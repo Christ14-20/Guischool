@@ -1,0 +1,346 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+//////////////////////
+// ENUMS
+//////////////////////
+
+enum UserRole {
+  ADMIN
+  DIRECTEUR
+  SECRETAIRE
+  COMPTABLE
+  ENSEIGNANT
+  PERSONNEL
+}
+
+enum EleveStatus {
+  ACTIF
+  TRANSFERE
+  ABANDONNE
+  DIPLOME
+}
+
+enum PaiementStatus {
+  PENDING
+  COMPLETED
+  FAILED
+}
+
+enum NotificationStatus {
+  UNREAD
+  READ
+}
+
+enum NotificationType {
+  INFO
+  ALERT
+  WARNING
+}
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+}
+
+enum LogLevel {
+  INFO
+  WARN
+  ERROR
+}
+
+//////////////////////
+// TABLES
+//////////////////////
+
+model Ecole {
+  id               Int       @id @default(autoincrement())
+  nom              String
+  adresse          String
+  email            String
+  tel              String
+  niveauDisponible String?
+  bareme           String?
+  horaires         String?
+  optionsPaiement  String?
+  actif            Boolean   @default(true)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  users       User[]
+  classes     Classe[]
+  settings    Setting[]
+  activities  Activity[]
+  cantine     Cantine[]
+  eleves      Eleve[]
+  paiements   Paiement[]
+  matieres    Matiere[]
+  personnel   Personnel[]
+}
+
+model User {
+  id                   Int       @id @default(autoincrement())
+  nom                  String
+  prenom               String
+  role                 UserRole
+  email                String    @unique
+  passwordHash         String
+  passwordInitial      Boolean   @default(true)
+  ecoleId              Int
+  actif                Boolean   @default(true)
+  permissionsDynamiques Json?
+  dernierLogin         DateTime?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  ecole     Ecole     @relation(fields: [ecoleId], references: [id])
+  classes   Classe[]  @relation("CreateurClasse")
+  activities Activity[] @relation("CreateurActivity")
+  paiements  Paiement[] @relation("EffectuePar")
+  auditLogs  Audit[]
+  notificationsExp Notification[] @relation("Expediteur")
+  notificationsDest Notification[] @relation("Destinataire")
+
+  notes      Note[]      @relation("EnseignantNotes")
+  matieres   Matiere[]   @relation("EnseignantMatieres")
+  absences   Absence[]   @relation("EnseignantAbsences")
+}
+
+model Classe {
+  id         Int      @id @default(autoincrement())
+  nom        String
+  niveau     String
+  filiere    String?
+  capacite   Int?
+  ecoleId    Int
+  createurId Int
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  ecole     Ecole @relation(fields: [ecoleId], references: [id])
+  createur  User  @relation("CreateurClasse", fields: [createurId], references: [id])
+  eleves    Eleve[]
+  matieres  Matiere[]
+}
+
+model Setting {
+  id        Int      @id @default(autoincrement())
+  ecoleId   Int
+  parametre String
+  valeur    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  ecole Ecole @relation(fields: [ecoleId], references: [id])
+}
+
+model Activity {
+  id        Int      @id @default(autoincrement())
+  nom       String
+  type      String
+  tarif     Float?
+  ecoleId   Int
+  date      DateTime?
+  createurId Int
+  actif     Boolean   @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  ecole    Ecole @relation(fields: [ecoleId], references: [id])
+  createur User  @relation("CreateurActivity", fields: [createurId], references: [id])
+}
+
+model Cantine {
+  id        Int      @id @default(autoincrement())
+  date      DateTime
+  repas     String
+  montant   Float
+  ecoleId   Int
+  actif     Boolean   @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  ecole Ecole @relation(fields: [ecoleId], references: [id])
+}
+
+model Eleve {
+  id            Int      @id @default(autoincrement())
+  nom           String
+  prenom        String
+  dateNaissance DateTime
+  classeId      Int
+  ecoleId       Int
+  tuteurId      Int?
+  status        EleveStatus @default(ACTIF)
+  deletedAt     DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  classe   Classe @relation(fields: [classeId], references: [id])
+  ecole    Ecole  @relation(fields: [ecoleId], references: [id])
+  tuteur   Tuteur? @relation(fields: [tuteurId], references: [id])
+  paiements Paiement[]
+  notes     Note[]
+  absences  Absence[]
+  documents Document[]
+}
+
+model Tuteur {
+  id        Int      @id @default(autoincrement())
+  nom       String
+  prenom    String
+  email     String
+  tel       String
+  adresse   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  eleves Eleve[]
+}
+
+model Paiement {
+  id                Int           @id @default(autoincrement())
+  eleveId           Int
+  type              String
+  montant           Float
+  date              DateTime
+  modePaiement      String
+  referencePaiement String @unique
+  effectueParId     Int
+  statut            PaiementStatus
+  comptableId       Int?
+  ecoleId           Int
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  eleve      Eleve @relation(fields: [eleveId], references: [id])
+  effectuePar User @relation("EffectuePar", fields: [effectueParId], references: [id])
+  ecole      Ecole @relation(fields: [ecoleId], references: [id])
+
+  @@index([ecoleId, date], map: "idx_paiements_ecole_date")
+  @@index([eleveId, date], map: "idx_paiements_eleve_date")
+  @@index([statut], map: "idx_paiements_statut")
+}
+
+model Note {
+  id          Int      @id @default(autoincrement())
+  eleveId     Int
+  matiereId   Int
+  note        Float
+  date        DateTime
+  enseignantId Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  eleve      Eleve   @relation(fields: [eleveId], references: [id])
+  matiere    Matiere @relation(fields: [matiereId], references: [id])
+  enseignant User    @relation("EnseignantNotes", fields: [enseignantId], references: [id])
+
+  @@index([eleveId, matiereId, date], map: "idx_note_eleve_matiere_date")
+}
+
+model Matiere {
+  id          Int      @id @default(autoincrement())
+  nom         String
+  classeId    Int
+  coef        Float
+  enseignantId Int
+  ecoleId     Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  classe     Classe @relation(fields: [classeId], references: [id])
+  enseignant User   @relation("EnseignantMatieres", fields: [enseignantId], references: [id])
+  ecole      Ecole  @relation(fields: [ecoleId], references: [id])
+  notes      Note[]
+  absences   Absence[]
+}
+
+model Absence {
+  id            Int      @id @default(autoincrement())
+  eleveId       Int
+  matiereId     Int
+  date          DateTime
+  justification String?
+  justified     Boolean   @default(false)
+  enseignantId  Int
+  status        String    @default("ABSENT") // ABSENT | RETARD
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  eleve      Eleve   @relation(fields: [eleveId], references: [id])
+  matiere    Matiere @relation(fields: [matiereId], references: [id])
+  enseignant User    @relation("EnseignantAbsences", fields: [enseignantId], references: [id])
+
+  @@index([date], map: "idx_absences_date")
+  @@index([eleveId, date], map: "idx_absences_eleve_date")
+  @@unique([eleveId, matiereId, date], map: "uniq_absence_eleve_matiere_date")
+}
+
+model Audit {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  action    AuditAction
+  tableName String
+  itemId    Int
+  details   Json?
+  date      DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model Notification {
+  id             Int      @id @default(autoincrement())
+  expediteurId   Int
+  destinataireId Int
+  message        String
+  type           NotificationType
+  status         NotificationStatus @default(UNREAD)
+  date           DateTime @default(now())
+  triggerEvent   String?
+
+  expediteur   User @relation("Expediteur", fields: [expediteurId], references: [id])
+  destinataire User @relation("Destinataire", fields: [destinataireId], references: [id])
+}
+
+model Document {
+  id          Int      @id @default(autoincrement())
+  eleveId     Int
+  type        String
+  fichierUrl  String
+  uploadDate  DateTime @default(now())
+  permissions Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  eleve Eleve @relation(fields: [eleveId], references: [id])
+}
+
+model Personnel {
+  id          Int      @id @default(autoincrement())
+  nom         String
+  prenom      String
+  role        String
+  ecoleId     Int
+  status      String
+  permissions Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  ecole Ecole @relation(fields: [ecoleId], references: [id])
+}
+
+model SystemLog {
+  id         Int      @id @default(autoincrement())
+  erreur     String
+  stacktrace String?
+  niveau     LogLevel
+  date       DateTime @default(now())
+}
