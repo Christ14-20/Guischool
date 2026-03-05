@@ -1,0 +1,28 @@
+# Ignore IntelliJ/Android Studio project files
+*.iml
+.idea/
+.idea/caches/
+.idea/libraries/
+.idea/modules.xml
+.idea/workspace.xml
+.idea/navEditor.xml
+.idea/assetWizardSettings.xml
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Gradle
+.gradle/
+build/
+captures/
+.externalNativeBuild/
+.cxx/
+local.properties
+
+# Android build folders
+Guischool2/app/build/
+Guischool2/.gradle/
+
+# Local settings
+Guischool2/local.properties
