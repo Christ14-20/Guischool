@@ -3,6 +3,7 @@
 import { Bell, Menu, Moon, Sun } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { useParams, usePathname, useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 
 import { BreadcrumbNav } from '@/components/layout/breadcrumb-nav';
 import { useSchoolYear } from '@/components/layout/school-year-provider';
@@ -22,12 +23,17 @@ type TopBarProps = {
 
 export function TopBar({ onHamburgerClick }: TopBarProps) {
   const { setTheme, resolvedTheme } = useTheme();
+  const [isMounted, setIsMounted] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
   const params = useParams();
   const locale = (params?.locale as string) ?? 'fr';
 
   const { schoolYear, setSchoolYear, availableYears } = useSchoolYear();
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   const switchLocale = (nextLocale: string | null) => {
     if (!nextLocale) return;
@@ -83,7 +89,7 @@ export function TopBar({ onHamburgerClick }: TopBarProps) {
           className="border-border/70 bg-background/70"
           aria-label="Basculer le theme"
         >
-          {resolvedTheme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+          {isMounted && (resolvedTheme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />)}
         </Button>
 
         <Select value={locale} onValueChange={switchLocale}>

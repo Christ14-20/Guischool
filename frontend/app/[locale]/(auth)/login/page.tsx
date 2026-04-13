@@ -6,7 +6,7 @@ import { useTranslations } from "next-intl";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { signIn } from "next-auth/react";
+import { signIn, useSession } from "next-auth/react";
 import { Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -37,6 +37,26 @@ const loginSchema = z.object({
 
 type LoginFormValues = z.infer<typeof loginSchema>;
 
+/**
+ * Récupère le chemin de redirection basé sur le rôle de l'utilisateur
+ */
+function getRedirectPath(role: string | undefined, locale: string): string {
+  if (!role) return `/${locale}/app/dashboard`;
+
+  switch (role) {
+    case "SUPER_ADMIN":
+      return `/${locale}/superadmin/dashboard`;
+    case "SUPPORT_STAFF":
+      return `/${locale}/superadmin/onboarding`;
+    case "ADMIN_SCHOOL":
+    case "TEACHER":
+    case "STUDENT":
+    case "PARENT":
+    default:
+      return `/${locale}/app/dashboard`;
+  }
+}
+
 export default function LoginPage() {
   const router = useRouter();
   const params = useParams();
@@ -44,6 +64,7 @@ export default function LoginPage() {
   const t = useTranslations("Auth");
   const [errorStatus, setErrorStatus] = useState<number | null>(null);
   const [isSubmitLoading, setSubmitLoading] = useState(false);
+  const { data: session } = useSession();
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -67,7 +88,16 @@ export default function LoginPage() {
           setErrorStatus(401);
         }
       } else if (res?.ok) {
-        router.push(`/${locale}/app/dashboard`);
+        // Petite pause pour permettre à la session de se mettre à jour
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        // Récupérer la session mise à jour pour accéder au rôle
+        const sessionResponse = await fetch('/api/auth/session');
+        const updatedSession = await sessionResponse.json();
+        
+        // Rediriger selon le rôle
+        const redirectPath = getRedirectPath(updatedSession?.user?.role, locale);
+        router.push(redirectPath);
       }
     } catch {
       setErrorStatus(500);
