@@ -17,6 +17,8 @@ def get_tokens_for_user(user):
 def build_auth_response(user):
     """Construit la réponse complète après login ou register."""
     tokens = get_tokens_for_user(user)
+    # Fallback : un superuser Django sans rôle RBAC est traité comme SUPER_ADMIN
+    role = user.get_role_name() or ("SUPER_ADMIN" if user.is_superuser else "")
     return {
         "status": "success",
         "data": {
@@ -25,7 +27,7 @@ def build_auth_response(user):
                 "email": user.email,
                 "first_name": user.first_name,
                 "last_name": user.last_name,
-                "role": user.get_role_name(),
+                "role": role,
                 "tenant_id": str(user.tenant_id) if user.tenant_id else None,
             },
             "tokens": tokens,

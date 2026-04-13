@@ -79,6 +79,9 @@ DATABASES = {
 # ─── Modèle utilisateur personnalisé ─────────────────────────────────
 AUTH_USER_MODEL = "authentication.User"
 
+# ─── Backend d'authentification (email comme identifiant) ────────────
+AUTHENTICATION_BACKENDS = ["django.contrib.auth.backends.ModelBackend"]
+
 # ─── Validation mots de passe ────────────────────────────────────────
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},

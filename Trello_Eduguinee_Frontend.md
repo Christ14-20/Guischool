@@ -227,14 +227,14 @@
 **Description :** Créer la sidebar de navigation principale de l'espace école.
 
 **Checklist :**
-- [ ] Logo Eduguinée + nom de l'école connectée en en-tête
-- [ ] Navigation avec icônes Lucide : Dashboard, Pédagogie, Élèves, Notes, Finance, Support, Paramètres
-- [ ] Section utilisateur en bas : avatar, nom, rôle, bouton Déconnexion
-- [ ] Liens actifs mis en surbrillance (`active` state)
-- [ ] Navigation filtrée selon le rôle (certaines entrées cachées)
-- [ ] Collapsible sur mobile → `Sheet` latéral avec bouton hamburger
-- [ ] Mode icônes uniquement sur tablette (768–1024px)
-- [ ] Mode développé sur desktop (> 1024px)
+- [x] Logo Eduguinée + nom de l'école connectée en en-tête
+- [x] Navigation avec icônes Lucide : Dashboard, Pédagogie, Élèves, Notes, Finance, Support, Paramètres
+- [x] Section utilisateur en bas : avatar, nom, rôle, bouton Déconnexion
+- [x] Liens actifs mis en surbrillance (`active` state)
+- [x] Navigation filtrée selon le rôle (certaines entrées cachées)
+- [x] Collapsible sur mobile → `Sheet` latéral avec bouton hamburger
+- [x] Mode icônes uniquement sur tablette (768–1024px)
+- [x] Mode développé sur desktop (> 1024px)
 
 **Labels :** `layout` `ui` `priorité-haute`
 
@@ -245,10 +245,10 @@
 **Description :** Créer la sidebar dédiée à l'espace super administrateur.
 
 **Checklist :**
-- [ ] Liens : Dashboard, Écoles, Plans, Utilisateurs, Logs, Alertes
-- [ ] Indicateur de rôle "Super Admin" visible
-- [ ] Même comportement responsive que la sidebar principale
-- [ ] Logo Eduguinée (version admin)
+- [x] Liens : Dashboard, Écoles, Plans, Utilisateurs, Logs, Alertes
+- [x] Indicateur de rôle "Super Admin" visible
+- [x] Même comportement responsive que la sidebar principale
+- [x] Logo Eduguinée (version admin)
 
 **Labels :** `layout` `superadmin`
 
@@ -259,12 +259,12 @@
 **Description :** Créer la barre supérieure avec fil d'Ariane, sélecteur d'année et notifications.
 
 **Checklist :**
-- [ ] Composant `BreadcrumbNav` (fil d'Ariane dynamique selon la route active)
-- [ ] Sélecteur d'année scolaire active (global, persisté en contexte React)
-- [ ] Cloche notifications avec compteur de badges
-- [ ] Bouton toggle mode sombre
-- [ ] Sélecteur de langue (FR / EN)
-- [ ] Responsive : hamburger sur mobile
+- [x] Composant `BreadcrumbNav` (fil d'Ariane dynamique selon la route active)
+- [x] Sélecteur d'année scolaire active (global, persisté en contexte React)
+- [x] Cloche notifications avec compteur de badges
+- [x] Bouton toggle mode sombre
+- [x] Sélecteur de langue (FR / EN)
+- [x] Responsive : hamburger sur mobile
 
 **Labels :** `layout` `ui`
 
@@ -275,9 +275,9 @@
 **Description :** Créer le composant d'en-tête de page réutilisable sur toutes les pages.
 
 **Checklist :**
-- [ ] Props : `title`, `description`, `actions` (slot pour boutons)
-- [ ] Affichage cohérent : titre H1, description en gris, boutons d'actions à droite
-- [ ] Responsive : boutons passent sous le titre sur mobile
+- [x] Props : `title`, `description`, `actions` (slot pour boutons)
+- [x] Affichage cohérent : titre H1, description en gris, boutons d'actions à droite
+- [x] Responsive : boutons passent sous le titre sur mobile
 - [ ] Utilisation sur toutes les pages applicatives
 
 **Labels :** `layout` `composants`
