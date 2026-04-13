@@ -90,6 +90,25 @@ export type SystemAlertItem = {
   message: string;
 };
 
+export type OnboardingRequestItem = {
+  id: string;
+  tracking_code: string;
+  school_name: string;
+  school_type: 'PRIMAIRE' | 'COLLEGE' | 'LYCEE' | 'MIXTE';
+  school_city: string;
+  school_phone: string;
+  school_email: string;
+  admin_first_name: string;
+  admin_last_name: string;
+  admin_email: string;
+  admin_phone: string;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  review_note: string;
+  processed_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
 export async function getSchools(
   token: string,
   query?: Record<string, string | number | undefined>
@@ -202,4 +221,28 @@ export async function resetSuperadminUserPassword(token: string, id: string) {
     token,
     method: 'POST',
   });
+}
+
+export async function getOnboardingRequests(
+  token: string,
+  query?: Record<string, string | number | undefined>
+): Promise<PaginatedResult<OnboardingRequestItem>> {
+  const data = await request<any>('/support/onboarding-requests/', { token, query });
+  return {
+    count: Number(data?.count ?? 0),
+    results: Array.isArray(data?.results) ? data.results : [],
+  };
+}
+
+export async function reviewOnboardingRequest(
+  token: string,
+  id: string,
+  body: { status: 'APPROVED' | 'REJECTED'; review_note?: string }
+) {
+  const data = await request<any>(`/support/onboarding-requests/${id}/review/`, {
+    token,
+    method: 'POST',
+    body,
+  });
+  return data?.data ?? data;
 }

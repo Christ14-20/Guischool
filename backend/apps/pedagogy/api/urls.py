@@ -3,7 +3,7 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from apps.pedagogy.api.views import (
     SchoolYearViewSet, LevelViewSet, ClassViewSet, SubjectViewSet,
-    EvaluationViewSet, AttendanceViewSet,
+    TimetableSlotViewSet, EvaluationViewSet, AttendanceViewSet,
     StudentViewSet, GradeViewSet, YearEndDecisionViewSet, BulkPromotionView,
 )
 
@@ -14,6 +14,7 @@ router.register("pedagogy/schoolyears", SchoolYearViewSet, basename="schoolyear"
 router.register("pedagogy/levels", LevelViewSet, basename="level")
 router.register("pedagogy/classes", ClassViewSet, basename="class")
 router.register("pedagogy/subjects", SubjectViewSet, basename="subject")
+router.register("pedagogy/timetable", TimetableSlotViewSet, basename="timetable")
 router.register("pedagogy/evaluations", EvaluationViewSet, basename="evaluation")
 router.register("pedagogy/attendances", AttendanceViewSet, basename="attendance")
 

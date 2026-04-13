@@ -7,6 +7,7 @@ import { signOut, useSession } from 'next-auth/react';
 import {
   AlertTriangle,
   Building2,
+  ClipboardCheck,
   LayoutDashboard,
   ListChecks,
   LogOut,
@@ -28,6 +29,7 @@ type AdminNavItem = {
 
 const ADMIN_NAV_ITEMS: AdminNavItem[] = [
   { label: 'Dashboard', href: '/superadmin/dashboard', icon: LayoutDashboard },
+  { label: 'Onboarding', href: '/superadmin/onboarding', icon: ClipboardCheck },
   { label: 'Ecoles', href: '/superadmin/schools', icon: Building2 },
   { label: 'Plans', href: '/superadmin/plans', icon: ListChecks },
   { label: 'Utilisateurs', href: '/superadmin/users', icon: UserCog },

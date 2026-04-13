@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useParams, usePathname } from 'next/navigation';
 import { signOut, useSession } from 'next-auth/react';
 import {
@@ -27,6 +27,11 @@ type NavItem = {
   href: string;
   icon: React.ComponentType<{ className?: string }>;
   roles?: Role[];
+  children?: Array<{
+    label: string;
+    href: string;
+    roles?: Role[];
+  }>;
 };
 
 const NAV_ITEMS: NavItem[] = [
@@ -36,6 +41,13 @@ const NAV_ITEMS: NavItem[] = [
     href: '/app/pedagogie',
     icon: GraduationCap,
     roles: [ROLES.ADMIN_SCHOOL, ROLES.SECRETAIRE, ROLES.ENSEIGNANT],
+    children: [
+      { label: 'Annees scolaires', href: '/app/pedagogie/school-years' },
+      { label: 'Classes', href: '/app/pedagogie/classes' },
+      { label: 'Matieres', href: '/app/pedagogie/subjects' },
+      { label: 'Emploi du temps', href: '/app/pedagogie/timetable' },
+      { label: 'Presences', href: '/app/pedagogie/attendance' },
+    ],
   },
   {
     label: 'Eleves',
@@ -94,9 +106,17 @@ function SidebarLinks({
   onNavigate?: () => void;
   compact: boolean;
 }) {
+  const normalizedRole = role?.trim().toUpperCase() as Role | undefined;
+
   const filteredItems = useMemo(
-    () => NAV_ITEMS.filter((item) => !item.roles || (role ? item.roles.includes(role) : false)),
-    [role]
+    () =>
+      NAV_ITEMS.filter((item) => !item.roles || (normalizedRole ? item.roles.includes(normalizedRole) : false)).map(
+        (item) => ({
+          ...item,
+          children: item.children?.filter((child) => !child.roles || (normalizedRole ? child.roles.includes(normalizedRole) : false)),
+        })
+      ),
+    [normalizedRole]
   );
 
   const pathWithoutLocale = pathname.replace(/^\/(fr|en)/, '');
@@ -111,22 +131,48 @@ function SidebarLinks({
         const Icon = item.icon;
 
         return (
-          <Link
-            key={item.href}
-            href={localizedHref}
-            title={compact ? item.label : undefined}
-            onClick={onNavigate}
-            className={cn(
-              'flex items-center rounded-xl px-3 py-2.5 text-sm font-medium transition-all',
-              compact ? 'justify-center gap-3 lg:justify-start' : 'gap-3',
-              isActive
-                ? 'bg-background text-primary shadow-none'
-                : 'text-primary-foreground/82 hover:bg-primary-foreground/12 hover:text-primary-foreground'
-            )}
-          >
-            <Icon className="h-4 w-4 shrink-0" />
-            <span className={cn(compact && 'hidden lg:inline')}>{item.label}</span>
-          </Link>
+          <div key={item.href} className="space-y-1">
+            <Link
+              href={localizedHref}
+              title={compact ? item.label : undefined}
+              onClick={onNavigate}
+              className={cn(
+                'flex items-center rounded-xl px-3 py-2.5 text-sm font-medium transition-all',
+                compact ? 'justify-center gap-3 lg:justify-start' : 'gap-3',
+                isActive
+                  ? 'bg-background text-primary shadow-none'
+                  : 'text-primary-foreground/82 hover:bg-primary-foreground/12 hover:text-primary-foreground'
+              )}
+            >
+              <Icon className="h-4 w-4 shrink-0" />
+              <span className={cn(compact && 'hidden lg:inline')}>{item.label}</span>
+            </Link>
+
+            {item.children && item.children.length > 0 && isActive ? (
+              <div className={cn('space-y-1 pl-10', compact && 'hidden lg:block')}>
+                {item.children.map((child) => {
+                  const childHref = `/${locale}${child.href}`;
+                  const isChildActive = pathWithoutLocale === child.href;
+
+                  return (
+                    <Link
+                      key={child.href}
+                      href={childHref}
+                      onClick={onNavigate}
+                      className={cn(
+                        'block rounded-lg px-3 py-2 text-xs font-medium transition-all',
+                        isChildActive
+                          ? 'bg-primary-foreground/16 text-primary-foreground'
+                          : 'text-primary-foreground/72 hover:bg-primary-foreground/10 hover:text-primary-foreground'
+                      )}
+                    >
+                      {child.label}
+                    </Link>
+                  );
+                })}
+              </div>
+            ) : null}
+          </div>
         );
       })}
     </nav>
@@ -137,11 +183,26 @@ export function AppSidebar({ schoolName = 'Ecole connectee' }: { schoolName?: st
   const params = useParams();
   const pathname = usePathname();
   const locale = (params?.locale as string) ?? 'fr';
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const [isMobileOpen, setMobileOpen] = useState(false);
+  const [stableRole, setStableRole] = useState<Role | undefined>(undefined);
 
   const userName = session?.user?.name ?? 'Utilisateur';
-  const userRole = (session?.user?.role as Role | undefined) ?? undefined;
+  const userRoleRaw = session?.user?.role;
+
+  useEffect(() => {
+    const role = userRoleRaw?.trim().toUpperCase();
+    if (role && Object.values(ROLES).includes(role as Role)) {
+      setStableRole(role as Role);
+      return;
+    }
+
+    if (status === 'unauthenticated') {
+      setStableRole(undefined);
+    }
+  }, [userRoleRaw, status]);
+
+  const userRole = stableRole;
 
   const handleLogout = async () => {
     await signOut({ callbackUrl: `/${locale}/login` });

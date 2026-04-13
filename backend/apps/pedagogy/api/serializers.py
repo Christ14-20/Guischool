@@ -8,6 +8,7 @@ from rest_framework import serializers
 from apps.pedagogy.models import (
     SchoolYear, Level, Class, Subject, ClassSubject,
     Attendance, Evaluation, Student, Enrollment, Grade, YearEndDecision,
+    TimetableSlot,
 )
 
 
@@ -51,6 +52,19 @@ class SubjectSerializer(serializers.ModelSerializer):
         model = Subject
         fields = ["id", "tenant", "code", "name", "category", "is_official"]
         read_only_fields = ["id"]
+
+
+class TimetableSlotSerializer(serializers.ModelSerializer):
+    subject_name = serializers.CharField(source="subject.name", read_only=True)
+
+    class Meta:
+        model = TimetableSlot
+        fields = [
+            "id", "tenant", "classe", "teacher", "subject", "subject_name",
+            "room", "day_of_week", "start_time", "end_time",
+            "is_recurring", "specific_date",
+        ]
+        read_only_fields = ["id", "subject_name"]
 
 
 class EvaluationSerializer(serializers.ModelSerializer):

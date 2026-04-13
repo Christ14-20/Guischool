@@ -11,13 +11,14 @@ from django.shortcuts import get_object_or_404
 from apps.pedagogy.models import (
     SchoolYear, Level, Class, Subject,
     Student, Enrollment, Grade, YearEndDecision, Evaluation, Attendance,
+    TimetableSlot,
 )
 from apps.pedagogy.api.serializers import (
     SchoolYearSerializer, LevelSerializer, ClassSerializer, SubjectSerializer,
     StudentListSerializer, StudentDetailSerializer, EnrollmentSerializer,
     GradeSerializer, GradeValidateSerializer,
     YearEndDecisionSerializer, BulkPromotionSerializer,
-    EvaluationSerializer, AttendanceSerializer,
+    EvaluationSerializer, AttendanceSerializer, TimetableSlotSerializer,
 )
 from apps.pedagogy.services import grading_service, enrollment_service
 from apps.pedagogy.models import YearEndDecision as YED
@@ -77,6 +78,20 @@ class SubjectViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         return Subject.objects.filter(tenant=self.request.user.tenant)
+
+
+class TimetableSlotViewSet(viewsets.ModelViewSet):
+    serializer_class = TimetableSlotSerializer
+    permission_classes = [IsAuthenticated]
+    filterset_fields = ["classe", "day_of_week", "subject"]
+
+    def get_queryset(self):
+        return TimetableSlot.objects.filter(
+            tenant=self.request.user.tenant
+        ).select_related("subject", "teacher")
+
+    def perform_create(self, serializer):
+        serializer.save(tenant=self.request.user.tenant)
 
 
 class EvaluationViewSet(viewsets.ModelViewSet):

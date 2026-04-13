@@ -1,7 +1,6 @@
-import { redirect } from 'next/navigation';
+import { OnboardingLanding } from '@/components/landing/onboarding-landing';
 
-// Page racine `/fr` ou `/en` → redirige vers la page de login
-export default async function LocaleRootPage({ params }: { params: Promise<{ locale: string }> }) {
-  const { locale } = await params;
-  redirect(`/${locale}/login`);
+// Page publique d'accueil locale avec onboarding école + admin.
+export default function LocaleRootPage() {
+  return <OnboardingLanding />;
 }

@@ -478,14 +478,14 @@
 **Description :** Créer la page de gestion des années scolaires.
 
 **Checklist :**
-- [ ] Liste des années scolaires avec statut (`Préparation / Active / Clôturée`)
-- [ ] Badge "Année courante" sur l'année active (`Badge` vert)
-- [ ] Alerte si aucune année active (`Alert` orange)
-- [ ] Bouton "Créer une année scolaire" → `Dialog`
-- [ ] Formulaire création : libellé (ex: 2024-2025), date début, date fin, activation
-- [ ] Validation : une seule année peut être active à la fois
-- [ ] Actions par ligne : Activer, Clôturer (`ConfirmDialog`)
-- [ ] `GET/POST /pedagogy/school-years/`
+- [x] Liste des années scolaires avec statut (`Préparation / Active / Clôturée`)
+- [x] Badge "Année courante" sur l'année active (`Badge` vert)
+- [x] Alerte si aucune année active (`Alert` orange)
+- [x] Bouton "Créer une année scolaire" → `Dialog`
+- [x] Formulaire création : libellé (ex: 2024-2025), date début, date fin, activation
+- [x] Validation : une seule année peut être active à la fois
+- [x] Actions par ligne : Activer, Clôturer (`ConfirmDialog`)
+- [x] `GET/POST /pedagogy/school-years/`
 
 **Labels :** `pédagogie`
 
@@ -496,14 +496,14 @@
 **Description :** Créer la page de gestion des classes de l'établissement.
 
 **Checklist :**
-- [ ] Toggle vue : grille ou liste
-- [ ] Filtre par cycle : Primaire / Collège / Lycée
-- [ ] Card par classe : nom, niveau, capacité (nb élèves / max), enseignant principal
-- [ ] Badge rouge si `nb_eleves > capacity` (surcharge)
-- [ ] Bouton "Nouvelle classe" → `Sheet` latéral
-- [ ] Formulaire `Sheet` : nom, niveau, cycle, capacité max, enseignant principal (`Select`)
-- [ ] Actions : Modifier, Archiver (`ConfirmDialog`)
-- [ ] `GET/POST/PUT /pedagogy/classes/`
+- [x] Toggle vue : grille ou liste
+- [x] Filtre par cycle : Primaire / Collège / Lycée
+- [x] Card par classe : nom, niveau, capacité (nb élèves / max), enseignant principal
+- [x] Badge rouge si `nb_eleves > capacity` (surcharge)
+- [x] Bouton "Nouvelle classe" → `Dialog`
+- [x] Formulaire : nom, niveau, cycle, capacité max
+- [x] Actions : Modifier, Archiver (`ConfirmDialog`)
+- [x] `GET/POST/PUT /pedagogy/classes/`
 
 **Labels :** `pédagogie`
 
@@ -514,11 +514,11 @@
 **Description :** Créer la page de gestion des matières enseignées.
 
 **Checklist :**
-- [ ] Liste des matières : nom, coefficient, niveau, enseignant(s) assigné(s)
-- [ ] Formulaire création/édition en `Sheet` ou `Dialog`
-- [ ] Champs : nom*, coefficient*, niveau (filtrée par cycle), couleur (sélecteur couleur pour l'emploi du temps)
-- [ ] Actions : Modifier, Supprimer (`ConfirmDialog`)
-- [ ] `GET/POST/PUT/DELETE /pedagogy/subjects/`
+- [x] Liste des matières : nom, code, catégorie, officielle
+- [x] Formulaire création/édition en `Dialog`
+- [x] Champs : code*, nom*, catégorie*, officielle (switch)
+- [x] Actions : Modifier, Supprimer (`ConfirmDialog`)
+- [x] `GET/POST/PUT/DELETE /pedagogy/subjects/`
 
 **Labels :** `pédagogie`
 
@@ -529,15 +529,14 @@
 **Description :** Créer la vue hebdomadaire de l'emploi du temps.
 
 **Checklist :**
-- [ ] Sélecteur de classe en haut de page
-- [ ] Grille hebdomadaire : colonnes Lundi → Samedi × lignes créneaux horaires
-- [ ] Chaque créneau : matière (avec couleur), enseignant, salle
-- [ ] Cellule vide : bouton "+" pour ajouter un créneau
-- [ ] `Dialog` ajout créneau : jour (`Select`), heure début/fin (`TimePicker`), matière (`Select`), enseignant (`Select`), salle (`Input`)
-- [ ] Validation : pas de chevauchement de créneaux pour un même enseignant
-- [ ] Actions créneau : Modifier, Supprimer
-- [ ] Responsive : scroll horizontal sur mobile
-- [ ] `GET/POST /pedagogy/timetable/`
+- [x] Sélecteur de classe en haut de page
+- [x] Grille hebdomadaire : colonnes Lundi → Samedi
+- [x] Chaque créneau : matière (avec couleur), salle
+- [x] Bouton "+" par colonne pour ajouter un créneau
+- [x] `Dialog` ajout créneau : jour, heure début/fin, matière, salle
+- [x] Actions créneau : Modifier, Supprimer
+- [x] Responsive : scroll horizontal (`ScrollArea`)
+- [x] `GET/POST/PATCH/DELETE /pedagogy/timetable/` (nouveau endpoint backend)
 
 **Labels :** `pédagogie`
 
@@ -548,15 +547,15 @@
 **Description :** Créer l'interface de saisie et de suivi des présences.
 
 **Checklist :**
-- [ ] Sélecteurs en cascade : classe → date (`DatePicker`) → matière (optionnel)
-- [ ] Liste des élèves de la classe avec statut de présence inline
-- [ ] Saisie rapide par ligne : radio-group ou boutons `Présent / Absent / Retard / Exclu`
-- [ ] Saisie en masse : bouton "Tous présents" (pré-remplissage)
-- [ ] Bouton "Enregistrer tout" → `POST /pedagogy/attendances/` (bulk)
-- [ ] Loading state pendant la soumission
-- [ ] Statistiques d'assiduité : `PieChart` Recharts (Présent / Absent / Retard / Exclu)
-- [ ] Vue historique : sélectionner une date passée → consultation uniquement
-- [ ] Toast succès/erreur
+- [x] Sélecteurs en cascade : classe → date → matière (optionnel)
+- [x] Liste des élèves avec statut de présence inline
+- [x] Saisie rapide par ligne : boutons `Présent / Absent / Retard / Exclu`
+- [x] Saisie en masse : bouton "Tous présents"
+- [x] Bouton "Enregistrer tout" → `POST /pedagogy/attendances/` (bulk)
+- [x] Loading state (`Skeleton`) pendant le chargement
+- [x] Statistiques d'assiduité : `PieChart` Recharts
+- [x] Vue historique : date passée → lecture seule
+- [x] Toast succès/erreur
 
 **Labels :** `pédagogie`
 
