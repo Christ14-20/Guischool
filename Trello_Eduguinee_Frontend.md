@@ -289,14 +289,14 @@
 **Description :** Créer le composant de tableau réutilisable et configurable.
 
 **Checklist :**
-- [ ] Colonnes configurables via prop `columns`
-- [ ] Pagination côté serveur (offset ou cursor), synchronisée avec les `searchParams` Next.js
-- [ ] Tri par colonne (clic sur l'en-tête)
-- [ ] Barre de recherche intégrée avec debounce
-- [ ] Sélection multiple (checkboxes) pour actions en masse
-- [ ] Skeleton loader pendant le chargement (jamais de spinner plein écran)
-- [ ] État vide avec composant `EmptyState`
-- [ ] Scrollable horizontalement sur mobile
+- [x] Colonnes configurables via prop `columns`
+- [x] Pagination côté serveur (offset ou cursor), synchronisée avec les `searchParams` Next.js
+- [x] Tri par colonne (clic sur l'en-tête)
+- [x] Barre de recherche intégrée avec debounce
+- [x] Sélection multiple (checkboxes) pour actions en masse
+- [x] Skeleton loader pendant le chargement (jamais de spinner plein écran)
+- [x] État vide avec composant `EmptyState`
+- [x] Scrollable horizontalement sur mobile
 
 **Labels :** `composants` `priorité-haute`
 
@@ -307,13 +307,13 @@
 **Description :** Créer le badge de statut coloré universel.
 
 **Checklist :**
-- [ ] Props : `status` (string), `variant` (auto-détecté)
-- [ ] Couleur verte : `ACTIF`, `ADMIS`, `PAYE`, `Active`
-- [ ] Couleur rouge : `SUSPENDU`, `EXCLU`, `OVERDUE`, `Suspended`
-- [ ] Couleur orange : `TRIAL`, `BROUILLON`, `EN_RETARD`
-- [ ] Couleur bleue : `EN_COURS`, `Pending`
-- [ ] Gris : autres statuts inconnus
-- [ ] Export et usage dans `DataTable` et fiches
+- [x] Props : `status` (string), `variant` (auto-détecté)
+- [x] Couleur verte : `ACTIF`, `ADMIS`, `PAYE`, `Active`
+- [x] Couleur rouge : `SUSPENDU`, `EXCLU`, `OVERDUE`, `Suspended`
+- [x] Couleur orange : `TRIAL`, `BROUILLON`, `EN_RETARD`
+- [x] Couleur bleue : `EN_COURS`, `Pending`
+- [x] Gris : autres statuts inconnus
+- [x] Export et usage dans `DataTable` et fiches
 
 **Labels :** `composants`
 
@@ -324,12 +324,12 @@
 **Description :** Créer le dialogue de confirmation réutilisable pour les actions destructives.
 
 **Checklist :**
-- [ ] Props : `title`, `description`, `onConfirm`, `onCancel`, `variant` (`default` / `destructive`)
-- [ ] Bouton de déclenchement configurable (slot)
-- [ ] `AlertDialog` shadcn/ui en fond
-- [ ] Variant `destructive` → bouton "Confirmer" rouge
-- [ ] Loading state sur le bouton pendant l'action
-- [ ] Utilisation : suppressions, suspensions, archivages
+- [x] Props : `title`, `description`, `onConfirm`, `onCancel`, `variant` (`default` / `destructive`)
+- [x] Bouton de déclenchement configurable (slot)
+- [x] `AlertDialog` shadcn/ui en fond
+- [x] Variant `destructive` → bouton "Confirmer" rouge
+- [x] Loading state sur le bouton pendant l'action
+- [x] Utilisation : suppressions, suspensions, archivages
 
 **Labels :** `composants`
 
@@ -340,10 +340,10 @@
 **Description :** Créer le composant d'état vide affiché quand une liste est vide.
 
 **Checklist :**
-- [ ] Props : `icon` (Lucide), `title`, `description`, `action` (CTA optionnel)
-- [ ] Centré verticalement dans le conteneur
-- [ ] CTA affiché uniquement si l'utilisateur a les droits de création (via `PermissionGate`)
-- [ ] Utilisation dans `DataTable` et toutes les listes
+- [x] Props : `icon` (Lucide), `title`, `description`, `action` (CTA optionnel)
+- [x] Centré verticalement dans le conteneur
+- [x] CTA affiché uniquement si l'utilisateur a les droits de création (via `PermissionGate`)
+- [x] Utilisation dans `DataTable` et toutes les listes
 
 **Labels :** `composants`
 
@@ -354,13 +354,13 @@
 **Description :** Créer le composant d'upload de fichiers avec drag & drop.
 
 **Checklist :**
-- [ ] Drag & drop zone
-- [ ] Prévisualisation pour les images
-- [ ] Barre de progression (`Progress` shadcn/ui)
-- [ ] Validation type MIME et taille avant upload
-- [ ] Upload via URL pré-signée (S3/MinIO) : appel backend → URL signée → upload direct
-- [ ] Gestion d'erreur (taille dépassée, type invalide, erreur réseau)
-- [ ] Props : `accept`, `maxSize`, `onUploadComplete`
+- [x] Drag & drop zone
+- [x] Prévisualisation pour les images
+- [x] Barre de progression (`Progress` shadcn/ui)
+- [x] Validation type MIME et taille avant upload
+- [x] Upload via URL pré-signée (S3/MinIO) : appel backend → URL signée → upload direct
+- [x] Gestion d'erreur (taille dépassée, type invalide, erreur réseau)
+- [x] Props : `accept`, `maxSize`, `onUploadComplete`
 
 **Labels :** `composants`
 

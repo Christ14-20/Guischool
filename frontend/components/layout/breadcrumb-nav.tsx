@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { Fragment } from 'react';
 import { useParams, usePathname } from 'next/navigation';
 
 import {
@@ -51,16 +52,16 @@ export function BreadcrumbNav() {
           const isLast = index === segments.length - 1;
 
           return (
-            <>
-              <BreadcrumbItem key={`item-${segment}-${index}`}>
+            <Fragment key={`crumb-${segment}-${index}`}>
+              <BreadcrumbItem>
                 {isLast ? (
                   <BreadcrumbPage>{prettyLabel(segment)}</BreadcrumbPage>
                 ) : (
                   <BreadcrumbLink render={<Link href={href} />}>{prettyLabel(segment)}</BreadcrumbLink>
                 )}
               </BreadcrumbItem>
-              {!isLast && <BreadcrumbSeparator key={`sep-${segment}-${index}`} />}
-            </>
+              {!isLast && <BreadcrumbSeparator />}
+            </Fragment>
           );
         })}
       </BreadcrumbList>
