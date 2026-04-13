@@ -1,0 +1,38 @@
+{
+  "Navigation": {
+    "dashboard": "Tableau de bord",
+    "students": "Élèves",
+    "grades": "Notes",
+    "finance": "Finance",
+    "settings": "Paramètres"
+  },
+  "Auth": {
+    "login": "Connexion",
+    "loginDescription": "Connectez-vous pour accéder à votre espace",
+    "email": "Adresse email",
+    "password": "Mot de passe",
+    "forgotPassword": "Mot de passe oublié ?",
+    "submit": "Se connecter",
+    "error401": "Identifiants incorrects. Veuillez réessayer.",
+    "error403": "Votre compte est suspendu. Veuillez contacter le support.",
+    "error500": "Une erreur serveur est survenue."
+  },
+  "Register": {
+    "title": "Création d'Établissement",
+    "description": "Suivez les étapes pour configurer votre plateforme.",
+    "step1": "Informations Administrateur",
+    "step2": "Détails de l'Établissement",
+    "step3": "Sélection du Plan",
+    "next": "Suivant",
+    "previous": "Précédent",
+    "back": "Retour",
+    "submit": "Créer le compte",
+    "accessDenied": "Accès Refusé",
+    "invitationRequired": "L'inscription est sur invitation uniquement. Veuillez vérifier votre lien d'invitation.",
+    "backToLogin": "Retour à la connexion"
+  },
+  "Errors": {
+    "notFound": "Page introuvable",
+    "serverError": "Erreur serveur"
+  }
+}
