@@ -80,7 +80,7 @@ function SuperadminLinks({
             title={compact ? item.label : undefined}
             className={cn(
               'flex items-center rounded-xl px-3 py-2.5 text-sm font-medium transition-all',
-              compact ? 'justify-center' : 'gap-3',
+              compact ? 'justify-center gap-3 lg:justify-start' : 'gap-3',
               isActive
                 ? 'bg-background text-primary shadow-none'
                 : 'text-primary-foreground/82 hover:bg-primary-foreground/12 hover:text-primary-foreground'

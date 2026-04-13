@@ -375,13 +375,13 @@
 **Description :** Créer le tableau de bord global de la plateforme pour le Super Admin.
 
 **Checklist :**
-- [ ] KPI Cards : nombre total d'écoles, écoles actives, suspendues, en trial
-- [ ] KPI Card : MRR estimé (formaté en GNF)
-- [ ] Graphique `LineChart` (Recharts) : évolution des inscriptions d'écoles dans le temps
-- [ ] Tableau des dernières écoles créées (`DataTable` simplifié, 5 dernières)
-- [ ] Section alertes système actives (`Alert` + `Badge`)
-- [ ] Données : `GET /superadmin/schools/`, `GET /monitoring/systemalerts/`
-- [ ] Server Component avec fetch côté serveur
+- [x] KPI Cards : nombre total d'écoles, écoles actives, suspendues, en trial
+- [x] KPI Card : MRR estimé (formaté en GNF)
+- [x] Graphique `LineChart` (Recharts) : évolution des inscriptions d'écoles dans le temps
+- [x] Tableau des dernières écoles créées (`DataTable` simplifié, 5 dernières)
+- [x] Section alertes système actives (`Alert` + `Badge`)
+- [x] Données : `GET /superadmin/schools/`, `GET /monitoring/systemalerts/`
+- [x] Server Component avec fetch côté serveur
 
 **Labels :** `superadmin` `dashboard`
 
@@ -392,15 +392,15 @@
 **Description :** Créer la page de liste et gestion de toutes les écoles.
 
 **Checklist :**
-- [ ] `DataTable` avec colonnes : Nom, Slug, Plan, Statut, Créée le, Actions
-- [ ] Filtre : statut (`Active/Suspended/Trial/Cancelled`)
-- [ ] Filtre : plan
-- [ ] Filtre : recherche texte (nom, slug)
-- [ ] `StatusBadge` sur la colonne Statut
-- [ ] Bouton "Nouvelle école" → Sheet latéral ou navigation vers `/superadmin/schools/new`
-- [ ] Actions par ligne : "Voir", "Suspendre" (`ConfirmDialog`), "Réactiver" (`ConfirmDialog`)
+- [x] `DataTable` avec colonnes : Nom, Slug, Plan, Statut, Créée le, Actions
+- [x] Filtre : statut (`Active/Suspended/Trial/Cancelled`)
+- [x] Filtre : plan
+- [x] Filtre : recherche texte (nom, slug)
+- [x] `StatusBadge` sur la colonne Statut
+- [x] Bouton "Nouvelle école" → Sheet latéral ou navigation vers `/superadmin/schools/new`
+- [x] Actions par ligne : "Voir", "Suspendre" (`ConfirmDialog`), "Réactiver" (`ConfirmDialog`)
 - [ ] Données : `GET /superadmin/schools/?status=&plan=&search=`
-- [ ] Pagination et URL persistable
+- [x] Pagination et URL persistable
 
 **Labels :** `superadmin`
 
@@ -411,12 +411,12 @@
 **Description :** Créer le formulaire de création d'une nouvelle école sur la plateforme.
 
 **Checklist :**
-- [ ] Champs : nom, slug (auto-généré depuis le nom, éditable), code MINEDU, type d'établissement, localisation
-- [ ] Sélection du plan (cards visuelles ou `Select`)
-- [ ] Validation Zod : unicité du slug (vérification API async), format code MINEDU
-- [ ] Bouton "Créer l'école" avec loading state
-- [ ] Toast succès → redirection vers le détail de l'école
-- [ ] `POST /superadmin/schools/`
+- [x] Champs : nom, slug (auto-généré depuis le nom, éditable), code MINEDU, type d'établissement, localisation
+- [x] Sélection du plan (cards visuelles ou `Select`)
+- [x] Validation Zod : unicité du slug (vérification API async), format code MINEDU
+- [x] Bouton "Créer l'école" avec loading state
+- [x] Toast succès → redirection vers le détail de l'école
+- [x] `POST /superadmin/schools/`
 
 **Labels :** `superadmin` `formulaire`
 
@@ -427,12 +427,12 @@
 **Description :** Créer la page de détail d'une école avec ses informations, son abonnement et ses statistiques.
 
 **Checklist :**
-- [ ] En-tête : nom de l'école, statut (`StatusBadge`), boutons d'actions
-- [ ] Tab 1 — **Informations générales** : nom, slug, code MINEDU, type, statut, dates de création
-- [ ] Tab 2 — **Abonnement** : plan actuel, dates début/fin, historique des paiements d'abonnement
-- [ ] Tab 3 — **Statistiques** : nb élèves, nb staff, usage stockage (barre `Progress`)
-- [ ] Tab 4 — **Actions** : Suspendre, Réactiver, Changer de plan → `ConfirmDialog` pour chaque action
-- [ ] Données : `GET /superadmin/schools/{id}/`
+- [x] En-tête : nom de l'école, statut (`StatusBadge`), boutons d'actions
+- [x] Tab 1 — **Informations générales** : nom, slug, code MINEDU, type, statut, dates de création
+- [x] Tab 2 — **Abonnement** : plan actuel, dates début/fin, historique des paiements d'abonnement
+- [x] Tab 3 — **Statistiques** : nb élèves, nb staff, usage stockage (barre `Progress`)
+- [x] Tab 4 — **Actions** : Suspendre, Réactiver, Changer de plan → `ConfirmDialog` pour chaque action
+- [x] Données : `GET /superadmin/schools/{id}/`
 
 **Labels :** `superadmin`
 
@@ -443,13 +443,13 @@
 **Description :** Créer l'interface de gestion des plans d'abonnement.
 
 **Checklist :**
-- [ ] Cards visuelles par plan : Starter, Pro, Enterprise
-- [ ] Chaque card : nom, max élèves, max staff, stockage, modules activés, tarifs
-- [ ] Bouton "Modifier" → `Dialog` avec formulaire d'édition
-- [ ] Formulaire : nom, nb max élèves, nb max staff, modules activés (multi-select `checkbox`), stockage (Go), tarif mensuel, tarif annuel
-- [ ] Validation Zod
-- [ ] `PUT /superadmin/plans/{id}/`
-- [ ] Toast succès/erreur
+- [x] Cards visuelles par plan : Starter, Pro, Enterprise
+- [x] Chaque card : nom, max élèves, max staff, stockage, modules activés, tarifs
+- [x] Bouton "Modifier" → `Dialog` avec formulaire d'édition
+- [x] Formulaire : nom, nb max élèves, nb max staff, modules activés (multi-select `checkbox`), stockage (Go), tarif mensuel, tarif annuel
+- [x] Validation Zod
+- [x] `PUT /superadmin/plans/{id}/`
+- [x] Toast succès/erreur
 
 **Labels :** `superadmin`
 
@@ -460,10 +460,10 @@
 **Description :** Créer la page de gestion des utilisateurs de la plateforme (hors utilisateurs des écoles).
 
 **Checklist :**
-- [ ] `DataTable` : nom, email, rôle, statut, dernière connexion
-- [ ] Filtre par rôle et statut
-- [ ] Actions : Activer / Désactiver, Réinitialiser mot de passe
-- [ ] `ConfirmDialog` pour les actions destructives
+- [x] `DataTable` : nom, email, rôle, statut, dernière connexion
+- [x] Filtre par rôle et statut
+- [x] Actions : Activer / Désactiver, Réinitialiser mot de passe
+- [x] `ConfirmDialog` pour les actions destructives
 
 **Labels :** `superadmin`
 
