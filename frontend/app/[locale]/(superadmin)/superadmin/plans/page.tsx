@@ -1,6 +1,7 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useSession } from 'next-auth/react';
 import { toast } from 'sonner';
 import { z } from 'zod';
 
@@ -18,10 +19,11 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { getPlans, type PlanItem, updatePlan } from '@/lib/api/superadmin';
 
 type Plan = {
-  id: string;
-  name: 'Starter' | 'Pro' | 'Enterprise';
+  id: number;
+  name: 'STARTER' | 'PRO' | 'ENTERPRISE';
   maxStudents: number;
   maxStaff: number;
   storageGb: number;
@@ -33,7 +35,7 @@ type Plan = {
 const AVAILABLE_MODULES = ['pedagogy', 'students', 'grades', 'finance', 'support', 'monitoring'];
 
 const planSchema = z.object({
-  name: z.string().min(2, 'Nom invalide.'),
+  name: z.enum(['STARTER', 'PRO', 'ENTERPRISE']),
   maxStudents: z.coerce.number().int().min(1, 'Min 1 eleve.'),
   maxStaff: z.coerce.number().int().min(1, 'Min 1 staff.'),
   storageGb: z.coerce.number().int().min(1, 'Min 1 Go.'),
@@ -42,41 +44,8 @@ const planSchema = z.object({
   yearlyPrice: z.coerce.number().min(0, 'Prix annuel invalide.'),
 });
 
-const FALLBACK_PLANS: Plan[] = [
-  {
-    id: 'starter',
-    name: 'Starter',
-    maxStudents: 500,
-    maxStaff: 40,
-    storageGb: 20,
-    modules: ['pedagogy', 'students', 'grades'],
-    monthlyPrice: 400000,
-    yearlyPrice: 4200000,
-  },
-  {
-    id: 'pro',
-    name: 'Pro',
-    maxStudents: 2500,
-    maxStaff: 180,
-    storageGb: 80,
-    modules: ['pedagogy', 'students', 'grades', 'finance', 'support'],
-    monthlyPrice: 900000,
-    yearlyPrice: 9600000,
-  },
-  {
-    id: 'enterprise',
-    name: 'Enterprise',
-    maxStudents: 10000,
-    maxStaff: 800,
-    storageGb: 300,
-    modules: AVAILABLE_MODULES,
-    monthlyPrice: 2200000,
-    yearlyPrice: 24000000,
-  },
-];
-
 type FormState = {
-  name: string;
+  name: 'STARTER' | 'PRO' | 'ENTERPRISE';
   maxStudents: string;
   maxStaff: string;
   storageGb: string;
@@ -87,6 +56,23 @@ type FormState = {
 
 function formatMoney(value: number) {
   return `${value.toLocaleString('fr-FR')} GNF`;
+}
+
+function formatPlanName(name: Plan['name']) {
+  return name.charAt(0) + name.slice(1).toLowerCase();
+}
+
+function apiPlanToUi(plan: PlanItem): Plan {
+  return {
+    id: plan.id,
+    name: plan.name,
+    maxStudents: Number(plan.max_students),
+    maxStaff: Number(plan.max_staff),
+    storageGb: Number(plan.storage_max_gb),
+    modules: Array.isArray(plan.modules_activated) ? plan.modules_activated : [],
+    monthlyPrice: Number(plan.price_monthly),
+    yearlyPrice: Number(plan.price_annual),
+  };
 }
 
 function planToFormState(plan: Plan): FormState {
@@ -102,8 +88,10 @@ function planToFormState(plan: Plan): FormState {
 }
 
 export default function SuperadminPlansPage() {
-  const [plans, setPlans] = useState<Plan[]>(FALLBACK_PLANS);
-  const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
+  const { data: session } = useSession();
+  const [plans, setPlans] = useState<Plan[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedPlanId, setSelectedPlanId] = useState<number | null>(null);
   const [isDialogOpen, setDialogOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [formState, setFormState] = useState<FormState | null>(null);
@@ -113,6 +101,33 @@ export default function SuperadminPlansPage() {
     () => plans.find((plan) => plan.id === selectedPlanId) ?? null,
     [plans, selectedPlanId]
   );
+
+  useEffect(() => {
+    const accessToken = session?.accessToken;
+    if (!accessToken) {
+      setLoading(false);
+      return;
+    }
+
+    let isMounted = true;
+
+    getPlans(accessToken)
+      .then((items) => {
+        if (!isMounted) return;
+        setPlans(items.map(apiPlanToUi));
+      })
+      .catch((error) => {
+        const message = error instanceof Error ? error.message : 'Impossible de charger les plans.';
+        toast.error(message);
+      })
+      .finally(() => {
+        if (isMounted) setLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [session?.accessToken]);
 
   const openEditDialog = (plan: Plan) => {
     setSelectedPlanId(plan.id);
@@ -135,7 +150,8 @@ export default function SuperadminPlansPage() {
   };
 
   const savePlan = async () => {
-    if (!selectedPlan || !formState) return;
+    const accessToken = session?.accessToken;
+    if (!accessToken || !selectedPlan || !formState) return;
 
     const validation = planSchema.safeParse(formState);
     if (!validation.success) {
@@ -150,40 +166,17 @@ export default function SuperadminPlansPage() {
     const payload = validation.data;
 
     try {
-      const base = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
-      const response = await fetch(`${base}/superadmin/plans/${selectedPlan.id}/`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: payload.name,
-          max_students: payload.maxStudents,
-          max_staff: payload.maxStaff,
-          storage_gb: payload.storageGb,
-          modules: payload.modules,
-          monthly_price: payload.monthlyPrice,
-          yearly_price: payload.yearlyPrice,
-        }),
+      const updated = await updatePlan(accessToken, selectedPlan.id, {
+        name: payload.name,
+        max_students: payload.maxStudents,
+        max_staff: payload.maxStaff,
+        modules_activated: payload.modules,
+        storage_max_gb: payload.storageGb,
+        price_monthly: payload.monthlyPrice,
+        price_annual: payload.yearlyPrice,
       });
 
-      if (!response.ok) throw new Error('Mise a jour impossible pour le moment.');
-
-      setPlans((prev) =>
-        prev.map((plan) =>
-          plan.id === selectedPlan.id
-            ? {
-                ...plan,
-                name: payload.name as Plan['name'],
-                maxStudents: payload.maxStudents,
-                maxStaff: payload.maxStaff,
-                storageGb: payload.storageGb,
-                modules: payload.modules,
-                monthlyPrice: payload.monthlyPrice,
-                yearlyPrice: payload.yearlyPrice,
-              }
-            : plan
-        )
-      );
-
+      setPlans((prev) => prev.map((plan) => (plan.id === selectedPlan.id ? apiPlanToUi(updated) : plan)));
       toast.success('Plan mis a jour avec succes.');
       setDialogOpen(false);
     } catch (error) {
@@ -201,12 +194,14 @@ export default function SuperadminPlansPage() {
         description="Gestion des limites, modules et tarifs Starter, Pro et Enterprise."
       />
 
+      {loading ? <p className="text-sm text-muted-foreground">Chargement des plans...</p> : null}
+
       <div className="grid gap-4 md:grid-cols-3">
         {plans.map((plan) => (
           <Card key={plan.id} className="border border-border/80">
             <CardHeader>
               <div className="flex items-center justify-between">
-                <CardTitle>{plan.name}</CardTitle>
+                <CardTitle>{formatPlanName(plan.name)}</CardTitle>
                 <StatusBadge status="active" />
               </div>
             </CardHeader>
@@ -220,7 +215,7 @@ export default function SuperadminPlansPage() {
                   <p className="text-xs text-muted-foreground">Max staff</p>
                   <p className="font-medium">{plan.maxStaff.toLocaleString('fr-FR')}</p>
                 </div>
-                <div className="rounded-md border p-2 col-span-2">
+                <div className="col-span-2 rounded-md border p-2">
                   <p className="text-xs text-muted-foreground">Stockage</p>
                   <p className="font-medium">{plan.storageGb} Go</p>
                 </div>
@@ -262,60 +257,32 @@ export default function SuperadminPlansPage() {
             <div className="grid gap-3 py-1 sm:grid-cols-2">
               <div className="space-y-1 sm:col-span-2">
                 <label className="text-sm font-medium">Nom du plan</label>
-                <Input
-                  value={formState.name}
-                  onChange={(event) => setFormState({ ...formState, name: event.target.value })}
-                />
+                <Input value={formatPlanName(formState.name)} disabled />
               </div>
 
               <div className="space-y-1">
                 <label className="text-sm font-medium">Max eleves</label>
-                <Input
-                  type="number"
-                  min={1}
-                  value={formState.maxStudents}
-                  onChange={(event) => setFormState({ ...formState, maxStudents: event.target.value })}
-                />
+                <Input type="number" min={1} value={formState.maxStudents} onChange={(event) => setFormState({ ...formState, maxStudents: event.target.value })} />
               </div>
 
               <div className="space-y-1">
                 <label className="text-sm font-medium">Max staff</label>
-                <Input
-                  type="number"
-                  min={1}
-                  value={formState.maxStaff}
-                  onChange={(event) => setFormState({ ...formState, maxStaff: event.target.value })}
-                />
+                <Input type="number" min={1} value={formState.maxStaff} onChange={(event) => setFormState({ ...formState, maxStaff: event.target.value })} />
               </div>
 
               <div className="space-y-1">
                 <label className="text-sm font-medium">Stockage (Go)</label>
-                <Input
-                  type="number"
-                  min={1}
-                  value={formState.storageGb}
-                  onChange={(event) => setFormState({ ...formState, storageGb: event.target.value })}
-                />
+                <Input type="number" min={1} value={formState.storageGb} onChange={(event) => setFormState({ ...formState, storageGb: event.target.value })} />
               </div>
 
               <div className="space-y-1">
                 <label className="text-sm font-medium">Tarif mensuel (GNF)</label>
-                <Input
-                  type="number"
-                  min={0}
-                  value={formState.monthlyPrice}
-                  onChange={(event) => setFormState({ ...formState, monthlyPrice: event.target.value })}
-                />
+                <Input type="number" min={0} value={formState.monthlyPrice} onChange={(event) => setFormState({ ...formState, monthlyPrice: event.target.value })} />
               </div>
 
               <div className="space-y-1">
                 <label className="text-sm font-medium">Tarif annuel (GNF)</label>
-                <Input
-                  type="number"
-                  min={0}
-                  value={formState.yearlyPrice}
-                  onChange={(event) => setFormState({ ...formState, yearlyPrice: event.target.value })}
-                />
+                <Input type="number" min={0} value={formState.yearlyPrice} onChange={(event) => setFormState({ ...formState, yearlyPrice: event.target.value })} />
               </div>
 
               <div className="space-y-2 sm:col-span-2">
@@ -323,7 +290,6 @@ export default function SuperadminPlansPage() {
                 <div className="grid gap-2 sm:grid-cols-2">
                   {AVAILABLE_MODULES.map((moduleName) => {
                     const checked = formState.modules.includes(moduleName);
-
                     return (
                       <label key={moduleName} className="flex items-center gap-2 rounded-md border p-2 text-sm capitalize">
                         <Checkbox checked={checked} onCheckedChange={(value) => toggleModule(moduleName, Boolean(value))} />

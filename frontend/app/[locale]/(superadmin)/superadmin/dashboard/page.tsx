@@ -5,6 +5,8 @@ import {
   type SuperadminKpi,
   type SuperadminSchool,
 } from '@/components/superadmin/superadmin-dashboard-view';
+import { auth } from '@/auth';
+import { getSchools, getSystemAlerts } from '@/lib/api/superadmin';
 
 function monthLabel(date: Date) {
   return date.toLocaleDateString('fr-FR', { month: 'short' });
@@ -46,25 +48,17 @@ function makeFallbackData() {
   return { kpis, growthData, latestSchools, alerts };
 }
 
-async function getSuperadminDashboardData() {
-  const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
+async function getSuperadminDashboardData(accessToken: string) {
 
   try {
-    const [schoolsRes, alertsRes] = await Promise.all([
-      fetch(`${baseUrl}/superadmin/schools/?page=1&page_size=5`, { cache: 'no-store' }),
-      fetch(`${baseUrl}/monitoring/systemalerts/?is_resolved=false&page_size=5`, { cache: 'no-store' }),
+    const [schoolsPage, activePage, suspendedPage, alertsPage] = await Promise.all([
+      getSchools(accessToken, { page: 1, page_size: 5 }),
+      getSchools(accessToken, { page: 1, page_size: 1, status: 'ACTIVE' }),
+      getSchools(accessToken, { page: 1, page_size: 1, status: 'SUSPENDED' }),
+      getSystemAlerts(accessToken, { is_resolved: 'false', page_size: 5 }),
     ]);
 
-    if (!schoolsRes.ok || !alertsRes.ok) {
-      return makeFallbackData();
-    }
-
-    const schoolsJson = await schoolsRes.json();
-    const alertsJson = await alertsRes.json();
-
-    const schoolsPayload = schoolsJson?.data ?? schoolsJson;
-    const schoolsItemsRaw = schoolsPayload?.results ?? schoolsPayload?.items ?? schoolsPayload ?? [];
-    const schoolsItems = Array.isArray(schoolsItemsRaw) ? schoolsItemsRaw : [];
+    const schoolsItems = schoolsPage.results;
 
     const latestSchools: SuperadminSchool[] = schoolsItems.slice(0, 5).map((item: any, index: number) => ({
       id: String(item.id ?? index),
@@ -73,13 +67,10 @@ async function getSuperadminDashboardData() {
       status: item.status ?? 'Active',
     }));
 
-    const totalSchools = Number(schoolsPayload?.count ?? schoolsItems.length);
-    const activeCount = schoolsItems.filter((item: any) => String(item.status).toUpperCase() === 'ACTIVE').length;
-    const suspendedCount = schoolsItems.filter((item: any) => String(item.status).toUpperCase() === 'SUSPENDED').length;
-
-    const alertPayload = alertsJson?.data ?? alertsJson;
-    const alertsItemsRaw = alertPayload?.results ?? alertPayload?.items ?? alertPayload ?? [];
-    const alertsItems = Array.isArray(alertsItemsRaw) ? alertsItemsRaw : [];
+    const totalSchools = schoolsPage.count;
+    const activeCount = activePage.count;
+    const suspendedCount = suspendedPage.count;
+    const alertsItems = alertsPage.results;
 
     const alerts: SuperadminAlert[] = alertsItems.slice(0, 5).map((item: any, index: number) => ({
       id: String(item.id ?? index),
@@ -110,7 +101,10 @@ async function getSuperadminDashboardData() {
 }
 
 export default async function SuperadminDashboardPage() {
-  const data = await getSuperadminDashboardData();
+  const session = await auth();
+  const accessToken = session?.accessToken;
+
+  const data = accessToken ? await getSuperadminDashboardData(accessToken) : makeFallbackData();
 
   return (
     <SuperadminDashboardView

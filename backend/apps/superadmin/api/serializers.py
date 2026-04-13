@@ -4,6 +4,7 @@ Serializers : Plan, Tenant (création + list + detail), Subscription.
 """
 from rest_framework import serializers
 from apps.superadmin.models import Plan, Tenant, Subscription
+from apps.authentication.models import User, Role
 
 
 class PlanSerializer(serializers.ModelSerializer):
@@ -52,3 +53,65 @@ class SubscriptionSerializer(serializers.ModelSerializer):
             "start_date", "end_date", "status", "last_payment_date", "created_at",
         ]
         read_only_fields = ["id", "created_at", "tenant_name", "plan_name"]
+
+
+class SuperadminUserSerializer(serializers.ModelSerializer):
+    role = serializers.SerializerMethodField()
+    status = serializers.SerializerMethodField()
+    last_login = serializers.DateTimeField(read_only=True)
+
+    class Meta:
+        model = User
+        fields = [
+            "id",
+            "first_name",
+            "last_name",
+            "email",
+            "role",
+            "status",
+            "last_login",
+            "date_joined",
+        ]
+        read_only_fields = fields
+
+    def get_role(self, obj):
+        return obj.get_role_name() or ""
+
+    def get_status(self, obj):
+        return "ACTIVE" if obj.is_active else "SUSPENDED"
+
+
+class SuperadminUserCreateUpdateSerializer(serializers.ModelSerializer):
+    role = serializers.ChoiceField(choices=Role.ROLE_CHOICES, required=True)
+    password = serializers.CharField(write_only=True, required=False, allow_blank=True)
+
+    class Meta:
+        model = User
+        fields = ["first_name", "last_name", "email", "role", "password"]
+
+    def validate(self, attrs):
+        if self.instance is None and not attrs.get("password"):
+            raise serializers.ValidationError({"password": "Le mot de passe est requis à la création."})
+        return attrs
+
+    def create(self, validated_data):
+        role_name = validated_data.pop("role")
+        password = validated_data.pop("password")
+        role = Role.objects.get(name=role_name)
+        user = User(tenant=None, role=role, **validated_data)
+        user.set_password(password)
+        user.save()
+        return user
+
+    def update(self, instance, validated_data):
+        role_name = validated_data.pop("role", None)
+        if role_name:
+            role = Role.objects.get(name=role_name)
+            instance.role = role
+        password = validated_data.pop("password", None)
+        if password:
+            instance.set_password(password)
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+        return instance

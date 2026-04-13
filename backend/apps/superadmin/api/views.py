@@ -6,13 +6,28 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from django.db.models import Q
+from django.utils.crypto import get_random_string
 
 from apps.superadmin.models import Tenant, Plan
+from apps.authentication.models import User
 from apps.superadmin.api.serializers import (
-    TenantSerializer, PlanSerializer, TenantSuspendSerializer
+    TenantSerializer, PlanSerializer, TenantSuspendSerializer,
+    SuperadminUserSerializer, SuperadminUserCreateUpdateSerializer,
 )
 from apps.superadmin.services import tenant_service
-from apps.authentication.permissions import CanCreateSchool, CanViewSchools, CanSuspendSchool, CanReactivateSchool, CanCreatePlan, CanViewPlans, CanEditPlan
+from apps.authentication.permissions import (
+    CanCreateSchool,
+    CanViewSchools,
+    CanSuspendSchool,
+    CanReactivateSchool,
+    CanCreatePlan,
+    CanViewPlans,
+    CanEditPlan,
+    CanViewUsers,
+    CanEditUser,
+    CanCreateUser,
+)
 
 
 class SchoolViewSet(viewsets.ModelViewSet):
@@ -110,3 +125,99 @@ class PlanViewSet(viewsets.ModelViewSet):
 
     def retrieve(self, request, *args, **kwargs):
         return Response({"status": "success", "data": self.get_serializer(self.get_object()).data})
+
+
+class SuperadminUserViewSet(viewsets.ModelViewSet):
+    """Gestion des utilisateurs globaux (hors utilisateurs d'écoles)."""
+    serializer_class = SuperadminUserSerializer
+    ordering_fields = ["first_name", "last_name", "email", "last_login", "date_joined"]
+    ordering = ["last_name", "first_name"]
+
+    def get_permissions(self):
+        if self.action == "create":
+            return [CanCreateUser()]
+        if self.action in ("update", "partial_update", "toggle_active", "reset_password"):
+            return [CanEditUser()]
+        return [CanViewUsers()]
+
+    def get_serializer_class(self):
+        if self.action in ("create", "update", "partial_update"):
+            return SuperadminUserCreateUpdateSerializer
+        return SuperadminUserSerializer
+
+    def get_queryset(self):
+        qs = User.objects.select_related("role", "tenant").filter(tenant__isnull=True)
+
+        role = (self.request.query_params.get("role") or "").strip().upper()
+        status_filter = (self.request.query_params.get("status") or "").strip().upper()
+        search = (self.request.query_params.get("search") or self.request.query_params.get("q") or "").strip()
+
+        if role:
+            qs = qs.filter(role__name=role)
+
+        if status_filter == "ACTIVE":
+            qs = qs.filter(is_active=True)
+        elif status_filter == "SUSPENDED":
+            qs = qs.filter(is_active=False)
+
+        if search:
+            qs = qs.filter(
+                Q(first_name__icontains=search)
+                | Q(last_name__icontains=search)
+                | Q(email__icontains=search)
+            )
+
+        return qs
+
+    def create(self, request, *args, **kwargs):
+        serializer = SuperadminUserCreateUpdateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.save()
+        return Response(
+            {"status": "success", "data": SuperadminUserSerializer(user).data},
+            status=status.HTTP_201_CREATED,
+        )
+
+    def partial_update(self, request, *args, **kwargs):
+        user = self.get_object()
+        serializer = SuperadminUserCreateUpdateSerializer(user, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.save()
+        return Response({"status": "success", "data": SuperadminUserSerializer(user).data})
+
+    def list(self, request, *args, **kwargs):
+        qs = self.filter_queryset(self.get_queryset())
+        page = self.paginate_queryset(qs)
+        serializer = self.get_serializer(page, many=True)
+        return self.get_paginated_response(serializer.data)
+
+    def retrieve(self, request, *args, **kwargs):
+        return Response({"status": "success", "data": self.get_serializer(self.get_object()).data})
+
+    @action(detail=True, methods=["patch"], url_path="toggle-active")
+    def toggle_active(self, request, pk=None):
+        user = self.get_object()
+        user.is_active = not user.is_active
+        user.save(update_fields=["is_active"])
+        serializer = self.get_serializer(user)
+        return Response(
+            {
+                "status": "success",
+                "message": "Utilisateur activé." if user.is_active else "Utilisateur suspendu.",
+                "data": serializer.data,
+            }
+        )
+
+    @action(detail=True, methods=["post"], url_path="reset-password")
+    def reset_password(self, request, pk=None):
+        user = self.get_object()
+        temporary_password = get_random_string(12)
+        user.set_password(temporary_password)
+        user.save(update_fields=["password"])
+        return Response(
+            {
+                "status": "success",
+                "message": "Mot de passe réinitialisé avec succès.",
+                "data": {"temporary_password": temporary_password},
+            }
+        )

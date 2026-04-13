@@ -45,10 +45,10 @@ class Tenant(models.Model):
         ("CANCELLED", "Annulée"),
     ]
     TYPE_CHOICES = [
-        ("PUBLIC", "Public"),
-        ("PRIVE", "Privé"),
-        ("COMMUNAUTAIRE", "Communautaire"),
-        ("CONFESSIONNEL", "Confessionnel"),
+        ("PRIMAIRE", "Primaire"),
+        ("COLLEGE", "Collège"),
+        ("LYCEE", "Lycée"),
+        ("MIXTE", "Mixte"),
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)

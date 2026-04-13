@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import { toast } from 'sonner';
 
 import { PageHeader } from '@/components/layout/page-header';
@@ -11,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress, ProgressLabel, ProgressValue } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { getPlans, getSchool, reactivateSchool, suspendSchool, updateSchool } from '@/lib/api/superadmin';
 
 type SchoolStatus = 'ACTIVE' | 'SUSPENDED' | 'TRIAL' | 'CANCELLED';
 type SchoolPlan = 'STARTER' | 'PRO' | 'ENTERPRISE';
@@ -132,6 +134,7 @@ function parseSchoolDetail(raw: any, fallbackId: string): SchoolDetail {
 export default function SuperadminSchoolDetailPage() {
   const router = useRouter();
   const params = useParams();
+  const { data: session } = useSession();
   const locale = (params?.locale as string) ?? 'fr';
   const schoolId = String(params?.id ?? '1');
 
@@ -139,25 +142,47 @@ export default function SuperadminSchoolDetailPage() {
     ...FALLBACK_SCHOOL,
     id: schoolId,
   });
+  const [plans, setPlans] = useState<Array<{ id: number; name: SchoolPlan }>>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const accessToken = session?.accessToken;
+    if (!accessToken) {
+      setLoading(false);
+      return;
+    }
+
     let isMounted = true;
 
     async function loadSchool() {
       setLoading(true);
       try {
-        const base = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
-        const response = await fetch(`${base}/superadmin/schools/${schoolId}/`, { cache: 'no-store' });
-        if (!response.ok) throw new Error('fallback');
+        const [schoolPayload, plansPayload] = await Promise.all([
+          getSchool(accessToken, schoolId),
+          getPlans(accessToken),
+        ]);
 
-        const json = await response.json();
-        const payload = json?.data ?? json;
+        const payload = schoolPayload;
         const detail = parseSchoolDetail(payload, schoolId);
 
-        if (isMounted) setSchool(detail);
-      } catch {
+        const mappedPlans = plansPayload
+          .map((plan) => ({
+            id: plan.id,
+            name: plan.name,
+          }))
+          .filter((plan) => ['STARTER', 'PRO', 'ENTERPRISE'].includes(plan.name)) as Array<{
+          id: number;
+          name: SchoolPlan;
+        }>;
+
         if (isMounted) {
+          setSchool(detail);
+          setPlans(mappedPlans);
+        }
+      } catch (error) {
+        if (isMounted) {
+          const message = error instanceof Error ? error.message : 'Impossible de charger le detail de l\'ecole.';
+          toast.error(message);
           setSchool({
             ...FALLBACK_SCHOOL,
             id: schoolId,
@@ -173,15 +198,54 @@ export default function SuperadminSchoolDetailPage() {
     return () => {
       isMounted = false;
     };
-  }, [schoolId]);
+  }, [schoolId, session?.accessToken]);
 
   const storagePercent = useMemo(() => {
     if (!school.stats.storageLimitGb) return 0;
     return Math.min(100, Math.round((school.stats.storageUsedGb / school.stats.storageLimitGb) * 100));
   }, [school.stats.storageLimitGb, school.stats.storageUsedGb]);
 
+  const refreshSchool = async () => {
+    const accessToken = session?.accessToken;
+    if (!accessToken) return;
+    const payload = await getSchool(accessToken, schoolId);
+    setSchool(parseSchoolDetail(payload, schoolId));
+  };
+
+  const handleSuspend = async () => {
+    const accessToken = session?.accessToken;
+    if (!accessToken) return;
+    await suspendSchool(accessToken, schoolId, 'Suspension depuis fiche detail');
+    await refreshSchool();
+    toast.success('Ecole suspendue avec succes.');
+  };
+
+  const handleReactivate = async () => {
+    const accessToken = session?.accessToken;
+    if (!accessToken) return;
+    await reactivateSchool(accessToken, schoolId);
+    await refreshSchool();
+    toast.success('Ecole reactivee avec succes.');
+  };
+
+  const handleChangePlan = async () => {
+    const accessToken = session?.accessToken;
+    if (!accessToken) return;
+
+    const enterprisePlan = plans.find((plan) => plan.name === 'ENTERPRISE');
+    const nextPlan = enterprisePlan ?? plans[0];
+    if (!nextPlan) {
+      toast.error('Aucun plan disponible pour la migration.');
+      return;
+    }
+
+    await updateSchool(accessToken, schoolId, { plan: nextPlan.id });
+    await refreshSchool();
+    const message = nextPlan.name === 'ENTERPRISE' ? 'Migration vers Enterprise effectuee.' : 'Plan mis a jour avec succes.';
+    toast.success(message);
+  };
+
   const fakeRequest = async (message: string) => {
-    await new Promise((resolve) => setTimeout(resolve, 350));
     toast.success(message);
   };
 
@@ -329,7 +393,7 @@ export default function SuperadminSchoolDetailPage() {
                 trigger={<Button variant="destructive">Suspendre</Button>}
                 confirmLabel="Suspendre"
                 loadingLabel="Suspension..."
-                onConfirm={() => fakeRequest('Ecole suspendue avec succes.')}
+                onConfirm={handleSuspend}
               />
 
               <ConfirmDialog
@@ -338,7 +402,7 @@ export default function SuperadminSchoolDetailPage() {
                 trigger={<Button variant="outline">Reactiver</Button>}
                 confirmLabel="Reactiver"
                 loadingLabel="Reactivation..."
-                onConfirm={() => fakeRequest('Ecole reactivee avec succes.')}
+                onConfirm={handleReactivate}
               />
 
               <ConfirmDialog
@@ -347,7 +411,7 @@ export default function SuperadminSchoolDetailPage() {
                 trigger={<Button>Changer de plan</Button>}
                 confirmLabel="Confirmer"
                 loadingLabel="Mise a jour..."
-                onConfirm={() => fakeRequest('Plan mis a jour avec succes.')}
+                onConfirm={handleChangePlan}
               />
             </CardContent>
           </Card>

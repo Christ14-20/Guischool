@@ -399,7 +399,7 @@
 - [x] `StatusBadge` sur la colonne Statut
 - [x] Bouton "Nouvelle école" → Sheet latéral ou navigation vers `/superadmin/schools/new`
 - [x] Actions par ligne : "Voir", "Suspendre" (`ConfirmDialog`), "Réactiver" (`ConfirmDialog`)
-- [ ] Données : `GET /superadmin/schools/?status=&plan=&search=`
+- [x] Données : `GET /superadmin/schools/?status=&plan=&search=`
 - [x] Pagination et URL persistable
 
 **Labels :** `superadmin`

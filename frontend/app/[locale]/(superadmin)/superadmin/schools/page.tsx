@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useParams, usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { useSession } from 'next-auth/react';
+import { toast } from 'sonner';
 
 import { PageHeader } from '@/components/layout/page-header';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
@@ -9,29 +11,37 @@ import { DataTable, type DataTableColumn } from '@/components/shared/DataTable';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { getPlans, getSchools, reactivateSchool, suspendSchool } from '@/lib/api/superadmin';
 
 type SchoolRow = {
   id: string;
   name: string;
   slug: string;
-  plan: 'Starter' | 'Pro' | 'Enterprise';
-  status: 'Active' | 'Suspended' | 'Trial' | 'Cancelled';
+  planName: string;
+  planId: number | null;
+  status: string;
   createdAt: string;
 };
 
-const FALLBACK_SCHOOLS: SchoolRow[] = [
-  { id: '1', name: 'Groupe Scolaire Horizon', slug: 'horizon', plan: 'Pro', status: 'Active', createdAt: '2026-04-01' },
-  { id: '2', name: 'Complexe La Reussite', slug: 'la-reussite', plan: 'Starter', status: 'Trial', createdAt: '2026-03-21' },
-  { id: '3', name: 'College Nongo', slug: 'college-nongo', plan: 'Enterprise', status: 'Suspended', createdAt: '2026-03-10' },
-  { id: '4', name: 'Lycee Saran', slug: 'lycee-saran', plan: 'Pro', status: 'Active', createdAt: '2026-02-18' },
-  { id: '5', name: 'Ecole Sainte Claire', slug: 'sainte-claire', plan: 'Starter', status: 'Cancelled', createdAt: '2026-02-04' },
-  { id: '6', name: 'Complexe Kouroula', slug: 'kouroula', plan: 'Pro', status: 'Active', createdAt: '2026-01-24' },
-  { id: '7', name: 'Institut Siguiri', slug: 'institut-siguiri', plan: 'Enterprise', status: 'Active', createdAt: '2026-01-11' },
-  { id: '8', name: 'Ecole Mory Kante', slug: 'mory-kante', plan: 'Starter', status: 'Trial', createdAt: '2025-12-30' },
-];
-
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('fr-FR');
+}
+
+function normalizeStatus(status: string) {
+  return status.toUpperCase();
+}
+
+function toOrdering(sortBy: string, sortOrder: string) {
+  if (!sortBy) return '-created_at';
+
+  const map: Record<string, string> = {
+    name: 'name',
+    createdAt: 'created_at',
+    created_at: 'created_at',
+  };
+
+  const backendField = map[sortBy] ?? sortBy;
+  return sortOrder === 'desc' ? `-${backendField}` : backendField;
 }
 
 export default function SuperadminSchoolsPage() {
@@ -39,46 +49,74 @@ export default function SuperadminSchoolsPage() {
   const params = useParams();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const { data: session } = useSession();
   const locale = (params?.locale as string) ?? 'fr';
 
-  const [schools, setSchools] = useState<SchoolRow[]>(FALLBACK_SCHOOLS);
+  const [schools, setSchools] = useState<SchoolRow[]>([]);
+  const [total, setTotal] = useState(0);
+  const [planOptions, setPlanOptions] = useState<Array<{ id: number; label: string }>>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const statusFilter = searchParams.get('status') ?? 'all';
   const planFilter = searchParams.get('plan') ?? 'all';
-  const query = (searchParams.get('q') ?? '').toLowerCase();
+  const query = searchParams.get('q') ?? '';
   const page = Number(searchParams.get('page') ?? '1');
   const pageSize = Number(searchParams.get('page_size') ?? '5');
+  const sortBy = searchParams.get('sort_by') ?? '';
+  const sortOrder = searchParams.get('sort_order') ?? 'asc';
 
   useEffect(() => {
+    const accessToken = session?.accessToken;
+    if (!accessToken) {
+      setLoading(false);
+      return;
+    }
+
     let isMounted = true;
 
     async function loadSchools() {
       setLoading(true);
       try {
-        const base = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
-        const response = await fetch(`${base}/superadmin/schools/`, { cache: 'no-store' });
-        if (!response.ok) throw new Error('Fallback');
+        const [plans, schoolsPage] = await Promise.all([
+          getPlans(accessToken),
+          getSchools(accessToken, {
+            page,
+            page_size: pageSize,
+            status: statusFilter === 'all' ? undefined : normalizeStatus(statusFilter),
+            plan: planFilter === 'all' ? undefined : planFilter,
+            search: query || undefined,
+            ordering: toOrdering(sortBy, sortOrder),
+          }),
+        ]);
 
-        const json = await response.json();
-        const payload = json?.data ?? json;
-        const list = payload?.results ?? payload?.items ?? payload ?? [];
-
-        if (isMounted && Array.isArray(list) && list.length > 0) {
-          const mapped: SchoolRow[] = list.map((item: any, index: number) => ({
-            id: String(item.id ?? index),
-            name: item.name ?? `Ecole ${index + 1}`,
-            slug: item.slug ?? `ecole-${index + 1}`,
-            plan: (item.plan?.name ?? item.plan_name ?? 'Starter') as SchoolRow['plan'],
-            status: (item.status ?? 'Active') as SchoolRow['status'],
-            createdAt: item.created_at ?? new Date().toISOString(),
-          }));
-
-          setSchools(mapped);
-        }
-      } catch {
         if (isMounted) {
-          setSchools(FALLBACK_SCHOOLS);
+          setPlanOptions(
+            plans.map((plan) => ({
+              id: plan.id,
+              label: plan.name.charAt(0) + plan.name.slice(1).toLowerCase(),
+            }))
+          );
+
+          setTotal(schoolsPage.count);
+          setSchools(
+            schoolsPage.results.map((item) => ({
+              id: item.id,
+              name: item.name,
+              slug: item.slug,
+              planName: item.plan_name ?? 'N/A',
+              planId: item.plan,
+              status: item.status,
+              createdAt: item.created_at,
+            }))
+          );
+        }
+      } catch (error) {
+        if (isMounted) {
+          const message = error instanceof Error ? error.message : 'Impossible de charger les ecoles.';
+          toast.error(message);
+          setSchools([]);
+          setTotal(0);
         }
       } finally {
         if (isMounted) setLoading(false);
@@ -89,22 +127,7 @@ export default function SuperadminSchoolsPage() {
     return () => {
       isMounted = false;
     };
-  }, []);
-
-  const filtered = useMemo(() => {
-    return schools.filter((item) => {
-      const matchesStatus = statusFilter === 'all' || item.status.toLowerCase() === statusFilter.toLowerCase();
-      const matchesPlan = planFilter === 'all' || item.plan.toLowerCase() === planFilter.toLowerCase();
-      const matchesSearch =
-        !query || item.name.toLowerCase().includes(query) || item.slug.toLowerCase().includes(query);
-      return matchesStatus && matchesPlan && matchesSearch;
-    });
-  }, [schools, statusFilter, planFilter, query]);
-
-  const pagedRows = useMemo(() => {
-    const start = (Math.max(page, 1) - 1) * pageSize;
-    return filtered.slice(start, start + pageSize);
-  }, [filtered, page, pageSize]);
+  }, [session?.accessToken, page, pageSize, statusFilter, planFilter, query, sortBy, sortOrder, refreshKey]);
 
   const setFilterParam = (key: string, value: string | null) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -119,11 +142,29 @@ export default function SuperadminSchoolsPage() {
     router.replace(`${pathname}?${params.toString()}`);
   };
 
+  const handleSuspend = async (row: SchoolRow) => {
+    const accessToken = session?.accessToken;
+    if (!accessToken) return;
+
+    await suspendSchool(accessToken, row.id, 'Suspension depuis console superadmin');
+    toast.success(`Ecole ${row.name} suspendue.`);
+    setRefreshKey((value) => value + 1);
+  };
+
+  const handleReactivate = async (row: SchoolRow) => {
+    const accessToken = session?.accessToken;
+    if (!accessToken) return;
+
+    await reactivateSchool(accessToken, row.id);
+    toast.success(`Ecole ${row.name} reactivee.`);
+    setRefreshKey((value) => value + 1);
+  };
+
   const columns: DataTableColumn<SchoolRow>[] = [
     { key: 'name', header: 'Nom', sortable: true, accessor: (row) => row.name },
     { key: 'slug', header: 'Slug', sortable: true, accessor: (row) => row.slug },
-    { key: 'plan', header: 'Plan', sortable: true, accessor: (row) => row.plan },
-    { key: 'status', header: 'Statut', sortable: true, accessor: (row) => <StatusBadge status={row.status} /> },
+    { key: 'plan', header: 'Plan', sortable: false, accessor: (row) => row.planName },
+    { key: 'status', header: 'Statut', sortable: false, accessor: (row) => <StatusBadge status={row.status.toLowerCase()} /> },
     { key: 'createdAt', header: 'Creee le', sortable: true, accessor: (row) => formatDate(row.createdAt) },
     {
       key: 'actions',
@@ -133,16 +174,14 @@ export default function SuperadminSchoolsPage() {
           <Button variant="outline" size="sm" onClick={() => router.push(`/${locale}/superadmin/schools/${row.id}`)}>
             Voir
           </Button>
-          {row.status === 'Suspended' ? (
+          {normalizeStatus(row.status) === 'SUSPENDED' ? (
             <ConfirmDialog
               title="Reactiver l'ecole"
               description={`Reactiver ${row.name} ?`}
               confirmLabel="Reactiver"
               loadingLabel="Reactivation..."
               trigger={<Button size="sm">Reactiver</Button>}
-              onConfirm={async () => {
-                await new Promise((resolve) => setTimeout(resolve, 350));
-              }}
+              onConfirm={() => handleReactivate(row)}
             />
           ) : (
             <ConfirmDialog
@@ -152,9 +191,7 @@ export default function SuperadminSchoolsPage() {
               confirmLabel="Suspendre"
               loadingLabel="Suspension..."
               trigger={<Button variant="outline" size="sm">Suspendre</Button>}
-              onConfirm={async () => {
-                await new Promise((resolve) => setTimeout(resolve, 350));
-              }}
+              onConfirm={() => handleSuspend(row)}
             />
           )}
         </div>
@@ -177,10 +214,10 @@ export default function SuperadminSchoolsPage() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Tous les statuts</SelectItem>
-            <SelectItem value="active">Active</SelectItem>
-            <SelectItem value="suspended">Suspended</SelectItem>
-            <SelectItem value="trial">Trial</SelectItem>
-            <SelectItem value="cancelled">Cancelled</SelectItem>
+            <SelectItem value="ACTIVE">Active</SelectItem>
+            <SelectItem value="SUSPENDED">Suspended</SelectItem>
+            <SelectItem value="TRIAL">Trial</SelectItem>
+            <SelectItem value="CANCELLED">Cancelled</SelectItem>
           </SelectContent>
         </Select>
 
@@ -190,9 +227,11 @@ export default function SuperadminSchoolsPage() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Tous les plans</SelectItem>
-            <SelectItem value="starter">Starter</SelectItem>
-            <SelectItem value="pro">Pro</SelectItem>
-            <SelectItem value="enterprise">Enterprise</SelectItem>
+            {planOptions.map((plan) => (
+              <SelectItem key={plan.id} value={String(plan.id)}>
+                {plan.label}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>
@@ -200,9 +239,9 @@ export default function SuperadminSchoolsPage() {
       <div className="rounded-lg border bg-card p-4">
         <DataTable
           columns={columns}
-          data={pagedRows}
+          data={schools}
           rowKey={(row) => row.id}
-          total={filtered.length}
+          total={total}
           page={Math.max(page, 1)}
           pageSize={pageSize}
           loading={loading}

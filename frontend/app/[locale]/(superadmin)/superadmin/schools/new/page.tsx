@@ -2,7 +2,8 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useParams, useRouter } from 'next/navigation';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useSession } from 'next-auth/react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { z } from 'zod';
@@ -22,6 +23,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { createSchool, getPlans, getSchools } from '@/lib/api/superadmin';
 
 const schema = z.object({
   name: z.string().min(3, 'Le nom doit contenir au moins 3 caracteres.'),
@@ -57,10 +59,12 @@ const TAKEN_SLUGS = new Set(['horizon', 'la-reussite', 'college-nongo']);
 export default function SuperadminNewSchoolPage() {
   const router = useRouter();
   const params = useParams();
+  const { data: session } = useSession();
   const locale = (params?.locale as string) ?? 'fr';
   const [checkingSlug, setCheckingSlug] = useState(false);
   const [slugManuallyEdited, setSlugManuallyEdited] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [plans, setPlans] = useState<Array<{ id: number; name: string }>>([]);
 
   const defaultValues = useMemo<FormValues>(
     () => ({
@@ -80,18 +84,42 @@ export default function SuperadminNewSchoolPage() {
     defaultValues,
   });
 
+  useEffect(() => {
+    const accessToken = session?.accessToken;
+    if (!accessToken) return;
+
+    let isMounted = true;
+
+    getPlans(accessToken)
+      .then((items) => {
+        if (!isMounted) return;
+        setPlans(
+          items.map((item) => ({
+            id: item.id,
+            name: item.name.charAt(0) + item.name.slice(1).toLowerCase(),
+          }))
+        );
+      })
+      .catch((error) => {
+        const message = error instanceof Error ? error.message : 'Impossible de charger les plans.';
+        toast.error(message);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [session?.accessToken]);
+
   const checkSlugAvailability = async (slug: string) => {
+    const accessToken = session?.accessToken;
+    if (!accessToken) return false;
+
     setCheckingSlug(true);
     try {
-      const base = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
-      const response = await fetch(`${base}/superadmin/schools/?search=${encodeURIComponent(slug)}`);
-      if (response.ok) {
-        const json = await response.json();
-        const payload = json?.data ?? json;
-        const items = payload?.results ?? payload?.items ?? payload ?? [];
-        if (Array.isArray(items)) {
-          return !items.some((item: any) => String(item.slug).toLowerCase() === slug.toLowerCase());
-        }
+      const result = await getSchools(accessToken, { page: 1, page_size: 10, search: slug });
+      const items = result.results;
+      if (Array.isArray(items)) {
+        return !items.some((item: any) => String(item.slug).toLowerCase() === slug.toLowerCase());
       }
       return !TAKEN_SLUGS.has(slug.toLowerCase());
     } catch {
@@ -102,6 +130,12 @@ export default function SuperadminNewSchoolPage() {
   };
 
   const onSubmit = async (values: FormValues) => {
+    const accessToken = session?.accessToken;
+    if (!accessToken) {
+      toast.error('Session invalide. Veuillez vous reconnecter.');
+      return;
+    }
+
     setSubmitting(true);
 
     try {
@@ -111,27 +145,15 @@ export default function SuperadminNewSchoolPage() {
         return;
       }
 
-      const base = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
-      const response = await fetch(`${base}/superadmin/schools/`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: values.name,
-          slug: values.slug,
-          code_minedu: values.codeMinedu,
-          type: values.type,
-          location: values.location,
-          plan: values.plan,
-          description: values.description,
-        }),
+      const payload = await createSchool(accessToken, {
+        name: values.name,
+        slug: values.slug,
+        code_minedu: values.codeMinedu,
+        type: values.type,
+        address: values.location,
+        plan: Number(values.plan),
+        settings: values.description ? { description: values.description } : {},
       });
-
-      if (!response.ok) {
-        throw new Error('Creation impossible pour le moment.');
-      }
-
-      const json = await response.json();
-      const payload = json?.data ?? json;
       const createdId = payload?.id;
 
       toast.success('Ecole creee avec succes.');
@@ -238,8 +260,8 @@ export default function SuperadminNewSchoolPage() {
                       </FormControl>
                       <SelectContent>
                         <SelectItem value="PRIMAIRE">Primaire</SelectItem>
-                        <SelectItem value="COLLEGE">College</SelectItem>
-                        <SelectItem value="LYCEE">Lycee</SelectItem>
+                        <SelectItem value="COLLEGE">Collège</SelectItem>
+                        <SelectItem value="LYCEE">Lycée</SelectItem>
                         <SelectItem value="MIXTE">Mixte</SelectItem>
                       </SelectContent>
                     </Select>
@@ -275,9 +297,11 @@ export default function SuperadminNewSchoolPage() {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="STARTER">Starter</SelectItem>
-                        <SelectItem value="PRO">Pro</SelectItem>
-                        <SelectItem value="ENTERPRISE">Enterprise</SelectItem>
+                        {plans.map((plan) => (
+                          <SelectItem key={plan.id} value={String(plan.id)}>
+                            {plan.name}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                     <FormMessage />
