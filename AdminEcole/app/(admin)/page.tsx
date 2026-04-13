@@ -14,9 +14,9 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6">
       {/* Page header */}
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Tableau de bord</h1>
-        <p className="text-sm text-muted-foreground">
+      <div className="relative z-10">
+        <h1 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-primary via-primary/80 to-purple-500 bg-clip-text text-transparent drop-shadow-sm sm:text-3xl">Tableau de bord</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
           Bienvenue, voici un apercu de votre etablissement
         </p>
       </div>

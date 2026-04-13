@@ -82,7 +82,7 @@ export default function AdminLayout({
       {/* Sidebar */}
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-50 flex w-64 flex-col bg-sidebar border-r border-sidebar-border transition-transform duration-300 lg:translate-x-0 lg:static",
+          "fixed inset-y-0 left-0 z-50 flex w-64 flex-col bg-sidebar/80 backdrop-blur-xl border-r border-sidebar-border/50 shadow-[4px_0_24px_rgba(0,0,0,0.1)] transition-transform duration-300 lg:translate-x-0 lg:static",
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
@@ -114,14 +114,14 @@ export default function AdminLayout({
                 key={item.name}
                 href={item.href}
                 className={cn(
-                  "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                  "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-300 group",
                   isActive
-                    ? "bg-sidebar-accent text-primary"
-                    : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                    ? "bg-gradient-to-r from-primary/20 to-transparent text-primary border-l-[3px] border-primary shadow-[inset_0_1px_rgba(255,255,255,0.05)]"
+                    : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground hover:translate-x-1"
                 )}
                 onClick={() => setSidebarOpen(false)}
               >
-                <item.icon className={cn("h-5 w-5", isActive && "text-primary")} />
+                <item.icon className={cn("h-5 w-5 transition-transform duration-300 group-hover:scale-110", isActive && "text-primary drop-shadow-[0_0_8px_rgba(var(--primary),0.5)]")} />
                 {item.name}
               </Link>
             )
@@ -141,7 +141,7 @@ export default function AdminLayout({
       {/* Main content */}
       <div className="flex flex-1 flex-col">
         {/* Header */}
-        <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b border-border bg-background/95 backdrop-blur px-4 lg:px-6">
+        <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b border-border/40 bg-background/70 backdrop-blur-xl px-4 lg:px-6 shadow-[0_4px_24px_rgba(0,0,0,0.05)]">
           <Button
             variant="ghost"
             size="icon"

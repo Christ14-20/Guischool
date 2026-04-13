@@ -54,7 +54,7 @@ function formatGNF(value: number) {
 
 export function UnpaidList() {
   return (
-    <div className="rounded-xl border border-border bg-card p-5">
+    <div className="rounded-xl border border-border/50 bg-card/40 p-5 shadow-lg backdrop-blur-xl">
       <div className="mb-4 flex items-center justify-between">
         <div>
           <h3 className="text-sm font-semibold">Impayes prioritaires</h3>
@@ -62,7 +62,7 @@ export function UnpaidList() {
             {unpaidStudents.length} eleves avec solde en attente
           </p>
         </div>
-        <Button variant="outline" size="sm" className="gap-2">
+        <Button variant="outline" size="sm" className="gap-2 bg-background/50 backdrop-blur-sm transition-colors hover:bg-background/80 hover:text-primary">
           <MessageSquare className="h-4 w-4" />
           Relancer tous
         </Button>
@@ -71,19 +71,19 @@ export function UnpaidList() {
         {unpaidStudents.map((student) => (
           <div
             key={student.id}
-            className="flex items-center justify-between rounded-lg bg-secondary/50 p-3"
+            className="group flex items-center justify-between rounded-lg bg-secondary/30 p-3 transition-all duration-300 hover:bg-secondary/60 hover:shadow-sm"
           >
             <div className="space-y-0.5">
-              <p className="text-sm font-medium">{student.name}</p>
+              <p className="text-sm font-medium transition-colors group-hover:text-primary">{student.name}</p>
               <p className="text-xs text-muted-foreground">{student.class}</p>
             </div>
             <div className="text-right">
-              <p className="text-sm font-semibold text-destructive">
+              <p className="text-sm font-semibold text-destructive drop-shadow-[0_0_8px_rgba(var(--destructive),0.2)]">
                 {formatGNF(student.amount)}
               </p>
               <Badge
                 variant={student.status === "tres_en_retard" ? "destructive" : "secondary"}
-                className="mt-1 text-[10px]"
+                className="mt-1 text-[10px] shadow-sm transition-transform group-hover:scale-105"
               >
                 {student.status === "tres_en_retard" ? "Tres en retard" : "En retard"}
               </Badge>

@@ -27,7 +27,7 @@ function formatGNF(value: number) {
 
 export function PaymentChart() {
   return (
-    <div className="rounded-xl border border-border bg-card p-5">
+    <div className="rounded-xl border border-border/50 bg-card/40 p-5 shadow-lg backdrop-blur-xl">
       <div className="mb-4 flex items-center justify-between">
         <div>
           <h3 className="text-sm font-semibold">Evolution des paiements</h3>
@@ -71,10 +71,12 @@ export function PaymentChart() {
             />
             <Tooltip
               contentStyle={{
-                backgroundColor: "oklch(0.18 0.01 260)",
-                border: "1px solid oklch(0.28 0.01 260)",
-                borderRadius: "8px",
+                backgroundColor: "rgba(20, 20, 30, 0.75)",
+                backdropFilter: "blur(12px)",
+                border: "1px solid rgba(255, 255, 255, 0.1)",
+                borderRadius: "12px",
                 color: "oklch(0.95 0 0)",
+                boxShadow: "0 8px 32px rgba(0, 0, 0, 0.2)"
               }}
               formatter={(value: number) => [`${formatGNF(value)} GNF`, ""]}
             />

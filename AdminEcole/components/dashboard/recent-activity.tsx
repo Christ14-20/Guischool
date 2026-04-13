@@ -65,26 +65,26 @@ const typeColors = {
 
 export function RecentActivity() {
   return (
-    <div className="rounded-xl border border-border bg-card p-5">
+    <div className="rounded-xl border border-border/50 bg-card/40 p-5 shadow-lg backdrop-blur-xl">
       <div className="mb-4 flex items-center justify-between">
         <h3 className="text-sm font-semibold">Activite recente</h3>
-        <button className="text-xs font-medium text-primary hover:underline">
+        <button className="text-xs font-medium text-primary transition-colors hover:text-primary/80 hover:underline">
           Voir tout
         </button>
       </div>
-      <div className="space-y-4">
+      <div className="space-y-2">
         {activities.map((activity) => (
-          <div key={activity.id} className="flex items-start gap-3">
-            <Avatar className={cn("h-9 w-9", typeColors[activity.type])}>
+          <div key={activity.id} className="group flex items-start gap-3 rounded-lg p-2 transition-all hover:bg-secondary/40 hover:shadow-sm">
+            <Avatar className={cn("h-9 w-9 transition-transform group-hover:scale-110 group-hover:rotate-6", typeColors[activity.type])}>
               <AvatarFallback className="bg-transparent text-xs font-medium">
                 {activity.initials}
               </AvatarFallback>
             </Avatar>
             <div className="flex-1 space-y-0.5">
-              <p className="text-sm font-medium">{activity.title}</p>
+              <p className="text-sm font-medium transition-colors group-hover:text-primary">{activity.title}</p>
               <p className="text-xs text-muted-foreground">{activity.description}</p>
             </div>
-            <span className="text-xs text-muted-foreground whitespace-nowrap">
+            <span className="whitespace-nowrap text-[10px] font-medium text-muted-foreground opacity-80 transition-opacity group-hover:opacity-100">
               {activity.time}
             </span>
           </div>

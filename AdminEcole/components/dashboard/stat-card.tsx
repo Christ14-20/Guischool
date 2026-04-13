@@ -14,10 +14,10 @@ interface StatCardProps {
 }
 
 const variantStyles = {
-  default: "bg-card border-border",
-  success: "bg-card border-border",
-  warning: "bg-card border-border",
-  info: "bg-card border-border",
+  default: "border-border/50 group-hover:border-primary/40",
+  success: "border-success/20 group-hover:border-success/50 hover:shadow-success/10",
+  warning: "border-warning/20 group-hover:border-warning/50 hover:shadow-warning/10",
+  info: "border-info/20 group-hover:border-info/50 hover:shadow-info/10",
 }
 
 const iconVariantStyles = {
@@ -37,10 +37,13 @@ export function StatCard({
 }: StatCardProps) {
   return (
     <div className={cn(
-      "rounded-xl border p-5 transition-all hover:border-primary/30",
+      "group relative overflow-hidden rounded-xl border p-5 transition-all duration-500 hover:-translate-y-1 hover:shadow-xl bg-card/40 backdrop-blur-xl will-change-transform z-10",
       variantStyles[variant]
     )}>
-      <div className="flex items-start justify-between">
+      {/* Soft gradient highlight on hover */}
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-tr from-white/0 via-white/5 to-white/0 opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
+      
+      <div className="relative z-20 flex items-start justify-between">
         <div className="space-y-1">
           <p className="text-sm font-medium text-muted-foreground">{title}</p>
           <p className="text-2xl font-bold tracking-tight">{value}</p>
@@ -60,10 +63,10 @@ export function StatCard({
           )}
         </div>
         <div className={cn(
-          "flex h-10 w-10 items-center justify-center rounded-lg",
+          "flex h-10 w-10 items-center justify-center rounded-lg transition-transform duration-500 group-hover:scale-110 group-hover:rotate-3",
           iconVariantStyles[variant]
         )}>
-          <Icon className="h-5 w-5" />
+          <Icon className="h-5 w-5 drop-shadow-md" />
         </div>
       </div>
     </div>
