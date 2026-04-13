@@ -6,6 +6,8 @@ import { useParams, usePathname } from 'next/navigation';
 import { signOut, useSession } from 'next-auth/react';
 import {
   BookOpen,
+  ChevronDown,
+  ChevronRight,
   CircleHelp,
   CreditCard,
   GraduationCap,
@@ -120,6 +122,52 @@ function SidebarLinks({
   );
 
   const pathWithoutLocale = pathname.replace(/^\/(fr|en)/, '');
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>(() => {
+    const initial: Record<string, boolean> = {};
+
+    for (const item of filteredItems) {
+      if (item.children && item.children.length > 0) {
+        initial[item.href] =
+          pathWithoutLocale === item.href || pathWithoutLocale.startsWith(`${item.href}/`);
+      }
+    }
+
+    return initial;
+  });
+
+  useEffect(() => {
+    setExpandedSections((prev) => {
+      const next = { ...prev };
+      let changed = false;
+
+      for (const item of filteredItems) {
+        if (!item.children || item.children.length === 0) {
+          continue;
+        }
+
+        const hasStoredValue = Object.prototype.hasOwnProperty.call(next, item.href);
+        const shouldOpenByPath =
+          pathWithoutLocale === item.href || pathWithoutLocale.startsWith(`${item.href}/`);
+
+        if (!hasStoredValue) {
+          next[item.href] = shouldOpenByPath;
+          changed = true;
+        } else if (shouldOpenByPath && !next[item.href]) {
+          next[item.href] = true;
+          changed = true;
+        }
+      }
+
+      return changed ? next : prev;
+    });
+  }, [filteredItems, pathWithoutLocale]);
+
+  const toggleSection = (href: string) => {
+    setExpandedSections((prev) => ({
+      ...prev,
+      [href]: !prev[href],
+    }));
+  };
 
   return (
     <nav className="space-y-1">
@@ -132,23 +180,63 @@ function SidebarLinks({
 
         return (
           <div key={item.href} className="space-y-1">
-            <Link
-              href={localizedHref}
-              title={compact ? item.label : undefined}
-              onClick={onNavigate}
-              className={cn(
-                'flex items-center rounded-xl px-3 py-2.5 text-sm font-medium transition-all',
-                compact ? 'justify-center gap-3 lg:justify-start' : 'gap-3',
-                isActive
-                  ? 'bg-background text-primary shadow-none'
-                  : 'text-primary-foreground/82 hover:bg-primary-foreground/12 hover:text-primary-foreground'
-              )}
-            >
-              <Icon className="h-4 w-4 shrink-0" />
-              <span className={cn(compact && 'hidden lg:inline')}>{item.label}</span>
-            </Link>
+            {item.children && item.children.length > 0 ? (
+              <div
+                className={cn(
+                  'flex items-center rounded-xl pr-2',
+                  isActive
+                    ? 'bg-background text-primary shadow-none'
+                    : 'text-primary-foreground/82 hover:bg-primary-foreground/12 hover:text-primary-foreground'
+                )}
+              >
+                <Link
+                  href={localizedHref}
+                  title={compact ? item.label : undefined}
+                  onClick={onNavigate}
+                  className={cn(
+                    'flex min-w-0 flex-1 items-center rounded-xl px-3 py-2.5 text-sm font-medium transition-all',
+                    compact ? 'justify-center gap-3 lg:justify-start' : 'gap-3'
+                  )}
+                >
+                  <Icon className="h-4 w-4 shrink-0" />
+                  <span className={cn(compact && 'hidden lg:inline')}>{item.label}</span>
+                </Link>
 
-            {item.children && item.children.length > 0 && isActive ? (
+                <button
+                  type="button"
+                  onClick={() => toggleSection(item.href)}
+                  aria-label={expandedSections[item.href] ? 'Replier le sous-menu' : 'Deplier le sous-menu'}
+                  className={cn(
+                    'inline-flex h-8 w-8 items-center justify-center rounded-lg text-primary/90 transition hover:bg-primary/10',
+                    compact && 'hidden lg:inline-flex'
+                  )}
+                >
+                  {expandedSections[item.href] ? (
+                    <ChevronDown className="h-4 w-4" />
+                  ) : (
+                    <ChevronRight className="h-4 w-4" />
+                  )}
+                </button>
+              </div>
+            ) : (
+              <Link
+                href={localizedHref}
+                title={compact ? item.label : undefined}
+                onClick={onNavigate}
+                className={cn(
+                  'flex items-center rounded-xl px-3 py-2.5 text-sm font-medium transition-all',
+                  compact ? 'justify-center gap-3 lg:justify-start' : 'gap-3',
+                  isActive
+                    ? 'bg-background text-primary shadow-none'
+                    : 'text-primary-foreground/82 hover:bg-primary-foreground/12 hover:text-primary-foreground'
+                )}
+              >
+                <Icon className="h-4 w-4 shrink-0" />
+                <span className={cn(compact && 'hidden lg:inline')}>{item.label}</span>
+              </Link>
+            )}
+
+            {item.children && item.children.length > 0 && expandedSections[item.href] ? (
               <div className={cn('space-y-1 pl-10', compact && 'hidden lg:block')}>
                 {item.children.map((child) => {
                   const childHref = `/${locale}${child.href}`;

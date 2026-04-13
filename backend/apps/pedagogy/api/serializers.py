@@ -21,14 +21,14 @@ class SchoolYearSerializer(serializers.ModelSerializer):
     class Meta:
         model = SchoolYear
         fields = ["id", "tenant", "label", "start_date", "end_date", "status", "is_current"]
-        read_only_fields = ["id"]
+        read_only_fields = ["id", "tenant"]
 
 
 class LevelSerializer(serializers.ModelSerializer):
     class Meta:
         model = Level
         fields = ["id", "tenant", "cycle", "name", "order_index"]
-        read_only_fields = ["id"]
+        read_only_fields = ["id", "tenant"]
 
 
 class ClassSerializer(serializers.ModelSerializer):
@@ -41,7 +41,7 @@ class ClassSerializer(serializers.ModelSerializer):
             "id", "tenant", "school_year", "level", "level_name",
             "name", "capacity", "room", "main_teacher", "current_count",
         ]
-        read_only_fields = ["id", "level_name", "current_count"]
+        read_only_fields = ["id", "tenant", "level_name", "current_count"]
 
     def get_current_count(self, obj):
         return obj.current_enrollment_count()

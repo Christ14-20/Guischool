@@ -43,6 +43,7 @@ import {
   type LevelItem,
   type SchoolYearItem,
   createClass,
+  createLevel,
   deleteClass,
   getClasses,
   getLevels,
@@ -127,6 +128,42 @@ export default function ClassesPage() {
     }
   };
 
+  const handleInitDefaultLevels = async () => {
+    if (!token) return;
+
+    const presets = [
+      { cycle: 'PRIMAIRE', name: 'CP1', order_index: 1 },
+      { cycle: 'PRIMAIRE', name: 'CP2', order_index: 2 },
+      { cycle: 'PRIMAIRE', name: 'CE1', order_index: 3 },
+      { cycle: 'PRIMAIRE', name: 'CE2', order_index: 4 },
+      { cycle: 'PRIMAIRE', name: 'CM1', order_index: 5 },
+      { cycle: 'PRIMAIRE', name: 'CM2', order_index: 6 },
+      { cycle: 'COLLEGE', name: '7e', order_index: 1 },
+      { cycle: 'COLLEGE', name: '8e', order_index: 2 },
+      { cycle: 'COLLEGE', name: '9e', order_index: 3 },
+      { cycle: 'COLLEGE', name: '10e', order_index: 4 },
+      { cycle: 'LYCEE', name: '11e', order_index: 1 },
+      { cycle: 'LYCEE', name: '12e', order_index: 2 },
+      { cycle: 'LYCEE', name: 'Terminale', order_index: 3 },
+    ] as const;
+
+    try {
+      await Promise.all(
+        presets.map((item) =>
+          createLevel(token, {
+            cycle: item.cycle,
+            name: item.name,
+            order_index: item.order_index,
+          })
+        )
+      );
+      toast.success('Niveaux par défaut initialisés.');
+      refresh();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Impossible d\'initialiser les niveaux.');
+    }
+  };
+
   return (
     <section className="space-y-4">
       <PageHeader
@@ -174,6 +211,18 @@ export default function ClassesPage() {
           </Button>
         </div>
       </div>
+
+      {!loading && levels.length === 0 && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+          <p className="mb-2 font-medium">Aucun niveau n'est disponible.</p>
+          <p className="mb-3 text-amber-800">
+            Initialisez les niveaux de base pour pouvoir sélectionner un niveau lors de la création d'une classe.
+          </p>
+          <Button type="button" onClick={handleInitDefaultLevels}>
+            Initialiser les niveaux par défaut
+          </Button>
+        </div>
+      )}
 
       {loading ? (
         <p className="py-8 text-center text-muted-foreground">Chargement...</p>

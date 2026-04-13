@@ -34,6 +34,9 @@ class SchoolYearViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         return SchoolYear.objects.filter(tenant=self.request.user.tenant)
 
+    def perform_create(self, serializer):
+        serializer.save(tenant=self.request.user.tenant)
+
 
 class LevelViewSet(viewsets.ModelViewSet):
     serializer_class = LevelSerializer
@@ -42,6 +45,9 @@ class LevelViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         return Level.objects.filter(tenant=self.request.user.tenant)
+
+    def perform_create(self, serializer):
+        serializer.save(tenant=self.request.user.tenant)
 
 
 class ClassViewSet(viewsets.ModelViewSet):
@@ -54,6 +60,9 @@ class ClassViewSet(viewsets.ModelViewSet):
         return Class.objects.filter(
             tenant=self.request.user.tenant
         ).select_related("level", "school_year", "main_teacher")
+
+    def perform_create(self, serializer):
+        serializer.save(tenant=self.request.user.tenant)
 
     @action(detail=True, methods=["get"], url_path="classement")
     def classement(self, request, pk=None):

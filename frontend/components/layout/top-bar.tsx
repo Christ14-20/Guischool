@@ -65,8 +65,11 @@ export function TopBar({ onHamburgerClick }: TopBarProps) {
 
       <div className="flex items-center gap-2">
         <Select value={schoolYear} onValueChange={handleSchoolYearChange}>
-          <SelectTrigger className="w-[132px] border-border/70 bg-background/70">
-            <SelectValue placeholder="Annee" />
+          <SelectTrigger
+            className="w-[160px] border-border/70 bg-background/70"
+            disabled={availableYears.length === 0}
+          >
+            <SelectValue placeholder="Année scolaire" />
           </SelectTrigger>
           <SelectContent>
             {availableYears.map((year) => (

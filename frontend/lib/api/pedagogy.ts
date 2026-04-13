@@ -147,6 +147,11 @@ export async function getLevels(
   return { count: Number(data?.count ?? 0), results: Array.isArray(data?.results) ? data.results : [] };
 }
 
+export async function createLevel(token: string, body: Record<string, unknown>) {
+  const data = await request<any>('/pedagogy/levels/', { token, method: 'POST', body });
+  return data?.data ?? data;
+}
+
 // ─── Classes ─────────────────────────────────────────────────────────────────
 
 export async function getClasses(
