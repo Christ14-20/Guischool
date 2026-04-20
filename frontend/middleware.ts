@@ -24,6 +24,8 @@ export async function middleware(request: NextRequest) {
   const localePrefix = /^\/(fr|en)/;
   const pathWithoutLocale = pathname.replace(localePrefix, '') || '/';
 
+  console.log(`[Middleware] Pathname: ${pathname} | WithoutLocale: ${pathWithoutLocale}`);
+
   // Vérifier si c'est une route protégée
   const matchedRoute = ROUTE_PERMISSIONS.find(({ pattern }) =>
     pattern.test(pathWithoutLocale)

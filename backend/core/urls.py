@@ -9,6 +9,11 @@ from drf_spectacular.views import (
     SpectacularSwaggerView,
 )
 
+# Personnalisation de l'interface d'administration
+admin.site.site_header = "Eduguinée 3.0 — Administration"
+admin.site.site_title = "Eduguinée Admin"
+admin.site.index_title = "Tableau de bord Eduguinée"
+
 urlpatterns = [
     # Admin Django
     path("admin/", admin.site.urls),
