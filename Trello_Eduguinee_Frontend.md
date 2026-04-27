@@ -624,14 +624,14 @@
 **Description :** Créer la page de fiche élève avec l'en-tête et le tab Profil.
 
 **Checklist :**
-- [ ] En-tête : avatar (photo élève ou initiales), matricule, nom complet, classe, `StatusBadge`
-- [ ] Structure `Tabs` : Profil, Notes, Présences, Finances, Historique
-- [ ] Tab Profil : affichage des infos personnelles + tuteur (lecture seule)
-- [ ] Bouton "Modifier" → formulaire d'édition inline ou `Sheet` (selon permissions)
-- [ ] Actions selon rôle (`PermissionGate`) :
-  - [ ] `ADMIN_SCHOOL` : Modifier, Archiver (`ConfirmDialog`), Réinscrire
-  - [ ] `SECRETAIRE` : Modifier profil
-- [ ] Données : `GET /students/{id}/`
+- [x] En-tête : avatar (photo élève ou initiales), matricule, nom complet, classe, `StatusBadge`
+- [x] Structure `Tabs` : Profil, Notes, Présences, Finances, Historique
+- [x] Tab Profil : affichage des infos personnelles + tuteur (lecture seule)
+- [x] Bouton "Modifier" → formulaire d'édition inline ou `Sheet` (selon permissions)
+- [x] Actions selon rôle (`PermissionGate`) :
+  - [x] `ADMIN_SCHOOL` : Modifier, Archiver (`ConfirmDialog`), Réinscrire
+  - [x] `SECRETAIRE` : Modifier profil
+- [x] Données : `GET /students/{id}/`
 
 **Labels :** `élèves`
 

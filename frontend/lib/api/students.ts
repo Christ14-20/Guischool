@@ -57,11 +57,16 @@ export type StudentItem = {
   last_name: string;
   full_name: string;
   birth_date?: string;
+  birth_place?: string;
+  gender?: 'M' | 'F' | string;
+  photo_url?: string;
   classe: number | null;
   classe_name: string;
   status: StudentStatus;
   guardian_name: string;
+  guardian_relationship?: string;
   guardian_phone: string;
+  guardian_email?: string;
 };
 
 type RawStudent = Record<string, unknown>;
@@ -98,11 +103,19 @@ function normalizeStudent(raw: RawStudent): StudentItem {
     full_name: [lastName, firstName].filter(Boolean).join(' ').trim() || toStringValue(raw.full_name),
     birth_date:
       toStringValue(raw.birth_date) || toStringValue(raw.date_of_birth) || toStringValue(raw.date_naissance),
+    birth_place:
+      toStringValue(raw.birth_place) || toStringValue(raw.lieu_naissance) || toStringValue(raw.place_of_birth),
+    gender: toStringValue(raw.gender) || toStringValue(raw.sexe),
+    photo_url: toStringValue(raw.photo_url) || toStringValue(raw.photo) || toStringValue(raw.avatar_url),
     classe: typeof raw.classe === 'number' ? raw.classe : null,
     classe_name: classeName,
     status,
     guardian_name: guardianName,
+    guardian_relationship:
+      toStringValue(raw.guardian_relationship) || toStringValue(raw.tuteur_lien) || toStringValue(raw.tutor_relationship),
     guardian_phone: guardianPhone,
+    guardian_email:
+      toStringValue(raw.guardian_email) || toStringValue(raw.tuteur_email) || toStringValue(raw.tutor_email),
   };
 }
 
@@ -116,6 +129,11 @@ export async function getStudents(
     count: Number(data?.count ?? 0),
     results: rows.map((item: RawStudent) => normalizeStudent(item)),
   };
+}
+
+export async function getStudent(token: string, id: string): Promise<StudentItem> {
+  const data = await request<any>(`/students/${id}/`, { token });
+  return normalizeStudent((data?.data ?? data) as RawStudent);
 }
 
 export type CreateStudentPayload = {
@@ -138,4 +156,25 @@ export type CreateStudentPayload = {
 export async function createStudent(token: string, body: CreateStudentPayload) {
   const data = await request<any>('/students/', { token, method: 'POST', body });
   return data?.data ?? data;
+}
+
+export async function updateStudent(
+  token: string,
+  id: string,
+  body: Partial<CreateStudentPayload>
+) {
+  const data = await request<any>(`/students/${id}/`, { token, method: 'PATCH', body });
+  return data?.data ?? data;
+}
+
+export async function archiveStudent(token: string, id: string) {
+  return request(`/students/${id}/archiver/`, { token, method: 'POST' });
+}
+
+export async function reinscribeStudent(
+  token: string,
+  id: string,
+  body: { school_year: number; classe: number }
+) {
+  return request(`/students/${id}/reinscription/`, { token, method: 'POST', body });
 }
