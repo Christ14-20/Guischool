@@ -298,6 +298,32 @@ export async function getGradeTemplate(token: string, classeId: string): Promise
 
 export async function getStudentGrades(
   token: string,
+  params: { eleve?: string; classe?: string; matiere?: number; periode?: string; annee?: number }
+) {
+  const query = new URLSearchParams();
+  if (params.eleve) query.append('eleve', params.eleve);
+  if (params.classe) query.append('classe', params.classe);
+  if (params.matiere) query.append('matiere', String(params.matiere));
+  if (params.periode) query.append('periode', params.periode);
+  if (params.annee) query.append('annee_scolaire', String(params.annee));
+
+  return request<any>(`/grades/?${query.toString()}`, { token });
+}
+
+export async function getClassRanking(
+  token: string,
+  classeId: string,
+  anneeId: string,
+  periode?: string
+) {
+  const query = new URLSearchParams({ classe: classeId, annee: anneeId });
+  if (periode) query.append('periode', periode);
+
+  return request<any[]>(`/grades/ranking/?${query.toString()}`, { token });
+}
+
+export async function getStudentGradesLegacy(
+  token: string,
   query: { eleve: string; periode: string }
 ): Promise<GradeItem[]> {
   const data = await request<any>('/grades/', { token, query });
@@ -322,4 +348,24 @@ export async function getStudentGrades(
       period: String(item.period ?? item.periode ?? query.periode),
     };
   });
+}
+
+export async function getYearEndDecisions(
+  token: string,
+  params: { annee?: string; classe?: string; decision?: string }
+) {
+  const query = new URLSearchParams();
+  if (params.annee) query.append('annee_scolaire', params.annee);
+  if (params.classe) query.append('classe_origine', params.classe);
+  if (params.decision) query.append('decision', params.decision);
+
+  return request<any>('/year-end-decisions/', { token, query: Object.fromEntries(query) });
+}
+
+export async function createYearEndDecision(token: string, payload: any) {
+  return request<any>('/year-end-decisions/', { token, method: 'POST', body: payload });
+}
+
+export async function bulkCreatePromotions(token: string, payload: any) {
+  return request<any>('/promotions/bulk/', { token, method: 'POST', body: payload });
 }

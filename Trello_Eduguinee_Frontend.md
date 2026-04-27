@@ -741,11 +741,11 @@
 **Description :** Créer la vue classement d'une classe par moyenne décroissante.
 
 **Checklist :**
-- [ ] Tableau trié par moyenne décroissante : rang, nom, moyenne générale, mention
-- [ ] `Badge` de mention coloré
-- [ ] Sélecteur de période
-- [ ] Bouton "Exporter PDF" → `react-pdf` → téléchargement du bulletin de classement
-- [ ] Données : `GET /pedagogy/grades/ranking/?classe={id}&periode=`
+- [x] Tableau trié par moyenne décroissante : rang, nom, moyenne générale, mention
+- [x] `Badge` de mention coloré
+- [x] Sélecteur de période
+- [x] Bouton "Exporter PDF" → `react-pdf` → téléchargement du bulletin de classement
+- [x] Données : `GET /pedagogy/grades/ranking/?classe={id}&periode=`
 
 **Labels :** `notes`
 
@@ -756,14 +756,14 @@
 **Description :** Créer l'interface de décision de passage de fin d'année.
 
 **Checklist :**
-- [ ] Accessible uniquement quand l'année scolaire est en statut `CLOTURE_EN_COURS`
-- [ ] Sélecteur de classe
-- [ ] Tableau : élève, moyenne archivée, mention, décision actuelle
-- [ ] Par ligne : `Select` décision (`ADMIS / REDOUBLE / ORIENTE / TRANSFERE / EXCLU`) + classe destination (si pertinent)
-- [ ] Pré-remplissage automatique : `ADMIS` si moyenne ≥ seuil de passage (configurable)
-- [ ] Alerte si élève a atteint le nb max de redoublements (`Badge` orange + `Tooltip`)
-- [ ] Bouton "Traitement groupé" → `AlertDialog` → `POST /promotions/bulk/`
-- [ ] Accessible uniquement à `ADMIN_SCHOOL`
+- [x] Accessible uniquement quand l'année scolaire est en statut `CLOTURE_EN_COURS`
+- [x] Sélecteur de classe
+- [x] Tableau : élève, moyenne archivée, mention, décision actuelle
+- [x] Par ligne : `Select` décision (`ADMIS / REDOUBLE / ORIENTE / TRANSFERE / EXCLU`) + classe destination (si pertinent)
+- [x] Pré-remplissage automatique : `ADMIS` si moyenne ≥ seuil de passage (configurable)
+- [x] Alerte si élève a atteint le nb max de redoublements (`Badge` orange + `Tooltip`)
+- [x] Bouton "Traitement groupé" → `AlertDialog` → `POST /promotions/bulk/`
+- [x] Accessible uniquement à `ADMIN_SCHOOL`
 
 **Labels :** `notes` `fin-d-année`
 

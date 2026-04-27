@@ -378,6 +378,26 @@ class GradeViewSet(viewsets.ModelViewSet):
 
         return response
 
+    @action(detail=False, methods=["get"], url_path="ranking")
+    def ranking(self, request):
+        """Classement d'une classe pour une période donnée."""
+        from apps.pedagogy.services import grading_service
+
+        classe_id = request.query_params.get("classe")
+        annee_id = request.query_params.get("annee")
+        periode = request.query_params.get("periode")
+
+        if not classe_id or not annee_id:
+            return Response({"error": "Paramètres 'classe' et 'annee' obligatoires."}, status=400)
+
+        rankings = grading_service.compute_class_ranking(
+            classe_id=classe_id,
+            annee_scolaire_id=annee_id,
+            periode=periode
+        )
+
+        return Response(rankings)
+
 
 # ── Décisions de fin d'année ────────────────────────────────────────
 

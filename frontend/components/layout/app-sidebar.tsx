@@ -49,6 +49,7 @@ const NAV_ITEMS: NavItem[] = [
       { label: 'Matieres', href: '/app/pedagogie/subjects' },
       { label: 'Emploi du temps', href: '/app/pedagogie/timetable' },
       { label: 'Presences', href: '/app/pedagogie/attendance' },
+      { label: 'Fin d\'année', href: '/app/year-end', roles: [ROLES.ADMIN_SCHOOL] },
     ],
   },
   {
