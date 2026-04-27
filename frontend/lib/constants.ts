@@ -33,6 +33,7 @@ export const PERMISSIONS = {
   // Finance
   FINANCE_VIEW: 'finance:view',
   FINANCE_CREATE: 'finance:create',
+  FINANCE_EDIT: 'finance:edit',
   // Paramètres
   SETTINGS_VIEW: 'settings:view',
   SETTINGS_EDIT: 'settings:edit',
@@ -57,6 +58,7 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     PERMISSIONS.GRADE_BULK,
     PERMISSIONS.FINANCE_VIEW,
     PERMISSIONS.FINANCE_CREATE,
+    PERMISSIONS.FINANCE_EDIT,
     PERMISSIONS.SETTINGS_VIEW,
     PERMISSIONS.SETTINGS_EDIT,
     PERMISSIONS.YEAR_END_MANAGE,
@@ -69,6 +71,7 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     PERMISSIONS.GRADE_BULK,
     PERMISSIONS.FINANCE_VIEW,
     PERMISSIONS.FINANCE_CREATE,
+    PERMISSIONS.FINANCE_EDIT,
   ],
   ENSEIGNANT: [
     PERMISSIONS.STUDENT_VIEW,

@@ -99,7 +99,7 @@ class StudentListSerializer(serializers.ModelSerializer):
         model = Student
         fields = [
             "id", "matricule", "nom", "prenom", "sexe",
-            "statut", "classe_name", "tuteur_telephone",
+            "statut", "classe_name", "tuteur_nom", "tuteur_telephone",
         ]
         read_only_fields = ["id", "matricule", "classe_name"]
 
@@ -128,28 +128,38 @@ class StudentDetailSerializer(serializers.ModelSerializer):
 
 
 class EnrollmentSerializer(serializers.ModelSerializer):
+    classe_name = serializers.CharField(source="classe.name", read_only=True)
+    annee_scolaire_label = serializers.CharField(source="annee_scolaire.label", read_only=True)
+
     class Meta:
         model = Enrollment
         fields = [
-            "id", "eleve", "classe", "annee_scolaire",
+            "id", "eleve", "classe", "classe_name",
+            "annee_scolaire", "annee_scolaire_label",
             "type_inscription", "date_inscription",
             "inscrit_par", "frais_payes", "observations",
         ]
-        read_only_fields = ["id", "date_inscription", "inscrit_par"]
+        read_only_fields = ["id", "date_inscription", "inscrit_par", "classe_name", "annee_scolaire_label"]
 
 
 class GradeSerializer(serializers.ModelSerializer):
     note_convertie = serializers.DecimalField(max_digits=5, decimal_places=2, read_only=True)
+    matiere_name = serializers.CharField(source="matiere.name", read_only=True)
+    annee_scolaire_label = serializers.CharField(source="annee_scolaire.label", read_only=True)
 
     class Meta:
         model = Grade
         fields = [
-            "id", "tenant", "eleve", "matiere", "annee_scolaire", "periode",
+            "id", "tenant", "eleve", "matiere", "matiere_name",
+            "annee_scolaire", "annee_scolaire_label", "periode",
             "type_note", "note", "note_sur", "note_convertie", "coefficient",
             "saisie_par", "valide", "justification_modification",
             "created_at", "updated_at",
         ]
-        read_only_fields = ["id", "note_convertie", "saisie_par", "created_at", "updated_at"]
+        read_only_fields = [
+            "id", "note_convertie", "saisie_par", "created_at", "updated_at",
+            "matiere_name", "annee_scolaire_label"
+        ]
 
 
 class GradeValidateSerializer(serializers.Serializer):
@@ -160,17 +170,23 @@ class YearEndDecisionSerializer(serializers.ModelSerializer):
     eleve_nom = serializers.SerializerMethodField()
     decision_display = serializers.CharField(source="get_decision_display", read_only=True)
     mention_display = serializers.CharField(source="get_mention_display", read_only=True)
+    annee_scolaire_label = serializers.CharField(source="annee_scolaire.label", read_only=True)
+    classe_origine_name = serializers.CharField(source="classe_origine.name", read_only=True)
+    classe_destination_name = serializers.CharField(source="classe_destination.name", read_only=True)
 
     class Meta:
         model = YearEndDecision
         fields = [
-            "id", "eleve", "eleve_nom", "annee_scolaire",
-            "classe_origine", "decision", "decision_display",
-            "classe_destination", "moyenne_annuelle",
+            "id", "eleve", "eleve_nom", "annee_scolaire", "annee_scolaire_label",
+            "classe_origine", "classe_origine_name", "decision", "decision_display",
+            "classe_destination", "classe_destination_name", "moyenne_annuelle",
             "mention", "mention_display", "prise_par",
             "date_decision", "commentaire",
         ]
-        read_only_fields = ["id", "date_decision", "prise_par", "eleve_nom"]
+        read_only_fields = [
+            "id", "date_decision", "prise_par", "eleve_nom",
+            "annee_scolaire_label", "classe_origine_name", "classe_destination_name"
+        ]
 
     def get_eleve_nom(self, obj):
         return f"{obj.eleve.nom} {obj.eleve.prenom}"

@@ -672,10 +672,10 @@
 **Description :** Afficher le solde et l'historique financier d'un élève dans sa fiche.
 
 **Checklist :**
-- [ ] Solde dû mis en évidence (montant en rouge si > 0)
-- [ ] Liste des paiements : date, montant, méthode, n° reçu
-- [ ] Bouton "Enregistrer un paiement" → ouvre le `Dialog` de paiement (MODULE FINANCE)
-- [ ] Données : `GET /finance/payments/?etudiant={id}`
+- [x] Solde dû mis en évidence (montant en rouge si > 0)
+- [x] Liste des paiements : date, montant, méthode, n° reçu
+- [x] Bouton "Enregistrer un paiement" → ouvre le `Dialog` de paiement (MODULE FINANCE)
+- [x] Données : `GET /finance/payments/?etudiant={id}`
 
 **Labels :** `élèves` `finance`
 
@@ -686,11 +686,11 @@
 **Description :** Afficher la timeline des événements de la vie scolaire de l'élève.
 
 **Checklist :**
-- [ ] Timeline verticale chronologique
-- [ ] Types d'événements : inscription, changement de classe, décision fin d'année, modification profil, paiement
-- [ ] Icône et couleur par type d'événement
-- [ ] Date et auteur de chaque événement
-- [ ] Données : `GET /students/{id}/history/`
+- [x] Timeline verticale chronologique
+- [x] Types d'événements : inscription, changement de classe, décision fin d'année, modification profil, paiement
+- [x] Icône et couleur par type d'événement
+- [x] Date et auteur de chaque événement
+- [x] Données : `GET /students/{id}/history/`
 
 **Labels :** `élèves`
 

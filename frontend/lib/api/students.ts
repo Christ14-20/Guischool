@@ -69,6 +69,12 @@ export type StudentItem = {
   guardian_email?: string;
 };
 
+export type StudentHistory = {
+  inscriptions: any[];
+  decisions_fin_annee: any[];
+  notes_validees: any[];
+};
+
 type RawStudent = Record<string, unknown>;
 
 function toStringValue(value: unknown) {
@@ -177,4 +183,9 @@ export async function reinscribeStudent(
   body: { school_year: number; classe: number }
 ) {
   return request(`/students/${id}/reinscription/`, { token, method: 'POST', body });
+}
+
+export async function getStudentHistory(token: string, id: string): Promise<StudentHistory> {
+  const data = await request<any>(`/students/${id}/historique/`, { token });
+  return data?.data ?? data;
 }

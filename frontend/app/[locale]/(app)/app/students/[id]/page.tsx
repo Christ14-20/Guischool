@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { useForm } from 'react-hook-form';
+import { AlertCircle, Calendar, CreditCard, Gavel, Star, UserPlus } from 'lucide-react';
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
 import { toast } from 'sonner';
 import { z } from 'zod';
@@ -30,8 +31,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { useRole } from '@/hooks/useRole';
 import { getAttendances, getStudentGrades, type AttendanceItem, type GradeItem } from '@/lib/api/pedagogy';
-import { archiveStudent, getStudent, reinscribeStudent, type StudentItem, updateStudent } from '@/lib/api/students';
+import { getStudentHistory, getStudent, type StudentHistory, type StudentItem, updateStudent, archiveStudent, reinscribeStudent } from '@/lib/api/students';
+import { getStudentFinancialSummary, getStudentPayments, type PaymentItem, type StudentFinancialSummary } from '@/lib/api/finance';
 import { PERMISSIONS, ROLES } from '@/lib/constants';
+import { cn, formatCurrency, formatDate } from '@/lib/utils';
 
 const editSchema = z.object({
   last_name: z.string().min(1, 'Le nom est requis.'),
@@ -74,6 +77,12 @@ export default function StudentDetailPage() {
   const [attendancesLoading, setAttendancesLoading] = useState(false);
   const [attendances, setAttendances] = useState<AttendanceItem[]>([]);
   const [attendanceView, setAttendanceView] = useState<AttendanceViewMode>('list');
+  const [financeLoading, setFinanceLoading] = useState(false);
+  const [payments, setPayments] = useState<PaymentItem[]>([]);
+  const [financeSummary, setFinanceSummary] = useState<StudentFinancialSummary | null>(null);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [history, setHistory] = useState<StudentHistory | null>(null);
+
   const canEditProfile = useRole([ROLES.ADMIN_SCHOOL, ROLES.SECRETAIRE]);
   const isAdminSchool = useRole([ROLES.ADMIN_SCHOOL]);
 
@@ -121,7 +130,7 @@ export default function StudentDetailPage() {
     if (!token || !id) return;
     let mounted = true;
     setGradesLoading(true);
-    getStudentGrades(token, { etudiant: id, periode: selectedPeriod })
+    getStudentGrades(token, { eleve: id, periode: selectedPeriod })
       .then((data) => {
         if (!mounted) return;
         setGrades(data);
@@ -142,7 +151,7 @@ export default function StudentDetailPage() {
     if (!token || !id) return;
     let mounted = true;
     setAttendancesLoading(true);
-    getAttendances(token, { etudiant: id, page_size: 200 })
+    getAttendances(token, { student: id, page_size: 200 })
       .then((response) => {
         if (!mounted) return;
         setAttendances(response.results);
@@ -158,6 +167,106 @@ export default function StudentDetailPage() {
       mounted = false;
     };
   }, [token, id]);
+
+  useEffect(() => {
+    if (!token || !id) return;
+    let mounted = true;
+    setFinanceLoading(true);
+
+    Promise.all([
+      getStudentPayments(token, id),
+      getStudentFinancialSummary(token, id)
+    ])
+      .then(([paymentsRes, summaryRes]) => {
+        if (!mounted) return;
+        setPayments(paymentsRes.results);
+        setFinanceSummary(summaryRes);
+      })
+      .catch((error) => {
+        toast.error(error instanceof Error ? error.message : 'Impossible de charger les données financières.');
+      })
+      .finally(() => {
+        if (mounted) setFinanceLoading(false);
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, [token, id]);
+
+  useEffect(() => {
+    if (!token || !id) return;
+    let mounted = true;
+    setHistoryLoading(true);
+    getStudentHistory(token, id)
+      .then((data) => {
+        if (mounted) setHistory(data);
+      })
+      .catch((error) => {
+        toast.error(error instanceof Error ? error.message : "Impossible de charger l'historique.");
+      })
+      .finally(() => {
+        if (mounted) setHistoryLoading(false);
+      });
+    return () => {
+      mounted = false;
+    };
+  }, [token, id]);
+
+  const timelineEvents = useMemo(() => {
+    if (!history && payments.length === 0) return [];
+    const events: any[] = [];
+
+    // Inscriptions
+    history?.inscriptions.forEach((ins) => {
+      events.push({
+        date: ins.date_inscription,
+        type: 'INSCRIPTION',
+        title: ins.type_inscription === 'REINSCRIPTION' ? 'Réinscription' : 'Inscription initiale',
+        description: `Classe: ${ins.classe_name || '—'} (${ins.annee_scolaire_label || '—'})`,
+        icon: 'UserPlus',
+        color: 'blue',
+      });
+    });
+
+    // Décisions fin d'année
+    history?.decisions_fin_annee.forEach((dec) => {
+      events.push({
+        date: dec.date_decision,
+        type: 'DECISION',
+        title: `Décision: ${dec.decision_display}`,
+        description: `Année: ${dec.annee_scolaire_label || '—'} - Moyenne: ${dec.moyenne_annuelle} - Mention: ${dec.mention_display}`,
+        icon: 'Gavel',
+        color: 'purple',
+      });
+    });
+
+    // Notes validées
+    history?.notes_validees.forEach((grade) => {
+      events.push({
+        date: grade.created_at,
+        type: 'NOTE',
+        title: `Note validée: ${grade.matiere_name}`,
+        description: `Période: ${grade.periode} - Note: ${grade.note_convertie}/20`,
+        icon: 'Star',
+        color: 'orange',
+      });
+    });
+
+    // Paiements
+    payments.forEach((pay) => {
+      events.push({
+        date: pay.date,
+        type: 'PAIEMENT',
+        title: `Paiement reçu`,
+        description: `${formatCurrency(pay.amount)} (${pay.payment_method}) - Reçu: ${pay.receipt_number || '—'}`,
+        icon: 'CreditCard',
+        color: 'green',
+      });
+    });
+
+    return events.sort((a, b) => b.date.localeCompare(a.date));
+  }, [history, payments]);
 
   const profileRows = useMemo(
     () => [
@@ -179,14 +288,14 @@ export default function StudentDetailPage() {
     if (!token || !student) return;
     try {
       await updateStudent(token, student.id, {
-        last_name: values.last_name,
-        first_name: values.first_name,
-        birth_place: values.birth_place || undefined,
-        guardian_name: values.guardian_name,
-        guardian_phone: values.guardian_phone,
-        guardian_email: values.guardian_email || undefined,
+        nom: values.last_name,
+        prenom: values.first_name,
+        lieu_naissance: values.birth_place || undefined,
+        tuteur_nom: values.guardian_name,
+        tuteur_telephone: values.guardian_phone,
+        tuteur_email: values.guardian_email || undefined,
         observations: values.observations || undefined,
-      });
+      } as any);
       toast.success('Profil élève mis à jour.');
       setEditOpen(false);
       await loadStudent();
@@ -514,15 +623,120 @@ export default function StudentDetailPage() {
             </TabsContent>
             <TabsContent value="finances">
               <Card>
-                <CardContent className="py-2 text-sm text-muted-foreground">
-                  Onglet Finances en cours d'implémentation (`STUDENTS-06`).
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <CardTitle>État financier et paiements</CardTitle>
+                  <PermissionGate permission={PERMISSIONS.FINANCE_EDIT} fallback={null}>
+                    <Button onClick={() => router.push(`/${locale}/app/finance/payments/new?student=${id}`)}>
+                      Enregistrer un paiement
+                    </Button>
+                  </PermissionGate>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {financeLoading ? (
+                    <p className="text-sm text-muted-foreground">Chargement des finances...</p>
+                  ) : (
+                    <>
+                      <div className="grid gap-4 md:grid-cols-3">
+                        <div className="rounded-lg border p-4">
+                          <p className="text-xs text-muted-foreground">Total dû (Année en cours)</p>
+                          <p className="text-xl font-bold">{formatCurrency(financeSummary?.total_due || 0)}</p>
+                        </div>
+                        <div className="rounded-lg border p-4">
+                          <p className="text-xs text-muted-foreground">Total payé</p>
+                          <p className="text-xl font-bold text-green-600">{formatCurrency(financeSummary?.total_paid || 0)}</p>
+                        </div>
+                        <div className="rounded-lg border p-4">
+                          <p className="text-xs text-muted-foreground">Solde restant</p>
+                          <p className={`text-xl font-bold ${(financeSummary?.balance || 0) > 0 ? 'text-destructive' : 'text-green-600'}`}>
+                            {formatCurrency(financeSummary?.balance || 0)}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="space-y-3">
+                        <h4 className="text-sm font-medium">Historique des paiements</h4>
+                        {payments.length === 0 ? (
+                          <p className="py-4 text-center text-sm text-muted-foreground border rounded-lg border-dashed">
+                            Aucun paiement enregistré pour le moment.
+                          </p>
+                        ) : (
+                          <div className="overflow-x-auto rounded-lg border">
+                            <table className="w-full text-sm">
+                              <thead className="bg-muted/40">
+                                <tr>
+                                  <th className="px-3 py-2 text-left font-medium">Date</th>
+                                  <th className="px-3 py-2 text-left font-medium">Référence / Reçu</th>
+                                  <th className="px-3 py-2 text-left font-medium">Méthode</th>
+                                  <th className="px-3 py-2 text-right font-medium">Montant</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {payments.map((p) => (
+                                  <tr key={p.id} className="border-t">
+                                    <td className="px-3 py-2">{formatDate(p.date)}</td>
+                                    <td className="px-3 py-2 font-mono text-xs">
+                                      {p.receipt_number || p.reference_number || '—'}
+                                    </td>
+                                    <td className="px-3 py-2">
+                                      <StatusBadge status={p.payment_method} />
+                                    </td>
+                                    <td className="px-3 py-2 text-right font-semibold">
+                                      {formatCurrency(p.amount)}
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>
             <TabsContent value="historique">
               <Card>
-                <CardContent className="py-2 text-sm text-muted-foreground">
-                  Onglet Historique en cours d'implémentation (`STUDENTS-07`).
+                <CardHeader>
+                  <CardTitle>Fil d'actualité scolaire</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {historyLoading ? (
+                    <p className="text-sm text-muted-foreground">Chargement de l'historique...</p>
+                  ) : timelineEvents.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">Aucun événement enregistré.</p>
+                  ) : (
+                    <div className="relative space-y-6 before:absolute before:left-4 before:top-2 before:h-[calc(100%-16px)] before:w-0.5 before:bg-muted">
+                      {timelineEvents.map((event, idx) => (
+                        <div key={idx} className="relative pl-10">
+                          <div
+                            className={cn(
+                              "absolute left-0 flex h-8 w-8 items-center justify-center rounded-full border bg-background ring-4 ring-background",
+                              event.color === 'blue' && "text-blue-600",
+                              event.color === 'green' && "text-green-600",
+                              event.color === 'purple' && "text-purple-600",
+                              event.color === 'orange' && "text-orange-600"
+                            )}
+                          >
+                            {event.icon === 'UserPlus' && <UserPlus className="h-4 w-4" />}
+                            {event.icon === 'Gavel' && <Gavel className="h-4 w-4" />}
+                            {event.icon === 'CreditCard' && <CreditCard className="h-4 w-4" />}
+                            {event.icon === 'Star' && <Star className="h-4 w-4" />}
+                            {!['UserPlus', 'Gavel', 'CreditCard', 'Star'].includes(event.icon) && (
+                              <div className="h-2 w-2 rounded-full bg-current" />
+                            )}
+                          </div>
+                          <div className="flex flex-col gap-1">
+                            <div className="flex items-center justify-between">
+                              <h5 className="text-sm font-semibold">{event.title}</h5>
+                              <time className="text-xs text-muted-foreground">{formatDate(event.date)}</time>
+                            </div>
+                            <p className="text-sm text-muted-foreground">{event.description}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>

@@ -262,9 +262,9 @@ export async function createAttendance(token: string, body: Record<string, unkno
 
 export async function getStudentGrades(
   token: string,
-  query: { etudiant: string; periode: string }
+  query: { eleve: string; periode: string }
 ): Promise<GradeItem[]> {
-  const data = await request<any>('/pedagogy/grades/', { token, query });
+  const data = await request<any>('/grades/', { token, query });
   const list = Array.isArray(data?.results) ? data.results : Array.isArray(data) ? data : [];
 
   return list.map((item: Record<string, unknown>) => {
