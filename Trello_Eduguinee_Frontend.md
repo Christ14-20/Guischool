@@ -591,29 +591,29 @@
 **Description :** Créer le formulaire multi-sections d'inscription d'un nouvel élève.
 
 **Checklist :**
-- [ ] **Section 1 — Informations personnelles**
-  - [ ] Nom* (`Input`)
-  - [ ] Prénom(s)* (`Input`)
-  - [ ] Date de naissance* (`DatePicker`, validation : pas dans le futur)
-  - [ ] Lieu de naissance (`Input`)
-  - [ ] Sexe* (`RadioGroup` : M / F)
-  - [ ] Photo (`FileUploader` — JPG/PNG, max 2 Mo, prévisualisation)
-- [ ] **Section 2 — Tuteur légal**
-  - [ ] Nom complet tuteur* (`Input`)
-  - [ ] Lien de parenté* (`Select` : Père / Mère / Tuteur / Autre)
-  - [ ] Téléphone* (`Input`, validation regex `^\+224[0-9]{9}$`, format affiché)
-  - [ ] Email (`Input`, optionnel)
-- [ ] **Section 3 — Scolarité**
-  - [ ] Année scolaire* (`Select`, filtrée : statuts `OUVERTE` et `EN_COURS` uniquement)
-  - [ ] Classe* (`Select`, filtrée par année scolaire, capacité affichée)
-  - [ ] Type d'inscription* (`Select` : Nouvelle / Réinscription / Transfert entrant)
-  - [ ] Observations (`Textarea`, optionnel)
-- [ ] Validation Zod globale avec messages d'erreur inline
-- [ ] Alerte si classe pleine → `AlertDialog` de confirmation avant soumission
-- [ ] Vérification doublon (nom + prénom + date de naissance) via appel API avant submit
-- [ ] Bouton "Enregistrer" avec loading state
-- [ ] `POST /students/`
-- [ ] Toast succès → redirection vers la fiche élève créée
+- [x] **Section 1 — Informations personnelles**
+  - [x] Nom* (`Input`)
+  - [x] Prénom(s)* (`Input`)
+  - [x] Date de naissance* (`DatePicker`, validation : pas dans le futur)
+  - [x] Lieu de naissance (`Input`)
+  - [x] Sexe* (`RadioGroup` : M / F)
+  - [x] Photo (`FileUploader` — JPG/PNG, max 2 Mo, prévisualisation)
+- [x] **Section 2 — Tuteur légal**
+  - [x] Nom complet tuteur* (`Input`)
+  - [x] Lien de parenté* (`Select` : Père / Mère / Tuteur / Autre)
+  - [x] Téléphone* (`Input`, validation regex `^\+224[0-9]{9}$`, format affiché)
+  - [x] Email (`Input`, optionnel)
+- [x] **Section 3 — Scolarité**
+  - [x] Année scolaire* (`Select`, filtrée : statuts `OUVERTE` et `EN_COURS` uniquement)
+  - [x] Classe* (`Select`, filtrée par année scolaire, capacité affichée)
+  - [x] Type d'inscription* (`Select` : Nouvelle / Réinscription / Transfert entrant)
+  - [x] Observations (`Textarea`, optionnel)
+- [x] Validation Zod globale avec messages d'erreur inline
+- [x] Alerte si classe pleine → `AlertDialog` de confirmation avant soumission
+- [x] Vérification doublon (nom + prénom + date de naissance) via appel API avant submit
+- [x] Bouton "Enregistrer" avec loading state
+- [x] `POST /students/`
+- [x] Toast succès → redirection vers la fiche élève créée
 
 **Labels :** `élèves` `formulaire` `priorité-haute`
 

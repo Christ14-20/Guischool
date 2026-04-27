@@ -56,6 +56,7 @@ export type StudentItem = {
   first_name: string;
   last_name: string;
   full_name: string;
+  birth_date?: string;
   classe: number | null;
   classe_name: string;
   status: StudentStatus;
@@ -95,6 +96,8 @@ function normalizeStudent(raw: RawStudent): StudentItem {
     first_name: firstName,
     last_name: lastName,
     full_name: [lastName, firstName].filter(Boolean).join(' ').trim() || toStringValue(raw.full_name),
+    birth_date:
+      toStringValue(raw.birth_date) || toStringValue(raw.date_of_birth) || toStringValue(raw.date_naissance),
     classe: typeof raw.classe === 'number' ? raw.classe : null,
     classe_name: classeName,
     status,
@@ -113,4 +116,26 @@ export async function getStudents(
     count: Number(data?.count ?? 0),
     results: rows.map((item: RawStudent) => normalizeStudent(item)),
   };
+}
+
+export type CreateStudentPayload = {
+  last_name: string;
+  first_name: string;
+  birth_date: string;
+  birth_place?: string;
+  gender: 'M' | 'F';
+  photo_url?: string;
+  guardian_name: string;
+  guardian_relationship: 'PERE' | 'MERE' | 'TUTEUR' | 'AUTRE';
+  guardian_phone: string;
+  guardian_email?: string;
+  school_year: number;
+  classe: number;
+  registration_type: 'NOUVELLE' | 'REINSCRIPTION' | 'TRANSFERT_ENTRANT';
+  observations?: string;
+};
+
+export async function createStudent(token: string, body: CreateStudentPayload) {
+  const data = await request<any>('/students/', { token, method: 'POST', body });
+  return data?.data ?? data;
 }
