@@ -102,6 +102,21 @@ export type TimetableSlotItem = {
   end_time: string;
 };
 
+export type EvaluationItem = {
+  id: number;
+  classe: number;
+  subject: number;
+  subject_name?: string;
+  teacher?: string;
+  type: 'INTERROGATION' | 'DEVOIR' | 'COMPOSITION' | string;
+  title: string;
+  max_score: number;
+  coefficient: number;
+  date: string;
+  is_published: boolean;
+  is_locked: boolean;
+};
+
 export type AttendanceItem = {
   id: number;
   student: string;
@@ -253,12 +268,27 @@ export async function bulkCreateAttendances(token: string, records: Record<strin
   return data;
 }
 
-export async function createAttendance(token: string, body: Record<string, unknown>) {
-  const data = await request<any>('/pedagogy/attendances/', { token, method: 'POST', body });
+// ─── Evaluations ─────────────────────────────────────────────────────────────
+export async function getEvaluations(
+  token: string,
+  query?: Record<string, string | number | undefined>
+): Promise<PaginatedResult<EvaluationItem>> {
+  const data = await request<any>('/pedagogy/evaluations/', { token, query });
+  return { count: Number(data?.count ?? 0), results: Array.isArray(data?.results) ? data.results : [] };
+}
+
+export async function createEvaluation(token: string, body: Record<string, unknown>) {
+  const data = await request<any>('/pedagogy/evaluations/', { token, method: 'POST', body });
   return data?.data ?? data;
 }
 
 // ─── Grades ──────────────────────────────────────────────────────────────────
+export async function bulkCreateGrades(token: string, grades: any[]) {
+  // Le backend n'a pas encore de endpoint bulk dédié, on va faire une boucle pour l'instant
+  // ou on pourra ajouter un endpoint bulk plus tard.
+  const promises = grades.map(g => request('/grades/', { token, method: 'POST', body: g }));
+  return Promise.all(promises);
+}
 
 export async function getStudentGrades(
   token: string,
