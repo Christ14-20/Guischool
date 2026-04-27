@@ -284,10 +284,16 @@ export async function createEvaluation(token: string, body: Record<string, unkno
 
 // ─── Grades ──────────────────────────────────────────────────────────────────
 export async function bulkCreateGrades(token: string, grades: any[]) {
-  // Le backend n'a pas encore de endpoint bulk dédié, on va faire une boucle pour l'instant
-  // ou on pourra ajouter un endpoint bulk plus tard.
-  const promises = grades.map(g => request('/grades/', { token, method: 'POST', body: g }));
-  return Promise.all(promises);
+  return request<any>('/grades/bulk/', { token, method: 'POST', body: grades });
+}
+
+export async function getGradeTemplate(token: string, classeId: string): Promise<Blob> {
+  const url = `${API_BASE}/grades/template/?classe=${classeId}`;
+  const response = await fetch(url, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!response.ok) throw new Error('Impossible de générer le modèle.');
+  return response.blob();
 }
 
 export async function getStudentGrades(

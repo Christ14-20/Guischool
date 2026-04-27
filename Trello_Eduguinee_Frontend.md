@@ -705,15 +705,15 @@
 **Description :** Créer la page principale de saisie des notes par classe et matière.
 
 **Checklist :**
-- [ ] Sélecteurs en cascade : Année scolaire → Classe → Matière → Période → Type de note
-- [ ] Tableau de saisie : une ligne par élève
-  - [ ] Colonnes : Matricule, Nom, Note (champ numérique), Barème (`Select` : /20 · /40 · /100), Note convertie /20 (calculée en temps réel), Commentaire (`Input`)
-- [ ] Note rouge si note convertie < 10/20 (indicateur visuel)
-- [ ] Bouton "Enregistrer en brouillon" → `POST /pedagogy/grades/` (statut brouillon)
-- [ ] Bouton "Valider" (ADMIN_SCHOOL uniquement via `PermissionGate`) → changement de statut
-- [ ] Loading state sur les boutons
-- [ ] Toast succès/erreur
-- [ ] Données : `GET /students/?classe=&annee=`, `POST /pedagogy/grades/`
+- [x] Sélecteurs en cascade : Année scolaire → Classe → Matière → Période → Type de note
+- [x] Tableau de saisie : une ligne par élève
+  - [x] Colonnes : Matricule, Nom, Note (champ numérique), Barème (`Select` : /20 · /40 · /100), Note convertie /20 (calculée en temps réel), Commentaire (`Input`)
+- [x] Note rouge si note convertie < 10/20 (indicateur visuel)
+- [x] Bouton "Enregistrer en brouillon" → `POST /pedagogy/grades/` (statut brouillon)
+- [x] Bouton "Valider" (ADMIN_SCHOOL uniquement via `PermissionGate`) → changement de statut
+- [x] Loading state sur les boutons
+- [x] Toast succès/erreur
+- [x] Données : `GET /students/?classe=&annee=`, `POST /pedagogy/grades/`
 
 **Labels :** `notes` `priorité-haute`
 
@@ -724,13 +724,13 @@
 **Description :** Créer l'interface d'import de notes par fichier CSV.
 
 **Checklist :**
-- [ ] Bouton "Télécharger le modèle CSV" → `GET /pedagogy/grades/template/`
-- [ ] `FileUploader` : accepte `.csv` uniquement
-- [ ] Aperçu du fichier avant validation : tableau des données parsées
-- [ ] Indicateur d'erreurs de parsing (lignes invalides en rouge)
-- [ ] Bouton "Valider l'import" → `POST /pedagogy/grades/bulk/`
-- [ ] Rapport après import : nb notes importées, nb erreurs
-- [ ] Accessible uniquement à `ADMIN_SCHOOL` et `SECRETAIRE`
+- [x] Bouton "Télécharger le modèle CSV" → `GET /grades/template/`
+- [x] `FileUploader` : accepte `.csv` uniquement
+- [x] Aperçu du fichier avant validation : tableau des données parsées
+- [x] Indicateur d'erreurs de parsing (lignes invalides en rouge)
+- [x] Bouton "Valider l'import" → `POST /grades/bulk/`
+- [x] Rapport après import : nb notes importées, nb erreurs
+- [x] Accessible uniquement à `ADMIN_SCHOOL` et `SECRETAIRE`
 
 **Labels :** `notes`
 

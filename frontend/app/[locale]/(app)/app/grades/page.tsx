@@ -1,6 +1,6 @@
 'use client';
 
-import { Check, Loader2, Save, Trash2, UserCheck } from 'lucide-react';
+import { Check, Loader2, Save, Trash2, Upload, UserCheck } from 'lucide-react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { useSession } from 'next-auth/react';
@@ -371,6 +371,10 @@ export default function GradesPage() {
             <CardTitle className="text-base">Liste des élèves</CardTitle>
             <div className="flex gap-2">
                <PermissionGate permission={PERMISSIONS.GRADE_CREATE}>
+                  <Button variant="outline" onClick={() => router.push(`${pathname}/bulk`)}>
+                    <Upload className="mr-2 h-4 w-4" />
+                    Import CSV
+                  </Button>
                   <Button onClick={handleSave} disabled={saving || students.length === 0}>
                     {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
                     Enregistrer tout

@@ -307,6 +307,77 @@ class GradeViewSet(viewsets.ModelViewSet):
             return Response({"status": "error", "message": result["error"]}, status=400)
         return Response({"status": "success", "message": "Note validée."})
 
+    @action(detail=False, methods=["post"], url_path="bulk")
+    def bulk_create(self, request):
+        """Création groupée de notes depuis un JSON (issu d'un CSV ou d'une grille)."""
+        from apps.pedagogy.models import Student
+
+        data = request.data
+        if not isinstance(data, list):
+            return Response({"status": "error", "message": "Liste attendue."}, status=400)
+
+        created_count = 0
+        errors = []
+
+        for index, item in enumerate(data):
+            # Résolution matricule -> eleve_id si nécessaire
+            if "eleve_matricule" in item and not item.get("eleve"):
+                try:
+                    student = Student.objects.get(
+                        tenant=self.request.user.tenant,
+                        matricule=item["eleve_matricule"]
+                    )
+                    item["eleve"] = str(student.id)
+                except Student.DoesNotExist:
+                    errors.append({"index": index, "errors": {"eleve_matricule": "Élève introuvable."}})
+                    continue
+
+            serializer = self.get_serializer(data=item)
+            if serializer.is_valid():
+                serializer.save(tenant=self.request.user.tenant, saisie_par=self.request.user)
+                created_count += 1
+            else:
+                errors.append({"index": index, "errors": serializer.errors})
+
+        return Response({
+            "status": "success",
+            "created_count": created_count,
+            "errors": errors
+        }, status=status.HTTP_201_CREATED if created_count > 0 else status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=False, methods=["get"], url_path="template")
+    def template(self, request):
+        """Génère un modèle CSV avec les matricules des élèves d'une classe."""
+        import csv
+        from django.http import HttpResponse
+        from apps.pedagogy.models import Enrollment
+
+        classe_id = request.query_params.get("classe")
+        if not classe_id:
+            return Response({"error": "Paramètre 'classe' manquant."}, status=400)
+
+        response = HttpResponse(content_type="text/csv")
+        response["Content-Disposition"] = f'attachment; filename="modele_notes_classe_{classe_id}.csv"'
+
+        writer = csv.writer(response)
+        writer.writerow(["matricule", "nom_complet", "note", "appreciation"])
+
+        enrollments = Enrollment.objects.filter(
+            classe_id=classe_id,
+            annee_scolaire__is_current=True,
+            eleve__statut="ACTIF"
+        ).select_related("eleve")
+
+        for enr in enrollments:
+            writer.writerow([
+                enr.eleve.matricule,
+                f"{enr.eleve.nom} {enr.eleve.prenom}",
+                "",
+                ""
+            ])
+
+        return response
+
 
 # ── Décisions de fin d'année ────────────────────────────────────────
 
