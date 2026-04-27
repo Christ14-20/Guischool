@@ -343,6 +343,7 @@ class Grade(models.Model):
         ("ANNUEL", "Annuel"),
     ]
     TYPE_NOTE_CHOICES = [
+        ("INTERROGATION", "Interrogation"),
         ("DEVOIR", "Devoir"),
         ("COMPOSITION", "Composition"),
         ("EXAMEN", "Examen"),

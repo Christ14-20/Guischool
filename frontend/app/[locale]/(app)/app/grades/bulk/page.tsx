@@ -1,6 +1,6 @@
 'use client';
 
-import { ArrowLeft, Download, FileSpreadsheet, Loader2, Save, Upload } from 'lucide-react';
+import { ArrowLeft, Download, FileSpreadsheet, Loader2, Save, Trash2, Upload } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -145,6 +145,10 @@ export default function GradesBulkPage() {
         setIsParsing(false);
       },
     });
+  };
+  const removeRow = (index: number) => {
+    setRows((prev) => prev.filter((_, i) => i !== index));
+    toast.info('Ligne supprimée.');
   };
 
   const handleImport = async () => {
@@ -307,6 +311,7 @@ export default function GradesBulkPage() {
                       <TableHead className="text-center w-24">Note</TableHead>
                       <TableHead>Appréciation</TableHead>
                       <TableHead>Statut</TableHead>
+                      <TableHead className="w-10"></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -322,6 +327,16 @@ export default function GradesBulkPage() {
                           ) : (
                             <span className="text-[10px] font-bold uppercase text-green-600 italic">OK</span>
                           )}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button 
+                            variant="ghost" 
+                            size="icon-xs" 
+                            className="text-muted-foreground hover:text-destructive"
+                            onClick={() => removeRow(i)}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
                         </TableCell>
                       </TableRow>
                     ))}

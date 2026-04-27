@@ -299,7 +299,7 @@ export async function getGradeTemplate(token: string, classeId: string): Promise
 export async function getStudentGrades(
   token: string,
   params: { eleve?: string; classe?: string; matiere?: number; periode?: string; annee?: number }
-) {
+): Promise<GradeItem[]> {
   const query = new URLSearchParams();
   if (params.eleve) query.append('eleve', params.eleve);
   if (params.classe) query.append('classe', params.classe);
@@ -307,7 +307,26 @@ export async function getStudentGrades(
   if (params.periode) query.append('periode', params.periode);
   if (params.annee) query.append('annee_scolaire', String(params.annee));
 
-  return request<any>(`/grades/?${query.toString()}`, { token });
+  const data = await request<any>(`/grades/?${query.toString()}`, { token });
+  const list = Array.isArray(data?.results) ? data.results : Array.isArray(data) ? data : [];
+
+  return list.map((item: any) => {
+    const score = Number(item.note ?? 0);
+    const maxScore = Number(item.note_sur ?? 20) || 20;
+    const coef = Number(item.coefficient ?? 1) || 1;
+    const converted = Number(item.note_convertie ?? (score * 20) / maxScore);
+
+    return {
+      id: item.id,
+      subject_name: item.matiere_name || '—',
+      score,
+      max_score: maxScore,
+      coefficient: coef,
+      converted_score_20: converted,
+      weighted_score: converted * coef,
+      comment: item.appreciation || '',
+    };
+  });
 }
 
 export async function getClassRanking(

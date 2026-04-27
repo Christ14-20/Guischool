@@ -88,6 +88,9 @@ class SubjectViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         return Subject.objects.filter(tenant=self.request.user.tenant)
 
+    def perform_create(self, serializer):
+        serializer.save(tenant=self.request.user.tenant)
+
 
 class TimetableSlotViewSet(viewsets.ModelViewSet):
     serializer_class = TimetableSlotSerializer
@@ -110,6 +113,9 @@ class EvaluationViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         return Evaluation.objects.filter(tenant=self.request.user.tenant)
+
+    def perform_create(self, serializer):
+        serializer.save(tenant=self.request.user.tenant)
 
     @action(detail=True, methods=["patch"], url_path="lock")
     def lock(self, request, pk=None):

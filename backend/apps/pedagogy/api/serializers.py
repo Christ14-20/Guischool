@@ -51,7 +51,7 @@ class SubjectSerializer(serializers.ModelSerializer):
     class Meta:
         model = Subject
         fields = ["id", "tenant", "code", "name", "category", "is_official"]
-        read_only_fields = ["id"]
+        read_only_fields = ["id", "tenant"]
 
 
 class TimetableSlotSerializer(serializers.ModelSerializer):
@@ -64,7 +64,7 @@ class TimetableSlotSerializer(serializers.ModelSerializer):
             "room", "day_of_week", "start_time", "end_time",
             "is_recurring", "specific_date",
         ]
-        read_only_fields = ["id", "subject_name"]
+        read_only_fields = ["id", "tenant", "subject_name"]
 
 
 class EvaluationSerializer(serializers.ModelSerializer):
@@ -75,7 +75,7 @@ class EvaluationSerializer(serializers.ModelSerializer):
             "title", "max_score", "coefficient", "date", "deadline",
             "is_published", "is_locked", "created_at",
         ]
-        read_only_fields = ["id", "created_at"]
+        read_only_fields = ["id", "tenant", "created_at"]
 
 
 class AttendanceSerializer(serializers.ModelSerializer):
@@ -86,7 +86,7 @@ class AttendanceSerializer(serializers.ModelSerializer):
             "status", "minutes_late", "justification", "justified_by",
             "created_by", "created_at",
         ]
-        read_only_fields = ["id", "created_at"]
+        read_only_fields = ["id", "tenant", "created_at"]
 
 
 # ── Module 4.5 — Élèves & Notes ────────────────────────────────────
@@ -157,7 +157,7 @@ class GradeSerializer(serializers.ModelSerializer):
             "created_at", "updated_at",
         ]
         read_only_fields = [
-            "id", "note_convertie", "saisie_par", "created_at", "updated_at",
+            "id", "tenant", "note_convertie", "saisie_par", "created_at", "updated_at",
             "matiere_name", "annee_scolaire_label"
         ]
 
