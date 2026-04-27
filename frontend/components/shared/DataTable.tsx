@@ -52,6 +52,7 @@ type DataTableProps<T> = {
   queryParamKey?: string;
   sortByParamKey?: string;
   sortOrderParamKey?: string;
+  onRowClick?: (row: T) => void;
 };
 
 export function DataTable<T>({
@@ -77,6 +78,7 @@ export function DataTable<T>({
   queryParamKey = 'q',
   sortByParamKey = 'sort_by',
   sortOrderParamKey = 'sort_order',
+  onRowClick,
 }: DataTableProps<T>) {
   const router = useRouter();
   const pathname = usePathname();
@@ -258,7 +260,12 @@ export function DataTable<T>({
                   const checked = currentSelection.includes(key);
 
                   return (
-                    <TableRow key={key} data-state={checked ? 'selected' : undefined}>
+                    <TableRow
+                      key={key}
+                      data-state={checked ? 'selected' : undefined}
+                      className={cn(onRowClick ? 'cursor-pointer hover:bg-muted/40' : undefined)}
+                      onClick={onRowClick ? () => onRowClick(row) : undefined}
+                    >
                       {selectable ? (
                         <TableCell>
                           <Checkbox

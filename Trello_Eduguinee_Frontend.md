@@ -570,17 +570,17 @@
 **Description :** Créer la page principale de liste et recherche des élèves.
 
 **Checklist :**
-- [ ] `DataTable` paginée, triable, filtrable
-- [ ] Colonnes : Matricule, Nom complet, Classe, Statut, Tuteur (téléphone), Actions
-- [ ] Filtre : classe (`Select`)
-- [ ] Filtre : statut (`ACTIF / SUSPENDU / TRANSFERE / ARCHIVE`)
-- [ ] Filtre : année scolaire
-- [ ] Barre de recherche texte (nom, matricule)
-- [ ] `StatusBadge` sur la colonne Statut
-- [ ] Bouton "Export CSV" (icône `Download`)
-- [ ] Bouton "Inscrire un élève" → conditionnel (`PermissionGate` : `can_create_student`)
-- [ ] Clic sur une ligne → navigation vers `/app/students/[id]`
-- [ ] Données : `GET /students/?classe=&statut=&annee=&search=`
+- [x] `DataTable` paginée, triable, filtrable
+- [x] Colonnes : Matricule, Nom complet, Classe, Statut, Tuteur (téléphone), Actions
+- [x] Filtre : classe (`Select`)
+- [x] Filtre : statut (`ACTIF / SUSPENDU / TRANSFERE / ARCHIVE`)
+- [x] Filtre : année scolaire
+- [x] Barre de recherche texte (nom, matricule)
+- [x] `StatusBadge` sur la colonne Statut
+- [x] Bouton "Export CSV" (icône `Download`)
+- [x] Bouton "Inscrire un élève" → conditionnel (`PermissionGate` : `can_create_student`)
+- [x] Clic sur une ligne → navigation vers `/app/students/[id]`
+- [x] Données : `GET /students/?classe=&statut=&annee=&search=`
 
 **Labels :** `élèves` `priorité-haute`
 
