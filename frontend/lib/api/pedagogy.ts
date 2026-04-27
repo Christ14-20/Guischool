@@ -113,6 +113,19 @@ export type AttendanceItem = {
   justification: string;
 };
 
+export type GradeItem = {
+  id: number | string;
+  student?: string | number;
+  subject_name: string;
+  score: number;
+  max_score: number;
+  coefficient: number;
+  converted_score_20: number;
+  weighted_score: number;
+  comment: string;
+  period: string;
+};
+
 // ─── School Years ────────────────────────────────────────────────────────────
 
 export async function getSchoolYears(
@@ -243,4 +256,34 @@ export async function bulkCreateAttendances(token: string, records: Record<strin
 export async function createAttendance(token: string, body: Record<string, unknown>) {
   const data = await request<any>('/pedagogy/attendances/', { token, method: 'POST', body });
   return data?.data ?? data;
+}
+
+// ─── Grades ──────────────────────────────────────────────────────────────────
+
+export async function getStudentGrades(
+  token: string,
+  query: { etudiant: string; periode: string }
+): Promise<GradeItem[]> {
+  const data = await request<any>('/pedagogy/grades/', { token, query });
+  const list = Array.isArray(data?.results) ? data.results : Array.isArray(data) ? data : [];
+
+  return list.map((item: Record<string, unknown>) => {
+    const score = Number(item.score ?? item.note ?? item.value ?? 0);
+    const maxScore = Number(item.max_score ?? item.scale ?? item.bareme ?? 20) || 20;
+    const coefficient = Number(item.coefficient ?? item.coef ?? 1) || 1;
+    const converted = Number(item.converted_score_20 ?? item.note_sur_20 ?? (score * 20) / maxScore);
+
+    return {
+      id: (item.id as number | string | undefined) ?? Math.random().toString(36).slice(2),
+      student: (item.student as string | number | undefined) ?? (item.etudiant as string | number | undefined),
+      subject_name: String(item.subject_name ?? item.subject ?? item.matiere_name ?? item.matiere ?? 'Matière'),
+      score,
+      max_score: maxScore,
+      coefficient,
+      converted_score_20: converted,
+      weighted_score: Number(item.weighted_score ?? item.note_ponderee ?? converted * coefficient),
+      comment: String(item.comment ?? item.appreciation ?? ''),
+      period: String(item.period ?? item.periode ?? query.periode),
+    };
+  });
 }

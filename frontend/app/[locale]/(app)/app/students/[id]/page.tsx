@@ -28,6 +28,7 @@ import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetT
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { useRole } from '@/hooks/useRole';
+import { getStudentGrades, type GradeItem } from '@/lib/api/pedagogy';
 import { archiveStudent, getStudent, reinscribeStudent, type StudentItem, updateStudent } from '@/lib/api/students';
 import { PERMISSIONS, ROLES } from '@/lib/constants';
 
@@ -59,6 +60,9 @@ export default function StudentDetailPage() {
   const [student, setStudent] = useState<StudentItem | null>(null);
   const [loading, setLoading] = useState(true);
   const [editOpen, setEditOpen] = useState(false);
+  const [selectedPeriod, setSelectedPeriod] = useState('TRIMESTRE_1');
+  const [gradesLoading, setGradesLoading] = useState(false);
+  const [grades, setGrades] = useState<GradeItem[]>([]);
   const canEditProfile = useRole([ROLES.ADMIN_SCHOOL, ROLES.SECRETAIRE]);
   const isAdminSchool = useRole([ROLES.ADMIN_SCHOOL]);
 
@@ -101,6 +105,27 @@ export default function StudentDetailPage() {
     loadStudent();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, id]);
+
+  useEffect(() => {
+    if (!token || !id) return;
+    let mounted = true;
+    setGradesLoading(true);
+    getStudentGrades(token, { etudiant: id, periode: selectedPeriod })
+      .then((data) => {
+        if (!mounted) return;
+        setGrades(data);
+      })
+      .catch((error) => {
+        toast.error(error instanceof Error ? error.message : 'Impossible de charger les notes.');
+      })
+      .finally(() => {
+        if (mounted) setGradesLoading(false);
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, [token, id, selectedPeriod]);
 
   const profileRows = useMemo(
     () => [
@@ -156,6 +181,13 @@ export default function StudentDetailPage() {
     });
     toast.success('Réinscription lancée.');
   };
+
+  const totalCoefficient = grades.reduce((sum, grade) => sum + (grade.coefficient || 0), 0);
+  const totalWeighted = grades.reduce((sum, grade) => sum + (grade.weighted_score || 0), 0);
+  const average = totalCoefficient > 0 ? totalWeighted / totalCoefficient : 0;
+
+  const mention = average >= 16 ? 'Excellent' : average >= 12 ? 'Passable' : 'Insuffisant';
+  const mentionTone = average >= 16 ? 'success' : average >= 12 ? 'warning' : 'danger';
 
   return (
     <section className="space-y-4">
@@ -245,8 +277,71 @@ export default function StudentDetailPage() {
 
             <TabsContent value="notes">
               <Card>
-                <CardContent className="py-2 text-sm text-muted-foreground">
-                  Onglet Notes en cours d'implémentation (`STUDENTS-04`).
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <CardTitle>Résultats scolaires</CardTitle>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">Période</span>
+                    <select
+                      value={selectedPeriod}
+                      onChange={(event) => setSelectedPeriod(event.target.value)}
+                      className="rounded-md border bg-background px-2 py-1 text-sm"
+                    >
+                      <option value="TRIMESTRE_1">Trimestre 1</option>
+                      <option value="TRIMESTRE_2">Trimestre 2</option>
+                      <option value="TRIMESTRE_3">Trimestre 3</option>
+                    </select>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {gradesLoading ? (
+                    <p className="text-sm text-muted-foreground">Chargement des notes...</p>
+                  ) : grades.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">Aucune note disponible pour cette période.</p>
+                  ) : (
+                    <div className="overflow-x-auto rounded-lg border">
+                      <table className="w-full min-w-[780px] text-sm">
+                        <thead className="bg-muted/40">
+                          <tr>
+                            <th className="px-3 py-2 text-left font-medium">Matière</th>
+                            <th className="px-3 py-2 text-left font-medium">Note</th>
+                            <th className="px-3 py-2 text-left font-medium">Coefficient</th>
+                            <th className="px-3 py-2 text-left font-medium">Note /20</th>
+                            <th className="px-3 py-2 text-left font-medium">Note pondérée</th>
+                            <th className="px-3 py-2 text-left font-medium">Commentaire</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {grades.map((grade) => (
+                            <tr key={String(grade.id)} className="border-t">
+                              <td className="px-3 py-2">{grade.subject_name}</td>
+                              <td className="px-3 py-2">
+                                {grade.score}/{grade.max_score}
+                              </td>
+                              <td className="px-3 py-2">{grade.coefficient}</td>
+                              <td
+                                className={`px-3 py-2 font-medium ${
+                                  grade.converted_score_20 < 10 ? 'text-destructive' : ''
+                                }`}
+                              >
+                                {grade.converted_score_20.toFixed(2)}
+                              </td>
+                              <td className="px-3 py-2">{grade.weighted_score.toFixed(2)}</td>
+                              <td className="px-3 py-2 text-muted-foreground">{grade.comment || '—'}</td>
+                            </tr>
+                          ))}
+                          <tr className="border-t bg-muted/30">
+                            <td className="px-3 py-2 font-semibold" colSpan={4}>
+                              Moyenne générale
+                            </td>
+                            <td className="px-3 py-2 font-semibold">{average.toFixed(2)} / 20</td>
+                            <td className="px-3 py-2">
+                              <StatusBadge status={mention} variant={mentionTone} />
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>

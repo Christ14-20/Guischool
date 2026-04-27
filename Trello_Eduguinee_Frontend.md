@@ -642,12 +642,12 @@
 **Description :** Afficher les notes et moyennes d'un élève dans sa fiche.
 
 **Checklist :**
-- [ ] Sélecteur de période (Trimestre 1, 2, 3)
-- [ ] Tableau : matière, note /20, coefficient, note pondérée, commentaire
-- [ ] Ligne total : moyenne générale calculée dynamiquement
-- [ ] Mention en `Badge` coloré (Excellent → vert foncé, Passable → jaune, Insuffisant → rouge)
-- [ ] Note rouge si note convertie < 10/20
-- [ ] Données : `GET /pedagogy/grades/?etudiant={id}&periode=`
+- [x] Sélecteur de période (Trimestre 1, 2, 3)
+- [x] Tableau : matière, note /20, coefficient, note pondérée, commentaire
+- [x] Ligne total : moyenne générale calculée dynamiquement
+- [x] Mention en `Badge` coloré (Excellent → vert foncé, Passable → jaune, Insuffisant → rouge)
+- [x] Note rouge si note convertie < 10/20
+- [x] Données : `GET /pedagogy/grades/?etudiant={id}&periode=`
 
 **Labels :** `élèves` `notes`
 
