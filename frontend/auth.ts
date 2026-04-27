@@ -31,6 +31,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
               email: payload.user.email,
               name: `${payload.user.first_name} ${payload.user.last_name}`.trim(),
               role: payload.user.role,
+              tenantId: payload.user.tenant_id,
               accessToken: payload.tokens.access,
               refreshToken: payload.tokens.refresh,
             }
@@ -49,11 +50,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.accessToken = user.accessToken
         token.refreshToken = user.refreshToken
         token.role = user.role
+        token.tenantId = user.tenantId
       }
       return token
     },
     async session({ session, token }) {
       session.user.role = token.role as string
+      session.user.tenantId = token.tenantId as string | undefined
       session.accessToken = token.accessToken as string
       return session
     }

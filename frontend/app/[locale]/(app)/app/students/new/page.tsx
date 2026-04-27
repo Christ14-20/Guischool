@@ -82,6 +82,7 @@ export default function NewStudentPage() {
   const locale = (params?.locale as string) ?? 'fr';
   const { data: session } = useSession();
   const token = session?.accessToken ?? '';
+  const tenantId = session?.user?.tenantId ?? '';
 
   const [years, setYears] = useState<SchoolYearItem[]>([]);
   const [classes, setClasses] = useState<ClassItem[]>([]);
@@ -182,20 +183,20 @@ export default function NewStudentPage() {
     }
 
     const payload = {
-      last_name: values.last_name,
-      first_name: values.first_name,
-      birth_date: values.birth_date,
-      birth_place: values.birth_place || undefined,
-      gender: values.gender,
-      photo_url: values.photo_url || undefined,
-      guardian_name: values.guardian_name,
-      guardian_relationship: values.guardian_relationship,
-      guardian_phone: values.guardian_phone,
-      guardian_email: values.guardian_email || undefined,
-      school_year: Number(values.school_year),
-      classe: Number(values.classe),
-      registration_type: values.registration_type,
-      observations: values.observations || undefined,
+      tenant: tenantId,
+      nom: values.last_name,
+      prenom: values.first_name,
+      date_naissance: values.birth_date,
+      lieu_naissance: values.birth_place || undefined,
+      sexe: values.gender,
+      photo: values.photo_url || undefined,
+      tuteur_nom: values.guardian_name,
+      tuteur_lien: values.guardian_relationship,
+      tuteur_telephone: values.guardian_phone,
+      tuteur_email: values.guardian_email || undefined,
+      annee_inscription: Number(values.school_year),
+      classe_actuelle: Number(values.classe),
+      contact_provisoire: false,
     } as const;
 
     const created = await createStudent(token, payload);
@@ -207,6 +208,10 @@ export default function NewStudentPage() {
   const onSubmit = async (values: FormValues) => {
     if (!token) {
       toast.error('Session invalide. Veuillez vous reconnecter.');
+      return;
+    }
+    if (!tenantId) {
+      toast.error('Tenant introuvable dans la session. Reconnectez-vous.');
       return;
     }
 

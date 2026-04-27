@@ -658,10 +658,10 @@
 **Description :** Afficher le suivi des présences d'un élève dans sa fiche.
 
 **Checklist :**
-- [ ] Vue liste ou calendrier des présences
-- [ ] Statistiques : taux d'assiduité global, nb absences, nb retards
-- [ ] `PieChart` Recharts par statut (Présent / Absent / Retard)
-- [ ] Données : `GET /pedagogy/attendances/?etudiant={id}`
+- [x] Vue liste ou calendrier des présences
+- [x] Statistiques : taux d'assiduité global, nb absences, nb retards
+- [x] `PieChart` Recharts par statut (Présent / Absent / Retard)
+- [x] Données : `GET /pedagogy/attendances/?etudiant={id}`
 
 **Labels :** `élèves`
 

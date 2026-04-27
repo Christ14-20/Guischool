@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { useForm } from 'react-hook-form';
+import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
 import { toast } from 'sonner';
 import { z } from 'zod';
 
@@ -28,7 +29,7 @@ import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetT
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { useRole } from '@/hooks/useRole';
-import { getStudentGrades, type GradeItem } from '@/lib/api/pedagogy';
+import { getAttendances, getStudentGrades, type AttendanceItem, type GradeItem } from '@/lib/api/pedagogy';
 import { archiveStudent, getStudent, reinscribeStudent, type StudentItem, updateStudent } from '@/lib/api/students';
 import { PERMISSIONS, ROLES } from '@/lib/constants';
 
@@ -43,6 +44,13 @@ const editSchema = z.object({
 });
 
 type EditValues = z.infer<typeof editSchema>;
+type AttendanceViewMode = 'list' | 'calendar';
+
+const ATTENDANCE_COLORS: Record<string, string> = {
+  PRESENT: '#22c55e',
+  ABSENT: '#ef4444',
+  LATE: '#eab308',
+};
 
 function getInitials(student?: StudentItem | null) {
   if (!student) return 'EL';
@@ -63,6 +71,9 @@ export default function StudentDetailPage() {
   const [selectedPeriod, setSelectedPeriod] = useState('TRIMESTRE_1');
   const [gradesLoading, setGradesLoading] = useState(false);
   const [grades, setGrades] = useState<GradeItem[]>([]);
+  const [attendancesLoading, setAttendancesLoading] = useState(false);
+  const [attendances, setAttendances] = useState<AttendanceItem[]>([]);
+  const [attendanceView, setAttendanceView] = useState<AttendanceViewMode>('list');
   const canEditProfile = useRole([ROLES.ADMIN_SCHOOL, ROLES.SECRETAIRE]);
   const isAdminSchool = useRole([ROLES.ADMIN_SCHOOL]);
 
@@ -127,6 +138,27 @@ export default function StudentDetailPage() {
     };
   }, [token, id, selectedPeriod]);
 
+  useEffect(() => {
+    if (!token || !id) return;
+    let mounted = true;
+    setAttendancesLoading(true);
+    getAttendances(token, { etudiant: id, page_size: 200 })
+      .then((response) => {
+        if (!mounted) return;
+        setAttendances(response.results);
+      })
+      .catch((error) => {
+        toast.error(error instanceof Error ? error.message : 'Impossible de charger les présences.');
+      })
+      .finally(() => {
+        if (mounted) setAttendancesLoading(false);
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, [token, id]);
+
   const profileRows = useMemo(
     () => [
       { label: 'Matricule', value: student?.matricule || '—' },
@@ -188,6 +220,28 @@ export default function StudentDetailPage() {
 
   const mention = average >= 16 ? 'Excellent' : average >= 12 ? 'Passable' : 'Insuffisant';
   const mentionTone = average >= 16 ? 'success' : average >= 12 ? 'warning' : 'danger';
+
+  const attendanceCounts = attendances.reduce(
+    (acc, item) => {
+      const status = item.status;
+      if (status === 'PRESENT') acc.present += 1;
+      if (status === 'ABSENT' || status === 'ABSENT_JUSTIFIED' || status === 'EXCLUDED') acc.absent += 1;
+      if (status === 'LATE') acc.late += 1;
+      return acc;
+    },
+    { present: 0, absent: 0, late: 0 }
+  );
+
+  const totalAttendances = attendanceCounts.present + attendanceCounts.absent + attendanceCounts.late;
+  const attendanceRate = totalAttendances > 0 ? (attendanceCounts.present / totalAttendances) * 100 : 0;
+
+  const pieData = [
+    { name: 'PRESENT', label: 'Présent', value: attendanceCounts.present },
+    { name: 'ABSENT', label: 'Absent', value: attendanceCounts.absent },
+    { name: 'LATE', label: 'Retard', value: attendanceCounts.late },
+  ].filter((item) => item.value > 0);
+
+  const attendancesByDate = [...attendances].sort((a, b) => b.date.localeCompare(a.date));
 
   return (
     <section className="space-y-4">
@@ -347,8 +401,114 @@ export default function StudentDetailPage() {
             </TabsContent>
             <TabsContent value="presences">
               <Card>
-                <CardContent className="py-2 text-sm text-muted-foreground">
-                  Onglet Présences en cours d'implémentation (`STUDENTS-05`).
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <CardTitle>Suivi des présences</CardTitle>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={attendanceView === 'list' ? 'default' : 'outline'}
+                      onClick={() => setAttendanceView('list')}
+                    >
+                      Vue liste
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={attendanceView === 'calendar' ? 'default' : 'outline'}
+                      onClick={() => setAttendanceView('calendar')}
+                    >
+                      Vue calendrier
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid gap-3 md:grid-cols-3">
+                    <div className="rounded-lg border p-3">
+                      <p className="text-xs text-muted-foreground">Taux d'assiduité global</p>
+                      <p className="text-lg font-semibold">{attendanceRate.toFixed(1)}%</p>
+                    </div>
+                    <div className="rounded-lg border p-3">
+                      <p className="text-xs text-muted-foreground">Absences</p>
+                      <p className="text-lg font-semibold text-destructive">{attendanceCounts.absent}</p>
+                    </div>
+                    <div className="rounded-lg border p-3">
+                      <p className="text-xs text-muted-foreground">Retards</p>
+                      <p className="text-lg font-semibold text-amber-600">{attendanceCounts.late}</p>
+                    </div>
+                  </div>
+
+                  {attendancesLoading ? (
+                    <p className="text-sm text-muted-foreground">Chargement des présences...</p>
+                  ) : (
+                    <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
+                      <div className="rounded-lg border p-3">
+                        {attendanceView === 'list' ? (
+                          attendancesByDate.length === 0 ? (
+                            <p className="text-sm text-muted-foreground">Aucune présence enregistrée.</p>
+                          ) : (
+                            <div className="space-y-2">
+                              {attendancesByDate.map((item) => (
+                                <div
+                                  key={item.id}
+                                  className="flex items-center justify-between rounded-md border px-3 py-2"
+                                >
+                                  <p className="text-sm">{item.date}</p>
+                                  <StatusBadge status={item.status} />
+                                </div>
+                              ))}
+                            </div>
+                          )
+                        ) : attendancesByDate.length === 0 ? (
+                          <p className="text-sm text-muted-foreground">Aucune présence enregistrée.</p>
+                        ) : (
+                          <div className="grid gap-2 sm:grid-cols-2">
+                            {attendancesByDate.map((item) => (
+                              <div key={item.id} className="rounded-md border p-2">
+                                <p className="text-xs text-muted-foreground">{item.date}</p>
+                                <div className="mt-1">
+                                  <StatusBadge status={item.status} />
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="rounded-lg border p-3">
+                        <p className="mb-2 text-sm font-medium">Répartition des statuts</p>
+                        {pieData.length === 0 ? (
+                          <p className="text-sm text-muted-foreground">Aucune donnée pour le graphique.</p>
+                        ) : (
+                          <div className="h-60">
+                            <ResponsiveContainer width="100%" height="100%">
+                              <PieChart>
+                                <Pie
+                                  data={pieData}
+                                  dataKey="value"
+                                  nameKey="label"
+                                  innerRadius={55}
+                                  outerRadius={85}
+                                  label={({ name, percent }) =>
+                                    `${String(name ?? '')} ${Math.round(((percent as number) || 0) * 100)}%`
+                                  }
+                                  labelLine={false}
+                                >
+                                  {pieData.map((entry) => (
+                                    <Cell
+                                      key={entry.name}
+                                      fill={ATTENDANCE_COLORS[entry.name] ?? '#94a3b8'}
+                                    />
+                                  ))}
+                                </Pie>
+                                <Tooltip />
+                              </PieChart>
+                            </ResponsiveContainer>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>

@@ -137,20 +137,20 @@ export async function getStudent(token: string, id: string): Promise<StudentItem
 }
 
 export type CreateStudentPayload = {
-  last_name: string;
-  first_name: string;
-  birth_date: string;
-  birth_place?: string;
-  gender: 'M' | 'F';
-  photo_url?: string;
-  guardian_name: string;
-  guardian_relationship: 'PERE' | 'MERE' | 'TUTEUR' | 'AUTRE';
-  guardian_phone: string;
-  guardian_email?: string;
-  school_year: number;
-  classe: number;
-  registration_type: 'NOUVELLE' | 'REINSCRIPTION' | 'TRANSFERT_ENTRANT';
-  observations?: string;
+  tenant: string;
+  nom: string;
+  prenom: string;
+  date_naissance: string;
+  lieu_naissance?: string;
+  sexe: 'M' | 'F';
+  photo?: string;
+  tuteur_nom: string;
+  tuteur_lien: 'PERE' | 'MERE' | 'TUTEUR' | 'AUTRE';
+  tuteur_telephone: string;
+  tuteur_email?: string;
+  annee_inscription: number;
+  classe_actuelle: number;
+  contact_provisoire?: boolean;
 };
 
 export async function createStudent(token: string, body: CreateStudentPayload) {

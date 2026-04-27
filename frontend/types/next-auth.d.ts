@@ -5,6 +5,7 @@ declare module "next-auth" {
     accessToken?: string
     user: {
       role?: string
+      tenantId?: string
     } & DefaultSession["user"]
   }
 
@@ -12,6 +13,7 @@ declare module "next-auth" {
     accessToken?: string
     refreshToken?: string
     role?: string
+    tenantId?: string
   }
 }
 
@@ -20,5 +22,6 @@ declare module "next-auth/jwt" {
     accessToken?: string
     refreshToken?: string
     role?: string
+    tenantId?: string
   }
 }
