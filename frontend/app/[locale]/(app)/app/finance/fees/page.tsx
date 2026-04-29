@@ -32,7 +32,7 @@ import {
   deleteFeeCategory,
   type FeeCategoryItem,
 } from '@/lib/api/finance';
-import { formatCurrency, formatDate } from '@/lib/utils';
+import { cn, formatCurrency, formatDate } from '@/lib/utils';
 import { useRole } from '@/hooks/useRole';
 import { ROLES } from '@/lib/constants';
 
@@ -254,148 +254,195 @@ export default function FeeCategoriesPage() {
           </SheetHeader>
 
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 pt-6">
-              <div className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Nom de la catégorie *</FormLabel>
-                      <FormControl>
-                        <Input placeholder="ex: Frais de Scolarité 1ère année" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <div className="grid grid-cols-2 gap-4">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8 pt-8">
+              <div className="grid gap-8">
+                {/* Section 1: Informations Générales */}
+                <div className="space-y-5">
+                  <div className="flex items-center gap-2 text-primary border-b pb-2">
+                    <div className="h-4 w-1 bg-primary rounded-full" />
+                    <h4 className="text-sm font-semibold uppercase tracking-wider">Informations Générales</h4>
+                  </div>
+                  
                   <FormField
                     control={form.control}
-                    name="type"
+                    name="name"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Type *</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Choisir" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {FEE_TYPES.map((t) => (
-                              <SelectItem key={t.value} value={t.value}>
-                                {t.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="amount"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Montant total (GNF) *</FormLabel>
+                        <FormLabel className="text-xs font-bold text-muted-foreground uppercase">Nom de la catégorie *</FormLabel>
                         <FormControl>
-                          <Input type="number" placeholder="0" {...field} />
+                          <Input 
+                            className="bg-muted/30 focus-visible:bg-background transition-colors" 
+                            placeholder="ex: Scolarité Primaire - Tranche 1" 
+                            {...field} 
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
+
+                  <div className="grid grid-cols-2 gap-5">
+                    <FormField
+                      control={form.control}
+                      name="type"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-xs font-bold text-muted-foreground uppercase">Type de frais *</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger className="bg-muted/30">
+                                <SelectValue placeholder="Choisir" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {FEE_TYPES.map((t) => (
+                                <SelectItem key={t.value} value={t.value}>
+                                  {t.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="amount"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-xs font-bold text-muted-foreground uppercase">Montant total (GNF) *</FormLabel>
+                          <FormControl>
+                            <div className="relative">
+                              <Input 
+                                type="number" 
+                                className="bg-muted/30 pl-8 font-mono font-bold text-primary" 
+                                placeholder="0" 
+                                {...field} 
+                              />
+                              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-xs font-bold">₲</span>
+                            </div>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <FormField
+                    control={form.control}
+                    name="is_mandatory"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-center justify-between rounded-xl border bg-muted/20 p-4 transition-all hover:bg-muted/30">
+                        <div className="space-y-0.5">
+                          <FormLabel className="font-semibold">Frais obligatoire</FormLabel>
+                          <FormDescription className="text-xs">
+                            Appliqué automatiquement lors de l'inscription.
+                          </FormDescription>
+                        </div>
+                        <FormControl>
+                          <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
                 </div>
 
-                <FormField
-                  control={form.control}
-                  name="is_mandatory"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
-                      <div className="space-y-0.5">
-                        <FormLabel>Frais obligatoire</FormLabel>
-                        <FormDescription>
-                          Appliqué automatiquement à tous les élèves.
-                        </FormDescription>
-                      </div>
-                      <FormControl>
-                        <Switch
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-
-                {/* Échéancier (Installments) */}
-                <div className="space-y-3 pt-4 border-t">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h4 className="text-sm font-medium">Échéancier de paiement</h4>
-                      <p className="text-[13px] text-muted-foreground">Ajoutez des tranches si le paiement est fractionné.</p>
+                {/* Section 2: Échéancier */}
+                <div className="space-y-5">
+                  <div className="flex items-center justify-between border-b pb-2">
+                    <div className="flex items-center gap-2 text-primary">
+                      <div className="h-4 w-1 bg-primary rounded-full" />
+                      <h4 className="text-sm font-semibold uppercase tracking-wider">Échéancier</h4>
                     </div>
-                    <Button type="button" variant="outline" size="sm" onClick={() => append({ date: '', amount: 0 })}>
-                      <Plus className="mr-1 h-3 w-3" /> Ajouter
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      size="sm" 
+                      className="h-8 px-3 text-xs gap-1.5 rounded-full border-primary/20 text-primary hover:bg-primary/5"
+                      onClick={() => append({ date: '', amount: 0 })}
+                    >
+                      <Plus className="h-3 w-3" /> Ajouter une tranche
                     </Button>
                   </div>
 
-                  {fields.map((field, index) => (
-                    <div key={field.id} className="flex items-start gap-2">
-                      <FormField
-                        control={form.control}
-                        name={`installments.${index}.date`}
-                        render={({ field: fField }) => (
-                          <FormItem className="flex-1">
-                            <FormControl>
-                              <Input type="date" {...fField} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name={`installments.${index}.amount`}
-                        render={({ field: fField }) => (
-                          <FormItem className="flex-1">
-                            <FormControl>
-                              <Input type="number" placeholder="Montant" {...fField} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => remove(index)}
-                        className="text-muted-foreground hover:text-destructive"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                  {fields.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-8 rounded-xl border border-dashed bg-muted/10 text-muted-foreground">
+                      <p className="text-xs italic">Aucun échéancier défini. Le paiement sera dû en une fois.</p>
                     </div>
-                  ))}
-                  
-                  {fields.length > 0 && (
-                    <div className="text-xs text-muted-foreground text-right mt-2">
-                      Total des tranches : {formatCurrency(form.watch('installments').reduce((sum, inst) => sum + Number(inst.amount || 0), 0))}
+                  ) : (
+                    <div className="space-y-3">
+                      {fields.map((field, index) => (
+                        <div key={field.id} className="group relative grid grid-cols-[1fr_1fr_auto] items-end gap-3 rounded-xl border bg-card p-3 shadow-sm transition-all hover:shadow-md">
+                          <FormField
+                            control={form.control}
+                            name={`installments.${index}.date`}
+                            render={({ field: fField }) => (
+                              <FormItem className="space-y-1">
+                                <FormLabel className="text-[10px] font-bold text-muted-foreground uppercase px-1">Date limite</FormLabel>
+                                <FormControl>
+                                  <Input type="date" className="h-9 border-none bg-muted/30" {...fField} />
+                                </FormControl>
+                                <FormMessage className="text-[10px]" />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={form.control}
+                            name={`installments.${index}.amount`}
+                            render={({ field: fField }) => (
+                              <FormItem className="space-y-1">
+                                <FormLabel className="text-[10px] font-bold text-muted-foreground uppercase px-1">Montant tranche</FormLabel>
+                                <FormControl>
+                                  <Input type="number" className="h-9 border-none bg-muted/30 font-mono text-xs" placeholder="0" {...fField} />
+                                </FormControl>
+                                <FormMessage className="text-[10px]" />
+                              </FormItem>
+                            )}
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => remove(index)}
+                            className="h-9 w-9 text-muted-foreground hover:bg-destructive/10 hover:text-destructive rounded-lg"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ))}
+
+                      <div className="flex items-center justify-between px-4 py-3 bg-primary/5 rounded-xl border border-primary/10">
+                        <span className="text-xs font-semibold text-primary/70 uppercase">Total tranches</span>
+                        <div className="text-right">
+                          <p className={cn(
+                            "font-mono font-bold text-sm",
+                            Math.abs(form.watch('installments').reduce((sum, inst) => sum + Number(inst.amount || 0), 0) - Number(form.watch('amount'))) > 1
+                              ? "text-orange-600"
+                              : "text-green-600"
+                          )}>
+                            {formatCurrency(form.watch('installments').reduce((sum, inst) => sum + Number(inst.amount || 0), 0))}
+                          </p>
+                          {Math.abs(form.watch('installments').reduce((sum, inst) => sum + Number(inst.amount || 0), 0) - Number(form.watch('amount'))) > 1 && (
+                            <p className="text-[10px] text-orange-500 font-medium">Ne correspond pas au total</p>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   )}
                 </div>
               </div>
 
-              <SheetFooter className="mt-8">
-                <Button type="button" variant="outline" onClick={() => setSheetOpen(false)}>
+              <SheetFooter className="mt-12 flex items-center gap-3 border-t pt-6">
+                <Button type="button" variant="ghost" className="rounded-full" onClick={() => setSheetOpen(false)}>
                   Annuler
                 </Button>
-                <Button type="submit" disabled={form.formState.isSubmitting}>
-                  {form.formState.isSubmitting ? 'Sauvegarde...' : 'Sauvegarder'}
+                <Button type="submit" className="rounded-full px-8 shadow-lg shadow-primary/20" disabled={form.formState.isSubmitting}>
+                  {form.formState.isSubmitting ? 'Sauvegarde...' : editingId ? 'Mettre à jour' : 'Créer la catégorie'}
                 </Button>
               </SheetFooter>
             </form>

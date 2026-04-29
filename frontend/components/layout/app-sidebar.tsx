@@ -69,6 +69,11 @@ const NAV_ITEMS: NavItem[] = [
     href: '/app/finance',
     icon: CreditCard,
     roles: [ROLES.ADMIN_SCHOOL, ROLES.SECRETAIRE],
+    children: [
+      { label: 'Paiements', href: '/app/finance/payments' },
+      { label: 'Factures', href: '/app/finance/invoices' },
+      { label: 'Frais Scolaires', href: '/app/finance/fees' },
+    ],
   },
   { label: 'Support', href: '/app/support', icon: CircleHelp },
   {

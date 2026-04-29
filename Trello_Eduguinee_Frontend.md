@@ -838,12 +838,12 @@
 **Description :** Créer l'interface de gestion des factures par élève.
 
 **Checklist :**
-- [ ] Liste des factures : élève, année scolaire, montant dû, payé, solde, statut
-- [ ] `StatusBadge` : Pending (orange) / Paid (vert) / Overdue (rouge)
-- [ ] Filtres : statut, élève, année scolaire
-- [ ] Vue détail d'une facture : montant dû, payé, solde restant, historique paiements associés
-- [ ] Bouton "Générer PDF" → `POST /finance/invoices/{id}/generate-pdf/` → téléchargement
-- [ ] Données : `GET /finance/invoices/`
+- [x] Liste des factures : élève, année scolaire, montant dû, payé, solde, statut
+- [x] `StatusBadge` : Pending (orange) / Paid (vert) / Overdue (rouge)
+- [x] Filtres : statut, élève, année scolaire
+- [x] Vue détail d'une facture : montant dû, payé, solde restant, historique paiements associés
+- [x] Bouton "Générer PDF" → `POST /finance/invoices/{id}/generate-pdf/` → téléchargement
+- [x] Données : `GET /finance/invoices/`
 
 **Labels :** `finance`
 

@@ -210,7 +210,7 @@ function RegisterPageInner() {
                     <FormField control={form.control} name="schoolType" render={({ field }) => (
                       <FormItem>
                         <FormLabel>Type</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <Select onValueChange={field.onChange} value={field.value}>
                           <FormControl>
                             <SelectTrigger><SelectValue placeholder="Sélectionnez..." /></SelectTrigger>
                           </FormControl>
@@ -239,7 +239,7 @@ function RegisterPageInner() {
                   <FormField control={form.control} name="plan" render={({ field }) => (
                     <FormItem>
                       <FormLabel>Sélection du Plan d'Abonnement</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger className="h-16">
                             <SelectValue placeholder="Choisir un forfait..." />

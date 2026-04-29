@@ -78,13 +78,16 @@ export type StudentFinancialSummary = {
 
 export type InvoiceItem = {
   id: string;
-  student: string;
-  school_year: number;
+  student: string | number;
+  student_name?: string;
+  school_year: string | number;
   total_due: number;
   total_paid: number;
   balance: number;
-  status: string;
-  created_at: string;
+  status: 'PENDING' | 'PAID' | 'OVERDUE' | string;
+  pdf_url?: string;
+  generated_at?: string;
+  created_at?: string;
 };
 
 export async function getStudentPayments(
@@ -148,6 +151,28 @@ export async function getStudentFinancialSummary(
     console.error('Erreur summary finance:', e);
     return null;
   }
+}
+
+export async function getInvoices(
+  token: string,
+  query?: Record<string, string | number | undefined>
+): Promise<PaginatedResult<InvoiceItem>> {
+  const data = await request<any>('/finance/invoices/', { token, query });
+  return {
+    count: Number(data?.count ?? 0),
+    results: Array.isArray(data?.results) ? data.results : Array.isArray(data) ? data : [],
+  };
+}
+
+export async function getInvoiceDetails(token: string, id: string): Promise<InvoiceItem> {
+  return request<InvoiceItem>(`/finance/invoices/${id}/`, { token });
+}
+
+export async function generateInvoicePdf(token: string, id: string): Promise<{ status: string, message: string }> {
+  return request<{ status: string, message: string }>(`/finance/invoices/${id}/generate-pdf/`, { 
+    token, 
+    method: 'POST' 
+  });
 }
 
 // ─── Fee Categories (Catégories de Frais) ────────────────────────────────────

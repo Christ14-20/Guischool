@@ -282,7 +282,7 @@ export default function PaymentsPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Mode de paiement *</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Choisir" />
