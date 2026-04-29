@@ -30,6 +30,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { StatusBadge } from '@/components/shared/StatusBadge';
+import dynamic from 'next/dynamic';
 
 import { getPayments, createPayment, type PaymentItem } from '@/lib/api/finance';
 import { getStudents, type StudentItem } from '@/lib/api/students';
@@ -45,6 +46,11 @@ const PAYMENT_METHODS = [
   { value: 'BANK_TRANSFER', label: 'Virement' },
   { value: 'CHECK', label: 'Chèque' },
 ];
+
+const DynamicReceiptViewer = dynamic(() => import('@/components/finance/ReceiptPDFViewer'), {
+  ssr: false,
+  loading: () => <div className="p-8 text-center text-muted-foreground">Chargement du visualiseur PDF...</div>
+});
 
 const paymentSchema = z.object({
   student: z.string().min(1, "L'élève est requis."),
@@ -64,6 +70,7 @@ export default function PaymentsPage() {
   const [students, setStudents] = useState<StudentItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [printPayment, setPrintPayment] = useState<PaymentItem | null>(null);
   
   const canManage = useRole([ROLES.ADMIN_SCHOOL, ROLES.SUPER_ADMIN]);
 
@@ -103,11 +110,13 @@ export default function PaymentsPage() {
   const onSubmit = async (values: PaymentFormValues) => {
     if (!token) return;
     try {
-      await createPayment(token, values);
+      const newPayment = await createPayment(token, values);
       toast.success('Paiement enregistré avec succès.');
       setDialogOpen(false);
       form.reset();
       loadData();
+      // Ouvre automatiquement le reçu pour l'impression après succès
+      setPrintPayment(newPayment);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Erreur lors de la sauvegarde.');
     }
@@ -184,8 +193,13 @@ export default function PaymentsPage() {
                     <StatusBadge status={payment.status} />
                   </TableCell>
                   <TableCell className="text-right">
-                    <Button variant="ghost" size="icon-xs" title="Imprimer le reçu" disabled>
-                      <Printer className="h-4 w-4 text-muted-foreground" />
+                    <Button 
+                      variant="ghost" 
+                      size="icon-xs" 
+                      title="Imprimer le reçu" 
+                      onClick={() => setPrintPayment(payment)}
+                    >
+                      <Printer className="h-4 w-4" />
                     </Button>
                   </TableCell>
                 </TableRow>
@@ -312,6 +326,19 @@ export default function PaymentsPage() {
               </DialogFooter>
             </form>
           </Form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!printPayment} onOpenChange={(open) => !open && setPrintPayment(null)}>
+        <DialogContent className="max-w-4xl h-[85vh] p-0 flex flex-col">
+          <div className="flex-1 w-full p-4">
+            {printPayment && (
+              <DynamicReceiptViewer 
+                payment={printPayment} 
+                onClose={() => setPrintPayment(null)} 
+              />
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </div>

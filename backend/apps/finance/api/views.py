@@ -44,8 +44,10 @@ class PaymentViewSet(viewsets.ModelViewSet):
         return Payment.objects.filter(tenant=self.request.user.tenant)
 
     def perform_create(self, serializer):
+        import uuid
         now = timezone.now()
-        receipt_number = f"REC-{now.strftime('%Y%m%d%H%M%S')}-{self.request.user.id}"
+        short_id = str(uuid.uuid4())[:6].upper()
+        receipt_number = f"REC-{now.strftime('%Y%m%d')}-{short_id}"
         serializer.save(
             tenant=self.request.user.tenant,
             received_by=self.request.user,

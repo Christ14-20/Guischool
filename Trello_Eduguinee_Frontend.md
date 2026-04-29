@@ -808,7 +808,7 @@
   - [x] Commentaire (`Textarea`, optionnel)
   - [x] Bouton "Enregistrer" avec loading state
   - [x] `POST /finance/payments/`
-  - [ ] Après succès : bouton "Imprimer le reçu" → génération PDF (`react-pdf`)
+  - [x] Après succès : bouton "Imprimer le reçu" → génération PDF (`react-pdf`)
 - [x] **Liste des paiements** (`DataTable`) :
   - [x] Colonnes : Date, Élève, Montant (GNF), Méthode, Statut, N° Reçu, Actions
   - [x] Filtres : méthode, statut, plage de dates (`DatePicker` range)
@@ -824,10 +824,10 @@
 **Description :** Implémenter la génération et l'impression du reçu de paiement en PDF.
 
 **Checklist :**
-- [ ] Template PDF avec `react-pdf` : logo école, informations élève, montant, méthode, date, n° reçu
-- [ ] Chargé dynamiquement via `next/dynamic` (éviter augmentation du bundle)
-- [ ] Bouton "Télécharger" et "Imprimer" (ouverture dans un nouvel onglet)
-- [ ] Prévisualisation avant impression (`react-pdf` viewer)
+- [x] Template PDF avec `react-pdf` : logo école, informations élève, montant, méthode, date, n° reçu
+- [x] Chargé dynamiquement via `next/dynamic` (éviter augmentation du bundle)
+- [x] Bouton "Télécharger" et "Imprimer" (ouverture dans un nouvel onglet)
+- [x] Prévisualisation avant impression (`react-pdf` viewer)
 
 **Labels :** `finance`
 

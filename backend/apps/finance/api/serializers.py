@@ -21,15 +21,16 @@ class StudentFeeSerializer(serializers.ModelSerializer):
 
 class PaymentSerializer(serializers.ModelSerializer):
     student_name = serializers.SerializerMethodField()
+    student_matricule = serializers.CharField(source="student.matricule", read_only=True)
 
     class Meta:
         model = Payment
         fields = [
-            "id", "tenant", "student", "student_name", "student_fee", "amount", "payment_date",
+            "id", "tenant", "student", "student_name", "student_matricule", "student_fee", "amount", "payment_date",
             "method", "reference", "received_by", "status", "receipt_number",
             "receipt_url", "sms_notification_sent", "created_at",
         ]
-        read_only_fields = ["id", "tenant", "receipt_number", "created_at", "received_by", "sms_notification_sent", "student_name"]
+        read_only_fields = ["id", "tenant", "receipt_number", "created_at", "received_by", "sms_notification_sent", "student_name", "student_matricule"]
 
     def get_student_name(self, obj):
         return f"{obj.student.nom} {obj.student.prenom}"

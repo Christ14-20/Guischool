@@ -57,6 +57,7 @@ export type PaymentItem = {
   id: string;
   student: string | number;
   student_name?: string;
+  student_matricule?: string;
   student_fee?: string | number;
   amount: number;
   payment_date: string;
