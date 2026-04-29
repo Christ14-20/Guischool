@@ -799,21 +799,21 @@
 **Description :** Créer le formulaire d'enregistrement d'un paiement et la liste des paiements.
 
 **Checklist :**
-- [ ] **`Dialog` de paiement** (déclenchable depuis la liste OU la fiche élève) :
-  - [ ] Élève (autocomplete `Command` avec recherche en temps réel)
-  - [ ] Montant* (`Input` numérique)
-  - [ ] Mode de paiement* (`Select` : Espèces / Orange Money / MTN Money / Wave / Virement)
-  - [ ] Référence (`Input`, optionnel)
-  - [ ] Date* (`DatePicker`, défaut = aujourd'hui)
-  - [ ] Commentaire (`Textarea`, optionnel)
-  - [ ] Bouton "Enregistrer" avec loading state
-  - [ ] `POST /finance/payments/`
+- [x] **`Dialog` de paiement** (déclenchable depuis la liste OU la fiche élève) :
+  - [x] Élève (autocomplete `Command` avec recherche en temps réel)
+  - [x] Montant* (`Input` numérique)
+  - [x] Mode de paiement* (`Select` : Espèces / Orange Money / MTN Money / Wave / Virement)
+  - [x] Référence (`Input`, optionnel)
+  - [x] Date* (`DatePicker`, défaut = aujourd'hui)
+  - [x] Commentaire (`Textarea`, optionnel)
+  - [x] Bouton "Enregistrer" avec loading state
+  - [x] `POST /finance/payments/`
   - [ ] Après succès : bouton "Imprimer le reçu" → génération PDF (`react-pdf`)
-- [ ] **Liste des paiements** (`DataTable`) :
-  - [ ] Colonnes : Date, Élève, Montant (GNF), Méthode, Statut, N° Reçu, Actions
-  - [ ] Filtres : méthode, statut, plage de dates (`DatePicker` range)
-  - [ ] Total en bas : montant total encaissé, nb paiements
-  - [ ] Bouton "Nouveau paiement" → ouvre le `Dialog`
+- [x] **Liste des paiements** (`DataTable`) :
+  - [x] Colonnes : Date, Élève, Montant (GNF), Méthode, Statut, N° Reçu, Actions
+  - [x] Filtres : méthode, statut, plage de dates (`DatePicker` range)
+  - [x] Total en bas : montant total encaissé, nb paiements
+  - [x] Bouton "Nouveau paiement" → ouvre le `Dialog`
 
 **Labels :** `finance` `priorité-haute`
 

@@ -44,7 +44,13 @@ class PaymentViewSet(viewsets.ModelViewSet):
         return Payment.objects.filter(tenant=self.request.user.tenant)
 
     def perform_create(self, serializer):
-        serializer.save(tenant=self.request.user.tenant, received_by=self.request.user)
+        now = timezone.now()
+        receipt_number = f"REC-{now.strftime('%Y%m%d%H%M%S')}-{self.request.user.id}"
+        serializer.save(
+            tenant=self.request.user.tenant,
+            received_by=self.request.user,
+            receipt_number=receipt_number
+        )
 
 
 class InvoiceViewSet(viewsets.ModelViewSet):

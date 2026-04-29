@@ -55,14 +55,17 @@ export type PaginatedResult<T> = {
 
 export type PaymentItem = {
   id: string;
-  student: string;
-  school_year: number;
-  date: string;
+  student: string | number;
+  student_name?: string;
+  student_fee?: string | number;
   amount: number;
-  payment_method: 'CASH' | 'TRANSFER' | 'CHECK' | 'MOBILE_MONEY' | string;
-  reference_number?: string;
+  payment_date: string;
+  method: 'CASH' | 'ORANGE_MONEY' | 'MTN_MONEY' | 'WAVE' | 'BANK_TRANSFER' | 'CHECK' | string;
+  reference?: string;
+  status: 'PENDING' | 'COMPLETED' | 'FAILED' | 'CANCELLED' | string;
   receipt_number?: string;
-  notes?: string;
+  receipt_url?: string;
+  created_at?: string;
 };
 
 export type StudentFinancialSummary = {
@@ -87,11 +90,31 @@ export async function getStudentPayments(
   token: string,
   studentId: string
 ): Promise<PaginatedResult<PaymentItem>> {
-  return request<PaginatedResult<PaymentItem>>('/finance/payments/', {
+  const data = await request<any>('/finance/payments/', {
     token,
     query: { student: studentId },
   });
+  return {
+    count: Number(data?.count ?? 0),
+    results: Array.isArray(data?.results) ? data.results : Array.isArray(data) ? data : [],
+  };
 }
+
+export async function getPayments(
+  token: string,
+  query?: Record<string, string | number | undefined>
+): Promise<PaginatedResult<PaymentItem>> {
+  const data = await request<any>('/finance/payments/', { token, query });
+  return {
+    count: Number(data?.count ?? 0),
+    results: Array.isArray(data?.results) ? data.results : Array.isArray(data) ? data : [],
+  };
+}
+
+export async function createPayment(token: string, body: Record<string, unknown>) {
+  return request<PaymentItem>('/finance/payments/', { token, method: 'POST', body });
+}
+
 
 /**
  * Récupère le résumé financier de l'élève pour l'année scolaire en cours via la facture.
