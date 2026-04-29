@@ -778,17 +778,17 @@
 **Description :** Créer l'interface de gestion des catégories de frais scolaires.
 
 **Checklist :**
-- [ ] Liste des catégories : nom, type, montant, obligatoire (`Switch` en lecture)
-- [ ] Bouton "Nouvelle catégorie" → `Sheet` latéral
-- [ ] Formulaire `Sheet` :
-  - [ ] Nom* (`Input`)
-  - [ ] Type* (`Select` : Inscription / Scolarité / Cantine / Transport / Autre)
-  - [ ] Montant* (`Input` numérique, formaté en GNF)
-  - [ ] Échéancier : champs dynamiques (ajouter/supprimer des tranches)
-  - [ ] Obligatoire (`Switch`)
-- [ ] Validation Zod
-- [ ] Actions : Modifier, Supprimer (`ConfirmDialog`)
-- [ ] `GET/POST/PUT/DELETE /finance/feecategories/`
+- [x] Liste des catégories : nom, type, montant, obligatoire (`Switch` en lecture)
+- [x] Bouton "Nouvelle catégorie" → `Sheet` latéral
+- [x] Formulaire `Sheet` :
+  - [x] Nom* (`Input`)
+  - [x] Type* (`Select` : Inscription / Scolarité / Cantine / Transport / Autre)
+  - [x] Montant* (`Input` numérique, formaté en GNF)
+  - [x] Échéancier : champs dynamiques (ajouter/supprimer des tranches)
+  - [x] Obligatoire (`Switch`)
+- [x] Validation Zod
+- [x] Actions : Modifier, Supprimer (`ConfirmDialog`)
+- [x] `GET/POST/PUT/DELETE /finance/feecategories/`
 
 **Labels :** `finance`
 

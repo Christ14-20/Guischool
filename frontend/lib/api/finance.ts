@@ -125,3 +125,44 @@ export async function getStudentFinancialSummary(
     return null;
   }
 }
+
+// ─── Fee Categories (Catégories de Frais) ────────────────────────────────────
+
+export type FeeInstallment = {
+  date: string;
+  amount: number;
+};
+
+export type FeeCategoryItem = {
+  id: number;
+  name: string;
+  type: 'TUITION' | 'REGISTRATION' | 'CANTEEN' | 'TRANSPORT' | 'UNIFORM' | 'SUPPLIES' | 'TRIP' | 'OTHER' | string;
+  amount: number;
+  installments: FeeInstallment[];
+  is_mandatory: boolean;
+  school_year: number | null;
+  created_at?: string;
+};
+
+export async function getFeeCategories(
+  token: string,
+  query?: Record<string, string | number | undefined>
+): Promise<PaginatedResult<FeeCategoryItem>> {
+  const data = await request<any>('/finance/feecategories/', { token, query });
+  return {
+    count: Number(data?.count ?? 0),
+    results: Array.isArray(data?.results) ? data.results : Array.isArray(data) ? data : [],
+  };
+}
+
+export async function createFeeCategory(token: string, body: Record<string, unknown>) {
+  return request<FeeCategoryItem>('/finance/feecategories/', { token, method: 'POST', body });
+}
+
+export async function updateFeeCategory(token: string, id: number, body: Record<string, unknown>) {
+  return request<FeeCategoryItem>(`/finance/feecategories/${id}/`, { token, method: 'PATCH', body });
+}
+
+export async function deleteFeeCategory(token: string, id: number) {
+  return request(`/finance/feecategories/${id}/`, { token, method: 'DELETE' });
+}

@@ -7,7 +7,7 @@ class FeeCategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = FeeCategory
         fields = ["id", "tenant", "name", "type", "amount", "installments", "is_mandatory", "school_year", "created_at"]
-        read_only_fields = ["id", "created_at"]
+        read_only_fields = ["id", "tenant", "created_at"]
 
 
 class StudentFeeSerializer(serializers.ModelSerializer):
