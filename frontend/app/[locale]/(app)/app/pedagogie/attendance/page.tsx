@@ -189,7 +189,7 @@ export default function AttendancePage() {
       <div className="flex flex-wrap gap-3 rounded-lg border bg-card p-3">
         <div className="flex flex-col gap-1">
           <Label className="text-xs text-muted-foreground">Classe</Label>
-          <Select value={selectedClass} onValueChange={setSelectedClass} disabled={loadingMeta}>
+          <Select value={selectedClass} onValueChange={(v) => v && setSelectedClass(v)} disabled={loadingMeta}>
             <SelectTrigger className="w-52">
               <SelectValue placeholder="Sélectionner une classe" />
             </SelectTrigger>
@@ -215,7 +215,7 @@ export default function AttendancePage() {
 
         <div className="flex flex-col gap-1">
           <Label className="text-xs text-muted-foreground">Matière (optionnel)</Label>
-          <Select value={selectedSubject} onValueChange={setSelectedSubject}>
+          <Select value={selectedSubject} onValueChange={(v) => setSelectedSubject(v ?? '')}>
             <SelectTrigger className="w-48">
               <SelectValue placeholder="Toutes les matières" />
             </SelectTrigger>

@@ -79,8 +79,8 @@ export default function SuperadminSchoolsPage() {
       setLoading(true);
       try {
         const [plans, schoolsPage] = await Promise.all([
-          getPlans(accessToken),
-          getSchools(accessToken, {
+          getPlans(accessToken as string),
+          getSchools(accessToken as string, {
             page,
             page_size: pageSize,
             status: statusFilter === 'all' ? undefined : normalizeStatus(statusFilter),
@@ -146,7 +146,7 @@ export default function SuperadminSchoolsPage() {
     const accessToken = session?.accessToken;
     if (!accessToken) return;
 
-    await suspendSchool(accessToken, row.id, 'Suspension depuis console superadmin');
+    await suspendSchool(accessToken as string, row.id, 'Suspension depuis console superadmin');
     toast.success(`Ecole ${row.name} suspendue.`);
     setRefreshKey((value) => value + 1);
   };
@@ -155,7 +155,7 @@ export default function SuperadminSchoolsPage() {
     const accessToken = session?.accessToken;
     if (!accessToken) return;
 
-    await reactivateSchool(accessToken, row.id);
+    await reactivateSchool(accessToken as string, row.id);
     toast.success(`Ecole ${row.name} reactivee.`);
     setRefreshKey((value) => value + 1);
   };
@@ -208,7 +208,7 @@ export default function SuperadminSchoolsPage() {
       />
 
       <div className="flex flex-col gap-2 rounded-lg border bg-card p-4 sm:flex-row sm:items-center">
-        <Select value={statusFilter} onValueChange={(value) => setFilterParam('status', value)}>
+        <Select value={statusFilter} onValueChange={(value) => setFilterParam('status', value ?? 'all')}>
           <SelectTrigger className="w-full sm:w-[190px]">
             <SelectValue placeholder="Statut" />
           </SelectTrigger>
@@ -221,7 +221,7 @@ export default function SuperadminSchoolsPage() {
           </SelectContent>
         </Select>
 
-        <Select value={planFilter} onValueChange={(value) => setFilterParam('plan', value)}>
+        <Select value={planFilter} onValueChange={(value) => setFilterParam('plan', value ?? 'all')}>
           <SelectTrigger className="w-full sm:w-[190px]">
             <SelectValue placeholder="Plan" />
           </SelectTrigger>

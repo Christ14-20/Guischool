@@ -187,7 +187,7 @@ export default function SchoolYearsPage() {
                     {new Date(year.end_date).toLocaleDateString('fr-FR')}
                   </TableCell>
                   <TableCell>
-                    <StatusBadge status={STATUS_BADGE[year.status]} label={STATUS_LABELS[year.status]} />
+                    <StatusBadge status={STATUS_LABELS[year.status]} />
                   </TableCell>
                   <TableCell>{year.is_current ? 'Oui' : 'Non'}</TableCell>
                   <TableCell>

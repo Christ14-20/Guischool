@@ -116,17 +116,17 @@ export default function SuperadminOnboardingPage() {
         <StatusBadge
           status={
             r.status === 'APPROVED'
-              ? 'active'
-              : r.status === 'REJECTED'
-                ? 'inactive'
-                : 'warning'
-          }
-          label={
-            r.status === 'APPROVED'
               ? 'Approuvée'
               : r.status === 'REJECTED'
                 ? 'Rejetée'
                 : 'En attente'
+          }
+          variant={
+            r.status === 'APPROVED'
+              ? 'success'
+              : r.status === 'REJECTED'
+                ? 'danger'
+                : 'warning'
           }
         />
       ),

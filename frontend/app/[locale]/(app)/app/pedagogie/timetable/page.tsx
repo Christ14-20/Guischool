@@ -163,7 +163,7 @@ export default function TimetablePage() {
 
       {/* Class selector */}
       <div className="flex flex-wrap items-center gap-3 rounded-lg border bg-card p-3">
-        <Select value={selectedClass} onValueChange={setSelectedClass}>
+        <Select value={selectedClass} onValueChange={(v) => v && setSelectedClass(v)}>
           <SelectTrigger className="w-64">
             <SelectValue placeholder="Sélectionner une classe" />
           </SelectTrigger>

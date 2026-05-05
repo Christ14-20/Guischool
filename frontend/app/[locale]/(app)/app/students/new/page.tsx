@@ -50,19 +50,19 @@ const schema = z.object({
       return !Number.isNaN(date.getTime()) && date <= new Date();
     }, 'La date de naissance ne peut pas être dans le futur.'),
   birth_place: z.string().optional(),
-  gender: z.enum(['M', 'F'], { required_error: 'Le sexe est requis.' }),
+  gender: z.enum(['M', 'F'], { error: 'Le sexe est requis.' } as any),
   photo_url: z.string().optional(),
   guardian_name: z.string().min(1, 'Le nom complet du tuteur est requis.'),
   guardian_relationship: z.enum(['PERE', 'MERE', 'TUTEUR', 'AUTRE'], {
-    required_error: 'Le lien de parenté est requis.',
-  }),
+    error: 'Le lien de parenté est requis.',
+  } as any),
   guardian_phone: z.string().regex(phoneRegex, 'Format requis: +224XXXXXXXXX'),
   guardian_email: z.string().email('Email invalide.').optional().or(z.literal('')),
   school_year: z.string().min(1, "L'année scolaire est requise."),
   classe: z.string().min(1, 'La classe est requise.'),
   registration_type: z.enum(['NOUVELLE', 'REINSCRIPTION', 'TRANSFERT_ENTRANT'], {
-    required_error: "Le type d'inscription est requis.",
-  }),
+    error: "Le type d'inscription est requis.",
+  } as any),
   observations: z.string().optional(),
 });
 

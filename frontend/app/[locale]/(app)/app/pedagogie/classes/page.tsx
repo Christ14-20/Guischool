@@ -176,7 +176,7 @@ export default function ClassesPage() {
 
       {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-3 rounded-lg border bg-card p-3">
-        <Select value={cycleFilter} onValueChange={setCycleFilter}>
+        <Select value={cycleFilter} onValueChange={(v) => setCycleFilter(v ?? 'all')}>
           <SelectTrigger className="w-40">
             <SelectValue placeholder="Cycle" />
           </SelectTrigger>
@@ -370,7 +370,7 @@ function ClassFormDialog({
   const classe = isEditing ? mode.classe : null;
 
   const form = useForm<FormValues>({
-    resolver: zodResolver(schema),
+    resolver: zodResolver(schema) as any,
     defaultValues: {
       name: classe?.name ?? '',
       school_year: classe?.school_year ? String(classe.school_year) : '',

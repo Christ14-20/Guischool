@@ -13,7 +13,7 @@ import { PageHeader } from '@/components/layout/page-header';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Progress, ProgressLabel, ProgressValue } from '@/components/ui/progress';
+import { Progress } from '@/components/ui/progress';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 const KPI_ITEMS = [
@@ -137,10 +137,13 @@ export default function AppDashboardPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             {WEEK_PROGRESS.map((item) => (
-              <Progress key={item.label} value={item.value}>
-                <ProgressLabel>{item.label}</ProgressLabel>
-                <ProgressValue>{item.value}%</ProgressValue>
-              </Progress>
+              <div key={item.label} className="space-y-1.5">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">{item.label}</span>
+                  <span className="font-semibold tabular-nums">{item.value}%</span>
+                </div>
+                <Progress value={item.value} className="h-2" />
+              </div>
             ))}
           </CardContent>
         </Card>

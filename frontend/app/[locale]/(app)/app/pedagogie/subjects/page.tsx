@@ -146,7 +146,7 @@ export default function SubjectsPage() {
       />
 
       <div className="flex gap-3 rounded-lg border bg-card p-3">
-        <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+        <Select value={categoryFilter} onValueChange={(v) => setCategoryFilter(v ?? 'all')}>
           <SelectTrigger className="w-48">
             <SelectValue placeholder="Filtrer par catégorie" />
           </SelectTrigger>

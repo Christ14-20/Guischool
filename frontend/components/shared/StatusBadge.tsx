@@ -9,10 +9,10 @@ type StatusBadgeProps = {
   className?: string;
 };
 
-const SUCCESS_STATUSES = new Set(['ACTIF', 'ADMIS', 'PAYE', 'PAID', 'ACTIVE']);
-const DANGER_STATUSES = new Set(['SUSPENDU', 'EXCLU', 'OVERDUE', 'SUSPENDED']);
-const WARNING_STATUSES = new Set(['TRIAL', 'BROUILLON', 'EN_RETARD']);
-const INFO_STATUSES = new Set(['EN_COURS', 'PENDING']);
+const SUCCESS_STATUSES = new Set(['ACTIF', 'ADMIS', 'PAYE', 'PAID', 'ACTIVE', 'RESOLU', 'COMPLETED', 'APPROVED', 'APPROUVEE']);
+const DANGER_STATUSES = new Set(['SUSPENDU', 'EXCLU', 'OVERDUE', 'SUSPENDED', 'FERME', 'BLOQUANT', 'CLOTUREE', 'REJECTED', 'REJETEE']);
+const WARNING_STATUSES = new Set(['TRIAL', 'BROUILLON', 'EN_RETARD', 'EN_ATTENTE', 'PENDING', 'PREPARATION', 'CLOTURE_EN_COURS']);
+const INFO_STATUSES = new Set(['EN_COURS', 'OUVERT', 'OUVERTE', 'PROCESSING']);
 
 const toneClasses: Record<StatusBadgeTone, string> = {
   success: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200',
@@ -28,7 +28,8 @@ function normalizeStatus(status: string) {
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .trim()
-    .toUpperCase();
+    .toUpperCase()
+    .replace(/\s+/g, '_');
 }
 
 function detectTone(status: string): StatusBadgeTone {

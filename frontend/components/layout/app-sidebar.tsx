@@ -75,7 +75,14 @@ const NAV_ITEMS: NavItem[] = [
       { label: 'Frais Scolaires', href: '/app/finance/fees' },
     ],
   },
-  { label: 'Support', href: '/app/support', icon: CircleHelp },
+  {
+    label: 'Support',
+    href: '/app/support',
+    icon: CircleHelp,
+    children: [
+      { label: 'Tickets', href: '/app/support/tickets' },
+    ],
+  },
   {
     label: 'Parametres',
     href: '/app/settings',

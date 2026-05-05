@@ -858,11 +858,11 @@
 **Description :** Créer la liste des tickets de support.
 
 **Checklist :**
-- [ ] `DataTable` : N° ticket, Catégorie, Priorité (`Badge` coloré), Statut, Date, Assigné à
-- [ ] Filtres : statut, catégorie, priorité
-- [ ] Bouton "Nouveau ticket" → ouvre un `Dialog` ou page dédiée
-- [ ] Clic sur une ligne → `/app/support/tickets/[id]`
-- [ ] Données : `GET /support/tickets/`
+- [x] `DataTable` : N° ticket, Catégorie, Priorité (`Badge` coloré), Statut, Date, Assigné à
+- [x] Filtres : statut, catégorie, priorité
+- [x] Bouton "Nouveau ticket" → ouvre un `Dialog` ou page dédiée
+- [x] Clic sur une ligne → `/app/support/tickets/[id]`
+- [x] Données : `GET /support/tickets/`
 
 **Labels :** `support`
 
@@ -873,13 +873,13 @@
 **Description :** Créer le formulaire de soumission d'un nouveau ticket de support.
 
 **Checklist :**
-- [ ] Catégorie (`Select`) : Technique / Facturation / Fonctionnel / Demande de fonctionnalité / Blocage / Paiement
-- [ ] Priorité (`Select`) : Bloquant / Majeur / Mineur / Question
-- [ ] Description* (`Textarea`)
-- [ ] Capture d'écran (upload optionnel, via `FileUploader`)
-- [ ] Validation Zod
-- [ ] `POST /support/tickets/`
-- [ ] Toast succès
+- [x] Catégorie (`Select`) : Technique / Facturation / Fonctionnel / Demande de fonctionnalité / Blocage / Paiement
+- [x] Priorité (`Select`) : Bloquant / Majeur / Mineur / Question
+- [x] Description* (`Textarea`)
+- [x] Capture d'écran (upload optionnel, via `FileUploader`)
+- [x] Validation Zod
+- [x] `POST /support/tickets/`
+- [x] Toast succès
 
 **Labels :** `support`
 
@@ -890,15 +890,15 @@
 **Description :** Créer la page de détail et fil de discussion d'un ticket.
 
 **Checklist :**
-- [ ] En-tête : N° ticket, catégorie, priorité, statut (`StatusBadge`)
-- [ ] Fil de discussion chronologique dans un `ScrollArea`
-- [ ] Chaque message : avatar, nom, date, contenu
-- [ ] Formulaire de réponse en bas (Textarea + bouton Envoyer)
-- [ ] `POST /support/tickets/{id}/messages/`
-- [ ] Actualisation du fil en temps réel ou polling toutes les 30s (React Query)
-- [ ] Actions admin (`PermissionGate` : `SUPER_ADMIN`, `ADMIN_SCHOOL`) :
-  - [ ] Changer le statut (`Select`)
-  - [ ] Assigner à un utilisateur (`Select`)
+- [x] En-tête : N° ticket, catégorie, priorité, statut (`StatusBadge`)
+- [x] Fil de discussion chronologique dans un `ScrollArea`
+- [x] Chaque message : avatar, nom, date, contenu
+- [x] Formulaire de réponse en bas (Textarea + bouton Envoyer)
+- [x] `POST /support/tickets/{id}/messages/`
+- [x] Actualisation du fil en temps réel ou polling toutes les 30s (React Query)
+- [x] Actions admin (`PermissionGate` : `SUPER_ADMIN`, `ADMIN_SCHOOL`) :
+  - [x] Changer le statut (`Select`)
+  - [x] Assigner à un utilisateur (`Select`)
 
 **Labels :** `support`
 

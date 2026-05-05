@@ -158,8 +158,8 @@ export default function SuperadminSchoolDetailPage() {
       setLoading(true);
       try {
         const [schoolPayload, plansPayload] = await Promise.all([
-          getSchool(accessToken, schoolId),
-          getPlans(accessToken),
+          getSchool(accessToken as string, schoolId),
+          getPlans(accessToken as string),
         ]);
 
         const payload = schoolPayload;
@@ -208,14 +208,14 @@ export default function SuperadminSchoolDetailPage() {
   const refreshSchool = async () => {
     const accessToken = session?.accessToken;
     if (!accessToken) return;
-    const payload = await getSchool(accessToken, schoolId);
+    const payload = await getSchool(accessToken as string, schoolId);
     setSchool(parseSchoolDetail(payload, schoolId));
   };
 
   const handleSuspend = async () => {
     const accessToken = session?.accessToken;
     if (!accessToken) return;
-    await suspendSchool(accessToken, schoolId, 'Suspension depuis fiche detail');
+    await suspendSchool(accessToken as string, schoolId, 'Suspension depuis fiche detail');
     await refreshSchool();
     toast.success('Ecole suspendue avec succes.');
   };
@@ -223,7 +223,7 @@ export default function SuperadminSchoolDetailPage() {
   const handleReactivate = async () => {
     const accessToken = session?.accessToken;
     if (!accessToken) return;
-    await reactivateSchool(accessToken, schoolId);
+    await reactivateSchool(accessToken as string, schoolId);
     await refreshSchool();
     toast.success('Ecole reactivee avec succes.');
   };
@@ -239,7 +239,7 @@ export default function SuperadminSchoolDetailPage() {
       return;
     }
 
-    await updateSchool(accessToken, schoolId, { plan: nextPlan.id });
+    await updateSchool(accessToken as string, schoolId, { plan: nextPlan.id });
     await refreshSchool();
     const message = nextPlan.name === 'ENTERPRISE' ? 'Migration vers Enterprise effectuee.' : 'Plan mis a jour avec succes.';
     toast.success(message);
@@ -369,12 +369,15 @@ export default function SuperadminSchoolDetailPage() {
                 <p className="text-2xl font-semibold">{school.stats.staff.toLocaleString('fr-FR')}</p>
               </div>
               <div className="rounded-md border p-3 sm:col-span-2">
-                <Progress value={storagePercent} className="w-full" aria-label="Usage stockage">
-                  <ProgressLabel>Usage stockage</ProgressLabel>
-                  <ProgressValue>
-                    {school.stats.storageUsedGb} Go / {school.stats.storageLimitGb} Go ({storagePercent}%)
-                  </ProgressValue>
-                </Progress>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="font-medium">Usage stockage</span>
+                    <span className="text-muted-foreground tabular-nums">
+                      {school.stats.storageUsedGb} Go / {school.stats.storageLimitGb} Go ({storagePercent}%)
+                    </span>
+                  </div>
+                  <Progress value={storagePercent} className="h-2 w-full" aria-label="Usage stockage" />
+                </div>
               </div>
             </CardContent>
           </Card>
