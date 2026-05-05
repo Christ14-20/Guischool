@@ -23,6 +23,7 @@ const toneClasses: Record<StatusBadgeTone, string> = {
 };
 
 function normalizeStatus(status: string) {
+  if (!status) return '';
   return status
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')

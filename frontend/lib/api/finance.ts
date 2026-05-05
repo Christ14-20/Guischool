@@ -59,6 +59,7 @@ export type PaymentItem = {
   student_name?: string;
   student_matricule?: string;
   student_fee?: string | number;
+  student_fee_name?: string;
   amount: number;
   payment_date: string;
   method: 'CASH' | 'ORANGE_MONEY' | 'MTN_MONEY' | 'WAVE' | 'BANK_TRANSFER' | 'CHECK' | string;
@@ -214,4 +215,27 @@ export async function updateFeeCategory(token: string, id: number, body: Record<
 
 export async function deleteFeeCategory(token: string, id: number) {
   return request(`/finance/feecategories/${id}/`, { token, method: 'DELETE' });
+}
+
+// ─── Student Fees (Frais par Élève) ──────────────────────────────────────────
+
+export type StudentFeeItem = {
+  id: number;
+  student: string | number;
+  fee_category: number;
+  fee_category_name?: string;
+  total_amount: number;
+  discount_amount: number;
+  balance_due: number;
+};
+
+export async function getStudentFees(
+  token: string,
+  query?: Record<string, string | number | undefined>
+): Promise<PaginatedResult<StudentFeeItem>> {
+  const data = await request<any>('/finance/student-fees/', { token, query });
+  return {
+    count: Number(data?.count ?? 0),
+    results: Array.isArray(data?.results) ? data.results : Array.isArray(data) ? data : [],
+  };
 }

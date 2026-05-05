@@ -32,7 +32,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import dynamic from 'next/dynamic';
 
-import { getPayments, createPayment, type PaymentItem } from '@/lib/api/finance';
+import { getPayments, createPayment, getStudentFees, type PaymentItem, type StudentFeeItem } from '@/lib/api/finance';
 import { getStudents, type StudentItem } from '@/lib/api/students';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { useRole } from '@/hooks/useRole';
@@ -54,6 +54,7 @@ const DynamicReceiptViewer = dynamic(() => import('@/components/finance/ReceiptP
 
 const paymentSchema = z.object({
   student: z.string().min(1, "L'élève est requis."),
+  student_fee: z.string().optional(),
   amount: z.coerce.number().min(1, 'Le montant doit être supérieur à 0.'),
   payment_date: z.string().min(1, 'La date est requise.'),
   method: z.string().min(1, 'Le mode de paiement est requis.'),
@@ -68,6 +69,7 @@ export default function PaymentsPage() {
 
   const [payments, setPayments] = useState<PaymentItem[]>([]);
   const [students, setStudents] = useState<StudentItem[]>([]);
+  const [studentFees, setStudentFees] = useState<StudentFeeItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [printPayment, setPrintPayment] = useState<PaymentItem | null>(null);
@@ -78,12 +80,31 @@ export default function PaymentsPage() {
     resolver: zodResolver(paymentSchema) as any,
     defaultValues: {
       student: '',
+      student_fee: '',
       amount: 0,
       payment_date: new Date().toISOString().split('T')[0],
       method: 'CASH',
       reference: '',
     },
   });
+
+  const selectedStudent = form.watch('student');
+
+  useEffect(() => {
+    const fetchFees = async () => {
+      if (!token || !selectedStudent) {
+        setStudentFees([]);
+        return;
+      }
+      try {
+        const res = await getStudentFees(token, { student: selectedStudent });
+        setStudentFees(res.results);
+      } catch (e) {
+        console.error('Erreur chargement frais:', e);
+      }
+    };
+    fetchFees();
+  }, [token, selectedStudent]);
 
   const loadData = async () => {
     if (!token) return;
@@ -157,6 +178,7 @@ export default function PaymentsPage() {
               <TableHead>N° Reçu</TableHead>
               <TableHead>Élève</TableHead>
               <TableHead>Mode</TableHead>
+              <TableHead>Frais concerné</TableHead>
               <TableHead className="text-right">Montant</TableHead>
               <TableHead className="text-center">Statut</TableHead>
               <TableHead className="w-[80px]"></TableHead>
@@ -165,13 +187,13 @@ export default function PaymentsPage() {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
+                <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
                   Chargement...
                 </TableCell>
               </TableRow>
             ) : payments.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
+                <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
                   Aucun paiement trouvé.
                 </TableCell>
               </TableRow>
@@ -185,6 +207,9 @@ export default function PaymentsPage() {
                   </TableCell>
                   <TableCell>
                     {PAYMENT_METHODS.find((m) => m.value === payment.method)?.label || payment.method}
+                  </TableCell>
+                  <TableCell className="text-xs text-muted-foreground italic">
+                    {payment.student_fee_name || 'Général'}
                   </TableCell>
                   <TableCell className="text-right font-bold text-primary">
                     {formatCurrency(payment.amount)}
@@ -244,6 +269,33 @@ export default function PaymentsPage() {
                   </FormItem>
                 )}
               />
+
+              {studentFees.length > 0 && (
+                <FormField
+                  control={form.control}
+                  name="student_fee"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Frais concerné</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Sélectionnez le frais à payer" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {studentFees.map((fee) => (
+                            <SelectItem key={fee.id} value={String(fee.id)}>
+                              {fee.fee_category_name} (Solde: {formatCurrency(fee.balance_due)})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
 
               <div className="grid grid-cols-2 gap-4">
                 <FormField

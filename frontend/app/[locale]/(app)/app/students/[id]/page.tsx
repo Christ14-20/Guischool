@@ -256,16 +256,20 @@ export default function StudentDetailPage() {
     // Paiements
     payments.forEach((pay) => {
       events.push({
-        date: pay.date,
+        date: pay.payment_date || pay.created_at || '',
         type: 'PAIEMENT',
         title: `Paiement reçu`,
-        description: `${formatCurrency(pay.amount)} (${pay.payment_method}) - Reçu: ${pay.receipt_number || '—'}`,
+        description: `${formatCurrency(pay.amount)} (${pay.method}) - Reçu: ${pay.receipt_number || '—'}`,
         icon: 'CreditCard',
         color: 'green',
       });
     });
 
-    return events.sort((a, b) => b.date.localeCompare(a.date));
+    return events.sort((a, b) => {
+      const dateA = a.date || '';
+      const dateB = b.date || '';
+      return dateB.localeCompare(dateA);
+    });
   }, [history, payments]);
 
   const profileRows = useMemo(
@@ -673,12 +677,12 @@ export default function StudentDetailPage() {
                               <tbody>
                                 {payments.map((p) => (
                                   <tr key={p.id} className="border-t">
-                                    <td className="px-3 py-2">{formatDate(p.date)}</td>
+                                    <td className="px-3 py-2">{formatDate(p.payment_date)}</td>
                                     <td className="px-3 py-2 font-mono text-xs">
-                                      {p.receipt_number || p.reference_number || '—'}
+                                      {p.receipt_number || p.reference || '—'}
                                     </td>
                                     <td className="px-3 py-2">
-                                      <StatusBadge status={p.payment_method} />
+                                      <StatusBadge status={p.method} />
                                     </td>
                                     <td className="px-3 py-2 text-right font-semibold">
                                       {formatCurrency(p.amount)}
