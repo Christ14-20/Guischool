@@ -33,7 +33,7 @@ const ADMIN_NAV_ITEMS: AdminNavItem[] = [
   { label: 'Ecoles', href: '/superadmin/schools', icon: Building2 },
   { label: 'Plans', href: '/superadmin/plans', icon: ListChecks },
   { label: 'Utilisateurs', href: '/superadmin/users', icon: UserCog },
-  { label: 'Logs', href: '/superadmin/logs', icon: ShieldCheck },
+  { label: 'Audit', href: '/superadmin/audit', icon: ShieldCheck },
   { label: 'Alertes', href: '/superadmin/alerts', icon: AlertTriangle },
 ];
 

@@ -180,6 +180,13 @@ export async function getSystemAlerts(
   };
 }
 
+export async function resolveSystemAlert(token: string, id: string) {
+  return request(`/monitoring/systemalerts/${id}/resolve/`, {
+    token,
+    method: 'POST',
+  });
+}
+
 export async function getSuperadminUsers(
   token: string,
   query?: Record<string, string | number | undefined>

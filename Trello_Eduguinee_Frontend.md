@@ -913,13 +913,13 @@
 **Description :** Créer la page de configuration de l'établissement scolaire.
 
 **Checklist :**
-- [ ] Accessible uniquement à `ADMIN_SCHOOL`
-- [ ] Section "Informations de l'école" : nom, logo (`FileUploader`), contact, adresse
-- [ ] Section "Paramètres pédagogiques" : seuil de passage (note mini pour `ADMIS`), nb max redoublements
-- [ ] Section "Utilisateurs" : liste des comptes associés à l'école, inviter un utilisateur (email + rôle)
-- [ ] Section "Sécurité" : changer mot de passe, sessions actives
-- [ ] Formulaires avec validation Zod
-- [ ] `PUT /schools/{id}/` pour les infos de l'école
+- [x] Accessible uniquement à `ADMIN_SCHOOL`
+- [x] Section "Informations de l'école" : nom, logo (`FileUploader`), contact, adresse
+- [x] Section "Paramètres pédagogiques" : seuil de passage (note mini pour `ADMIS`), nb max redoublements
+- [x] Section "Utilisateurs" : liste des comptes associés à l'école, inviter un utilisateur (email + rôle)
+- [x] Section "Sécurité" : changer mot de passe, sessions actives
+- [x] Formulaires avec validation Zod
+- [x] `PUT /schools/{id}/` pour les infos de l'école
 
 **Labels :** `paramètres`
 
@@ -934,12 +934,12 @@
 **Description :** Créer l'interface de consultation des logs d'audit (accès Super Admin et Admin École).
 
 **Checklist :**
-- [ ] `DataTable` : Date, Utilisateur, Action, Entité concernée, Ancienne valeur, Nouvelle valeur, IP
-- [ ] Filtres : utilisateur (`Select`), type d'action, plage de dates
-- [ ] Bouton "Export CSV"
-- [ ] Pagination côté serveur
-- [ ] Accessible sur `/superadmin/audit` pour le Super Admin et `/app/settings` (onglet) pour `ADMIN_SCHOOL`
-- [ ] Données : `GET /monitoring/auditlogs/`
+- [x] `DataTable` : Date, Utilisateur, Action, Entité concernée, Ancienne valeur, Nouvelle valeur, IP
+- [x] Filtres : utilisateur (`Select`), type d'action, plage de dates
+- [x] Bouton "Export CSV"
+- [x] Pagination côté serveur
+- [x] Accessible sur `/superadmin/audit` pour le Super Admin et `/app/settings` (onglet) pour `ADMIN_SCHOOL`
+- [x] Données : `GET /monitoring/auditlogs/`
 
 **Labels :** `monitoring`
 
@@ -950,11 +950,11 @@
 **Description :** Créer l'interface de gestion des alertes système.
 
 **Checklist :**
-- [ ] Liste des alertes actives avec niveau (Critique / Warning / Info)
-- [ ] `Badge` coloré par niveau
-- [ ] Bouton "Marquer comme résolue"
-- [ ] Données : `GET /monitoring/systemalerts/`
-- [ ] Affiché sur le dashboard Super Admin et dans une page dédiée
+- [x] Liste des alertes actives avec niveau (Critique / Warning / Info)
+- [x] `Badge` coloré par niveau
+- [x] Bouton "Marquer comme résolue"
+- [x] Données : `GET /monitoring/systemalerts/`
+- [x] Affiché sur le dashboard Super Admin et dans une page dédiée
 
 **Labels :** `monitoring` `superadmin`
 

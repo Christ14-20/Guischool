@@ -10,9 +10,9 @@ type StatusBadgeProps = {
 };
 
 const SUCCESS_STATUSES = new Set(['ACTIF', 'ADMIS', 'PAYE', 'PAID', 'ACTIVE', 'RESOLU', 'COMPLETED', 'APPROVED', 'APPROUVEE']);
-const DANGER_STATUSES = new Set(['SUSPENDU', 'EXCLU', 'OVERDUE', 'SUSPENDED', 'FERME', 'BLOQUANT', 'CLOTUREE', 'REJECTED', 'REJETEE']);
-const WARNING_STATUSES = new Set(['TRIAL', 'BROUILLON', 'EN_RETARD', 'EN_ATTENTE', 'PENDING', 'PREPARATION', 'CLOTURE_EN_COURS']);
-const INFO_STATUSES = new Set(['EN_COURS', 'OUVERT', 'OUVERTE', 'PROCESSING']);
+const DANGER_STATUSES = new Set(['SUSPENDU', 'EXCLU', 'OVERDUE', 'SUSPENDED', 'FERME', 'BLOQUANT', 'CLOTUREE', 'REJECTED', 'REJETEE', 'INACTIVE', 'CRITICAL']);
+const WARNING_STATUSES = new Set(['TRIAL', 'BROUILLON', 'EN_RETARD', 'EN_ATTENTE', 'PENDING', 'PREPARATION', 'CLOTURE_EN_COURS', 'INVITED', 'WARNING']);
+const INFO_STATUSES = new Set(['EN_COURS', 'OUVERT', 'OUVERTE', 'PROCESSING', 'INFO']);
 
 const toneClasses: Record<StatusBadgeTone, string> = {
   success: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200',

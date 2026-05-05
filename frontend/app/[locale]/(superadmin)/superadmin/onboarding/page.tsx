@@ -42,11 +42,11 @@ export default function SuperadminOnboardingPage() {
     let mounted = true;
     setLoading(true);
     getOnboardingRequests(token)
-      .then((res) => {
+      .then((res: any) => {
         if (!mounted) return;
         setRows(res.results);
       })
-      .catch((e) => {
+      .catch((e: Error | any) => {
         toast.error(e instanceof Error ? e.message : 'Erreur de chargement des demandes.');
       })
       .finally(() => {
