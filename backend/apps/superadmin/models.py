@@ -1,10 +1,11 @@
 """
 apps/superadmin/models.py
-Modèles multi-tenant : Plan, Tenant (École), Subscription.
+Modèles multi-tenant : Plan, Tenant (École), Subscription, Campus.
 """
 import uuid
 from django.db import models
 from django.utils.text import slugify
+from django.core.validators import MinValueValidator, MaxValueValidator
 
 
 class Plan(models.Model):
@@ -34,6 +35,72 @@ class Plan(models.Model):
 
     def __str__(self):
         return self.get_name_display()
+
+
+class Campus(models.Model):
+    """
+    Campus géographique d'une école (multi-campus).
+    Un tenant peut avoir plusieurs campus (ex: Campus Centre, Campus Nord).
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    tenant = models.ForeignKey(
+        "Tenant",
+        on_delete=models.CASCADE,
+        related_name="campuses",
+        verbose_name="École",
+    )
+    name = models.CharField(max_length=200, verbose_name="Nom du campus")
+    address = models.TextField(blank=True, verbose_name="Adresse complète")
+    city = models.CharField(max_length=100, blank=True, verbose_name="Ville")
+    prefecture = models.CharField(max_length=100, blank=True, verbose_name="Préfecture")
+
+    # Coordonnées GPS
+    latitude = models.DecimalField(
+        max_digits=9, decimal_places=6,
+        null=True, blank=True,
+        validators=[MinValueValidator(-90), MaxValueValidator(90)],
+        verbose_name="Latitude",
+    )
+    longitude = models.DecimalField(
+        max_digits=9, decimal_places=6,
+        null=True, blank=True,
+        validators=[MinValueValidator(-180), MaxValueValidator(180)],
+        verbose_name="Longitude",
+    )
+
+    # Niveaux éducatifs activés sur ce campus (liste de cycles : PRIMAIRE, COLLEGE, LYCEE...)
+    active_levels = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="Cycles actifs sur ce campus ex: ['PRIMAIRE', 'COLLEGE']",
+        verbose_name="Niveaux activés",
+    )
+
+    phone = models.CharField(max_length=20, blank=True, verbose_name="Téléphone")
+    email = models.EmailField(blank=True, verbose_name="Email")
+    is_main = models.BooleanField(
+        default=False,
+        verbose_name="Campus principal",
+        help_text="Le campus principal est le siège de l'établissement.",
+    )
+    is_active = models.BooleanField(default=True, verbose_name="Actif")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Campus"
+        verbose_name_plural = "Campus"
+        ordering = ["-is_main", "name"]
+        unique_together = [("tenant", "name")]
+
+    def __str__(self):
+        return f"{self.name} ({self.tenant.name})"
+
+    def save(self, *args, **kwargs):
+        # Garantir un seul campus principal par tenant
+        if self.is_main:
+            Campus.objects.filter(tenant=self.tenant, is_main=True).exclude(pk=self.pk).update(is_main=False)
+        super().save(*args, **kwargs)
 
 
 class Tenant(models.Model):

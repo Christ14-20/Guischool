@@ -1,9 +1,9 @@
 """
 apps/superadmin/api/serializers.py
-Serializers : Plan, Tenant (création + list + detail), Subscription.
+Serializers : Plan, Tenant (création + list + detail), Subscription, Campus.
 """
 from rest_framework import serializers
-from apps.superadmin.models import Plan, Tenant, Subscription
+from apps.superadmin.models import Plan, Tenant, Subscription, Campus
 from apps.authentication.models import User, Role
 
 
@@ -115,3 +115,51 @@ class SuperadminUserCreateUpdateSerializer(serializers.ModelSerializer):
             setattr(instance, attr, value)
         instance.save()
         return instance
+
+
+# ── Campus Serializers ────────────────────────────────────────────────────
+
+class CampusSerializer(serializers.ModelSerializer):
+    """Serializer complet pour lecture (list + detail)."""
+    tenant_name = serializers.CharField(source="tenant.name", read_only=True)
+    classes_count = serializers.SerializerMethodField()
+    students_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Campus
+        fields = [
+            "id", "tenant", "tenant_name", "name", "address", "city", "prefecture",
+            "latitude", "longitude", "active_levels", "phone", "email",
+            "is_main", "is_active", "classes_count", "students_count",
+            "created_at", "updated_at",
+        ]
+        read_only_fields = ["id", "tenant", "tenant_name", "classes_count", "students_count", "created_at", "updated_at"]
+
+    def get_classes_count(self, obj):
+        return obj.classes.count()
+
+    def get_students_count(self, obj):
+        return obj.students.count()
+
+
+class CampusWriteSerializer(serializers.ModelSerializer):
+    """Serializer pour création et mise à jour d'un campus."""
+
+    class Meta:
+        model = Campus
+        fields = [
+            "name", "address", "city", "prefecture",
+            "latitude", "longitude", "active_levels",
+            "phone", "email", "is_main", "is_active",
+        ]
+
+    def validate_active_levels(self, value):
+        """Vérifier que les cycles sont valides."""
+        valid_cycles = {"MATERNELLE", "PRIMAIRE", "CQP", "COLLEGE", "LYCEE_GEN",
+                        "LYCEE_TECH", "ETFP_A", "ETFP_B", "SUPERIEUR"}
+        for level in value:
+            if level not in valid_cycles:
+                raise serializers.ValidationError(
+                    f"Cycle invalide : '{level}'. Valeurs acceptables : {', '.join(sorted(valid_cycles))}"
+                )
+        return value

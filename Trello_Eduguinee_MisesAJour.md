@@ -16,18 +16,18 @@
 **Description :** Étendre le modèle `Tenant` pour supporter plusieurs campus géographiques par tenant.
 
 **Checklist Backend :**
-- [ ] Créer modèle `Campus` (nom, adresse, coordonnées GPS, tenant FK, niveaux activés)
-- [ ] Ajouter FK `campus` sur modèles : `Class`, `Staff`, `TimetableSlot`, `Student`
-- [ ] Filtrage multi-campus dans tous les ViewSets (isolation campus)
-- [ ] Endpoints : `GET/POST /superadmin/schools/{id}/campuses/`
-- [ ] Endpoint : `PATCH /superadmin/schools/{id}/campuses/{campus_id}/`
-- [ ] Ajouter `campus_id` dans les claims JWT (après le `tenant_id`)
-- [ ] Tests inter-campus : vérifier isolation données
+- [x] Créer modèle `Campus` (nom, adresse, coordonnées GPS, tenant FK, niveaux activés)
+- [x] Ajouter FK `campus` sur modèles : `Class`, `Staff`, `TimetableSlot`, `Student`
+- [x] Filtrage multi-campus dans tous les ViewSets (isolation campus)
+- [x] Endpoints : `GET/POST /superadmin/schools/{id}/campuses/`
+- [x] Endpoint : `PATCH /superadmin/schools/{id}/campuses/{campus_id}/`
+- [x] Ajouter `campus_id` dans les claims JWT (après le `tenant_id`)
+- [x] Tests inter-campus : vérifier isolation données
 
 **Checklist Frontend :**
-- [ ] Sélecteur de campus dans la `TopBar` (si multi-campus activé)
-- [ ] Filtrage dynamique des classes/élèves selon campus sélectionné
-- [ ] Page de configuration campus : `/superadmin/schools/[id]/campuses`
+- [x] Sélecteur de campus dans la `TopBar` (si multi-campus activé)
+- [x] Filtrage dynamique des classes/élèves selon campus sélectionné
+- [x] Page de configuration campus : `/superadmin/schools/[id]/campuses`
 
 **Labels :** `architecture` `multi-tenant` `priorité-haute`
 

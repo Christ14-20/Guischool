@@ -1,11 +1,12 @@
 'use client';
 
-import { Bell, Menu, Moon, Sun } from 'lucide-react';
+import { Bell, Building2, Menu, Moon, Sun } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { useParams, usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 import { BreadcrumbNav } from '@/components/layout/breadcrumb-nav';
+import { useCampus } from '@/components/layout/campus-provider';
 import { useSchoolYear } from '@/components/layout/school-year-provider';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -30,6 +31,7 @@ export function TopBar({ onHamburgerClick }: TopBarProps) {
   const locale = (params?.locale as string) ?? 'fr';
 
   const { schoolYear, setSchoolYear, availableYears } = useSchoolYear();
+  const { campus, setCampus, availableCampuses, isMultiCampus } = useCampus();
 
   useEffect(() => {
     setIsMounted(true);
@@ -44,6 +46,12 @@ export function TopBar({ onHamburgerClick }: TopBarProps) {
   const handleSchoolYearChange = (value: string | null) => {
     if (!value) return;
     setSchoolYear(value);
+  };
+
+  const handleCampusChange = (campusId: string | null) => {
+    if (!campusId) return;
+    const found = availableCampuses.find((c) => c.id === campusId);
+    if (found) setCampus(found);
   };
 
   return (
@@ -64,6 +72,7 @@ export function TopBar({ onHamburgerClick }: TopBarProps) {
       </div>
 
       <div className="flex items-center gap-2">
+        {/* Sélecteur d'année scolaire */}
         <Select value={schoolYear} onValueChange={handleSchoolYearChange}>
           <SelectTrigger
             className="w-[160px] border-border/70 bg-background/70"
@@ -79,6 +88,33 @@ export function TopBar({ onHamburgerClick }: TopBarProps) {
             ))}
           </SelectContent>
         </Select>
+
+        {/* Sélecteur de campus — visible seulement si multi-campus activé */}
+        {isMultiCampus && (
+          <Select value={campus?.id ?? ''} onValueChange={handleCampusChange}>
+            <SelectTrigger
+              className="w-[160px] border-border/70 bg-background/70"
+              aria-label="Sélectionner un campus"
+            >
+              <Building2 className="mr-1.5 h-3.5 w-3.5 shrink-0 text-primary" />
+              <SelectValue placeholder="Campus…" />
+            </SelectTrigger>
+            <SelectContent>
+              {availableCampuses.map((c) => (
+                <SelectItem key={c.id} value={c.id}>
+                  <span className="flex items-center gap-1.5">
+                    {c.name}
+                    {c.is_main && (
+                      <span className="rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary">
+                        Principal
+                      </span>
+                    )}
+                  </span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
 
         <Button variant="outline" size="icon" className="relative border-border/70 bg-background/70" aria-label="Notifications">
           <Bell className="h-4 w-4" />

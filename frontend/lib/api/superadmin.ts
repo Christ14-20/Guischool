@@ -253,3 +253,72 @@ export async function reviewOnboardingRequest(
   });
   return data?.data ?? data;
 }
+
+// ── Campus ────────────────────────────────────────────────────────────────
+
+export type CampusItem = {
+  id: string;
+  tenant: string;
+  tenant_name: string;
+  name: string;
+  address: string;
+  city: string;
+  prefecture: string;
+  latitude: string | null;
+  longitude: string | null;
+  active_levels: string[];
+  phone: string;
+  email: string;
+  is_main: boolean;
+  is_active: boolean;
+  classes_count: number;
+  students_count: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type CampusCreateBody = {
+  name: string;
+  address?: string;
+  city?: string;
+  prefecture?: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  active_levels?: string[];
+  phone?: string;
+  email?: string;
+  is_main?: boolean;
+  is_active?: boolean;
+};
+
+export async function getCampuses(token: string, schoolId: string): Promise<CampusItem[]> {
+  const data = await request<any>(`/superadmin/schools/${schoolId}/campuses/`, { token });
+  return data?.data ?? (Array.isArray(data?.results) ? data.results : []);
+}
+
+export async function createCampus(
+  token: string,
+  schoolId: string,
+  body: CampusCreateBody
+): Promise<CampusItem> {
+  const data = await request<any>(`/superadmin/schools/${schoolId}/campuses/`, {
+    token,
+    method: 'POST',
+    body,
+  });
+  return data?.data ?? data;
+}
+
+export async function updateCampus(
+  token: string,
+  schoolId: string,
+  campusId: string,
+  body: Partial<CampusCreateBody>
+): Promise<CampusItem> {
+  const data = await request<any>(`/superadmin/schools/${schoolId}/campuses/${campusId}/`, {
+    token,
+    method: 'PATCH',
+    body,
+  });
+  return data?.data ?? data;
+}

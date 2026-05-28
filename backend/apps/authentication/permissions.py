@@ -58,3 +58,9 @@ CanViewSystemAlerts = make_permission("can_view_systemalerts")
 CanViewTickets = make_permission("can_view_tickets")
 CanAssignTicket = make_permission("can_assign_ticket")
 CanUpdateTicketStatus = make_permission("can_update_ticket_status")
+
+# ── Permissions Campus ──────────────────────────────────────────────────
+CanViewCampuses = make_permission("can_view_campuses")
+CanCreateCampus = make_permission("can_create_campus")
+CanEditCampus = make_permission("can_edit_campus")
+CanDeleteCampus = make_permission("can_delete_campus")

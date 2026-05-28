@@ -389,6 +389,10 @@ export default function SuperadminSchoolDetailPage() {
               <CardTitle>Actions sensibles</CardTitle>
             </CardHeader>
             <CardContent className="flex flex-wrap gap-2">
+              <Button variant="secondary" onClick={() => router.push(`/${locale}/superadmin/schools/${schoolId}/campuses`)}>
+                Gérer les campus
+              </Button>
+
               <ConfirmDialog
                 title="Suspendre l'ecole"
                 description={`Confirmer la suspension de ${school.name} ?`}

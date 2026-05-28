@@ -70,6 +70,11 @@ class Class(models.Model):
     tenant = models.ForeignKey("superadmin.Tenant", on_delete=models.CASCADE, related_name="classes")
     school_year = models.ForeignKey(SchoolYear, on_delete=models.CASCADE, related_name="classes")
     level = models.ForeignKey(Level, on_delete=models.PROTECT, related_name="classes")
+    campus = models.ForeignKey(
+        "superadmin.Campus", null=True, blank=True,
+        on_delete=models.SET_NULL, related_name="classes",
+        verbose_name="Campus",
+    )
     name = models.CharField(max_length=100, help_text="Ex: 6ème A")
     capacity = models.PositiveSmallIntegerField(default=60)
     room = models.CharField(max_length=50, blank=True)
@@ -141,6 +146,11 @@ class TimetableSlot(models.Model):
         ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"], start=1
     )]
     tenant = models.ForeignKey("superadmin.Tenant", on_delete=models.CASCADE, related_name="timetable_slots")
+    campus = models.ForeignKey(
+        "superadmin.Campus", null=True, blank=True,
+        on_delete=models.SET_NULL, related_name="timetable_slots",
+        verbose_name="Campus",
+    )
     classe = models.ForeignKey(Class, on_delete=models.CASCADE, related_name="timetable_slots")
     teacher = models.ForeignKey("authentication.User", on_delete=models.CASCADE, related_name="timetable_slots")
     subject = models.ForeignKey(Subject, on_delete=models.CASCADE, related_name="timetable_slots")
@@ -260,6 +270,11 @@ class Student(models.Model):
     classe_actuelle = models.ForeignKey(
         Class, null=True, blank=True,
         on_delete=models.SET_NULL, related_name="students",
+    )
+    campus = models.ForeignKey(
+        "superadmin.Campus", null=True, blank=True,
+        on_delete=models.SET_NULL, related_name="students",
+        verbose_name="Campus",
     )
     annee_inscription = models.ForeignKey(
         SchoolYear, on_delete=models.PROTECT, related_name="new_students",

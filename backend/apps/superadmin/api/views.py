@@ -9,11 +9,12 @@ from rest_framework.permissions import IsAuthenticated
 from django.db.models import Q
 from django.utils.crypto import get_random_string
 
-from apps.superadmin.models import Tenant, Plan
+from apps.superadmin.models import Tenant, Plan, Campus
 from apps.authentication.models import User
 from apps.superadmin.api.serializers import (
     TenantSerializer, PlanSerializer, TenantSuspendSerializer,
     SuperadminUserSerializer, SuperadminUserCreateUpdateSerializer,
+    CampusSerializer, CampusWriteSerializer,
 )
 from apps.superadmin.services import tenant_service
 from apps.authentication.permissions import (
@@ -27,6 +28,10 @@ from apps.authentication.permissions import (
     CanViewUsers,
     CanEditUser,
     CanCreateUser,
+    CanViewCampuses,
+    CanCreateCampus,
+    CanEditCampus,
+    CanDeleteCampus,
 )
 
 
@@ -221,3 +226,69 @@ class SuperadminUserViewSet(viewsets.ModelViewSet):
                 "data": {"temporary_password": temporary_password},
             }
         )
+
+
+class CampusViewSet(viewsets.ModelViewSet):
+    """
+    CRUD campus pour une école donnée.
+    Routes : /superadmin/schools/{school_pk}/campuses/
+             /superadmin/schools/{school_pk}/campuses/{pk}/
+    """
+    serializer_class = CampusSerializer
+
+    def get_permissions(self):
+        if self.action == "create":
+            return [CanCreateCampus()]
+        if self.action in ("update", "partial_update"):
+            return [CanEditCampus()]
+        if self.action == "destroy":
+            return [CanDeleteCampus()]
+        return [CanViewCampuses()]
+
+    def get_serializer_class(self):
+        if self.action in ("create", "update", "partial_update"):
+            return CampusWriteSerializer
+        return CampusSerializer
+
+    def _get_tenant(self):
+        """Récupère le tenant (school) depuis l'URL (school_pk)."""
+        school_pk = self.kwargs.get("school_pk")
+        try:
+            return Tenant.objects.get(pk=school_pk)
+        except Tenant.DoesNotExist:
+            from rest_framework.exceptions import NotFound
+            raise NotFound("École introuvable.")
+
+    def get_queryset(self):
+        tenant = self._get_tenant()
+        return Campus.objects.filter(tenant=tenant).order_by("-is_main", "name")
+
+    def perform_create(self, serializer):
+        tenant = self._get_tenant()
+        serializer.save(tenant=tenant)
+
+    def list(self, request, *args, **kwargs):
+        qs = self.get_queryset()
+        serializer = CampusSerializer(qs, many=True)
+        return Response({"status": "success", "data": serializer.data})
+
+    def retrieve(self, request, *args, **kwargs):
+        campus = self.get_object()
+        return Response({"status": "success", "data": CampusSerializer(campus).data})
+
+    def create(self, request, *args, **kwargs):
+        serializer = CampusWriteSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        campus = serializer.instance
+        return Response(
+            {"status": "success", "data": CampusSerializer(campus).data},
+            status=status.HTTP_201_CREATED,
+        )
+
+    def partial_update(self, request, *args, **kwargs):
+        campus = self.get_object()
+        serializer = CampusWriteSerializer(campus, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response({"status": "success", "data": CampusSerializer(serializer.instance).data})
