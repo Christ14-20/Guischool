@@ -26,6 +26,9 @@ urlpatterns = [
         # Super Administration (Écoles/Plans)
         path("superadmin/", include("apps.superadmin.api.urls")),
         
+        # Réseaux d'écoles (Tenant Networks)
+        path("network/", include("apps.superadmin.api.network_urls")),
+        
         # Pédagogie (Années, Classes, Élèves, Notes, Décisions)
         path("", include("apps.pedagogy.api.urls")),
         

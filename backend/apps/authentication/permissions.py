@@ -64,3 +64,17 @@ CanViewCampuses = make_permission("can_view_campuses")
 CanCreateCampus = make_permission("can_create_campus")
 CanEditCampus = make_permission("can_edit_campus")
 CanDeleteCampus = make_permission("can_delete_campus")
+
+
+class IsNetworkAdmin(BasePermission):
+    """
+    Vérifie si l'utilisateur est NETWORK_ADMIN ou SUPER_ADMIN.
+    """
+    def has_permission(self, request, view):
+        if not (request.user and request.user.is_authenticated):
+            return False
+        return (
+            request.user.is_superuser or
+            (request.user.role and request.user.role.name in ["NETWORK_ADMIN", "SUPER_ADMIN"])
+        )
+

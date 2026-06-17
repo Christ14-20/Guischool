@@ -103,6 +103,31 @@ class Campus(models.Model):
         super().save(*args, **kwargs)
 
 
+class TenantNetwork(models.Model):
+    """Réseau d'écoles / chaînes d'établissement."""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(max_length=255, verbose_name="Nom du réseau")
+    description = models.TextField(blank=True, verbose_name="Description")
+    admin_network = models.ForeignKey(
+        "authentication.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="managed_networks",
+        verbose_name="Administrateur du réseau",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Réseau d'écoles"
+        verbose_name_plural = "Réseaux d'écoles"
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
+
+
 class Tenant(models.Model):
     """École / établissement scolaire (unité d'isolation multi-tenant)."""
     STATUS_CHOICES = [
@@ -130,6 +155,10 @@ class Tenant(models.Model):
     plan = models.ForeignKey(
         Plan, null=True, blank=True, on_delete=models.SET_NULL,
         related_name="tenants", verbose_name="Plan d'abonnement",
+    )
+    network = models.ForeignKey(
+        TenantNetwork, null=True, blank=True, on_delete=models.SET_NULL,
+        related_name="tenants", verbose_name="Réseau d'écoles",
     )
     settings = models.JSONField(
         default=dict, blank=True,

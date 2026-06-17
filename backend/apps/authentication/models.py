@@ -55,6 +55,7 @@ class Role(models.Model):
     ROLE_CHOICES = [
         ("SUPER_ADMIN", "Super Administrateur"),
         ("ADMIN_SCHOOL", "Administrateur École"),
+        ("NETWORK_ADMIN", "Administrateur Réseau"),
         ("SECRETAIRE", "Secrétaire"),
         ("ENSEIGNANT", "Enseignant"),
         ("PARENT", "Parent"),

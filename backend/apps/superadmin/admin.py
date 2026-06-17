@@ -1,15 +1,20 @@
 from django.contrib import admin
-from .models import Plan, Tenant, Subscription
+from .models import Plan, Tenant, Subscription, TenantNetwork
 
 @admin.register(Plan)
 class PlanAdmin(admin.ModelAdmin):
     list_display = ("name", "max_students", "max_staff", "price_monthly", "price_annual")
     list_editable = ("max_students", "max_staff", "price_monthly", "price_annual")
 
+@admin.register(TenantNetwork)
+class TenantNetworkAdmin(admin.ModelAdmin):
+    list_display = ("name", "admin_network", "created_at")
+    search_fields = ("name", "admin_network__email")
+
 @admin.register(Tenant)
 class TenantAdmin(admin.ModelAdmin):
-    list_display = ("name", "slug", "type", "status", "plan", "created_at")
-    list_filter = ("type", "status", "plan")
+    list_display = ("name", "slug", "type", "status", "plan", "network", "created_at")
+    list_filter = ("type", "status", "plan", "network")
     search_fields = ("name", "slug", "code_minedu")
     prepopulated_fields = {"slug": ("name",)}
 
