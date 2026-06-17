@@ -20,7 +20,7 @@ class TenantSettingsView(APIView):
         return request.user.tenant
 
     def get(self, request):
-        tenant = self._get_tenant()
+        tenant = self._get_tenant(request)
         if not tenant:
             return Response(
                 {"status": "error", "message": "Aucun établissement associé à cet utilisateur."},
@@ -30,7 +30,7 @@ class TenantSettingsView(APIView):
         return Response({"status": "success", "data": serializer.data})
 
     def patch(self, request):
-        tenant = self._get_tenant()
+        tenant = self._get_tenant(request)
         if not tenant:
             return Response(
                 {"status": "error", "message": "Aucun établissement associé à cet utilisateur."},
