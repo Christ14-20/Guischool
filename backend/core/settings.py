@@ -96,8 +96,10 @@ TIME_ZONE = "Africa/Conakry"
 USE_I18N = True
 USE_TZ = True
 
-# ─── Fichiers statiques ───────────────────────────────────────────────
+# ─── Fichiers statiques & médias ──────────────────────────────────────
 STATIC_URL = "static/"
+MEDIA_URL = "/media/"
+MEDIA_ROOT = BASE_DIR / "media"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # ─── Django REST Framework ────────────────────────────────────────────

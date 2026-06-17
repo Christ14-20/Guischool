@@ -88,6 +88,10 @@ const NAV_ITEMS: NavItem[] = [
     href: '/app/settings',
     icon: Settings,
     roles: [ROLES.ADMIN_SCHOOL],
+    children: [
+      { label: 'General', href: '/app/settings' },
+      { label: 'Configuration ecole', href: '/app/settings/tenant' },
+    ],
   },
 ];
 

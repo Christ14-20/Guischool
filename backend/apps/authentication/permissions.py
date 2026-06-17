@@ -78,3 +78,17 @@ class IsNetworkAdmin(BasePermission):
             (request.user.role and request.user.role.name in ["NETWORK_ADMIN", "SUPER_ADMIN"])
         )
 
+
+class IsSchoolDirector(BasePermission):
+    """
+    Accès réservé au Directeur d'établissement (ADMIN_SCHOOL) rattaché à un tenant.
+    """
+    def has_permission(self, request, view):
+        if not (request.user and request.user.is_authenticated):
+            return False
+        return (
+            request.user.tenant_id is not None
+            and request.user.role is not None
+            and request.user.role.name == "ADMIN_SCHOOL"
+        )
+

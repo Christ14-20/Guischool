@@ -3,6 +3,8 @@ core/urls.py — Centralisation des routes de l'API Eduguinée.
 """
 from django.contrib import admin
 from django.urls import path, include
+from django.conf import settings
+from django.conf.urls.static import static
 from drf_spectacular.views import (
     SpectacularAPIView,
     SpectacularRedocView,
@@ -28,6 +30,9 @@ urlpatterns = [
         
         # Réseaux d'écoles (Tenant Networks)
         path("network/", include("apps.superadmin.api.network_urls")),
+
+        # Configuration tenant (Directeur)
+        path("settings/", include("apps.superadmin.api.settings_urls")),
         
         # Pédagogie (Années, Classes, Élèves, Notes, Décisions)
         path("", include("apps.pedagogy.api.urls")),
@@ -47,3 +52,6 @@ urlpatterns = [
     path("api/v1/docs/swagger/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),
     path("api/v1/docs/redoc/", SpectacularRedocView.as_view(url_name="schema"), name="redoc"),
 ]
+
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

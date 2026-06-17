@@ -37,11 +37,11 @@
 **Description :** Permettre le regroupement de plusieurs tenants en un réseau avec reporting consolidé.
 
 **Checklist Backend :**
-- [ ] Créer modèle `TenantNetwork` (nom, description, admin_network)
-- [ ] Association `Tenant.network` FK nullable
-- [ ] Rôle `NETWORK_ADMIN` avec accès lecture agrégée sur ses tenants
-- [ ] Endpoint : `GET /network/dashboard/` → KPIs agrégés (effectifs, CA, taux réussite)
-- [ ] Endpoint : `GET /network/schools/` → liste écoles du réseau
+- [x] Créer modèle `TenantNetwork` (nom, description, admin_network)
+- [x] Association `Tenant.network` FK nullable
+- [x] Rôle `NETWORK_ADMIN` avec accès lecture agrégée sur ses tenants
+- [x] Endpoint : `GET /network/dashboard/` → KPIs agrégés (effectifs, CA, taux réussite)
+- [x] Endpoint : `GET /network/schools/` → liste écoles du réseau
 - [ ] Partage de programmes pédagogiques inter-écoles (optionnel)
 
 **Labels :** `architecture` `multi-tenant`
@@ -52,19 +52,19 @@
 **Description :** Implémenter le panneau de configuration maître de chaque tenant (CDC §1.4).
 
 **Checklist Backend :**
-- [ ] Étendre modèle `Tenant` : `logo`, `code_minedu`, `nif`, `registre_commerce`
-- [ ] Champs localisation : `timezone`, `date_format`, `first_day_week`, `default_lang`
-- [ ] Champs éducatifs : `education_system` (Guinéen/Franco-arabe/IB/Mixte), `active_levels`, `exams_prepared`
-- [ ] Modules activables : `has_internat`, `has_transport`, `has_cantine`, `has_bibliotheque`, `has_labo`, `has_official_exams`, `has_payroll`, `has_whatsapp`, `has_offline_advanced`, `has_predictive_analytics`
-- [ ] Endpoint : `GET/PATCH /settings/tenant/` (Directeur uniquement)
-- [ ] Serializer de validation par modules
+- [x] Étendre modèle `Tenant` : `logo`, `code_minedu`, `nif`, `registre_commerce`
+- [x] Champs localisation : `timezone`, `date_format`, `first_day_week`, `default_lang`
+- [x] Champs éducatifs : `education_system` (Guinéen/Franco-arabe/IB/Mixte), `active_levels`, `exams_prepared`
+- [x] Modules activables : `has_internat`, `has_transport`, `has_cantine`, `has_bibliotheque`, `has_labo`, `has_official_exams`, `has_payroll`, `has_whatsapp`, `has_offline_advanced`, `has_predictive_analytics`
+- [x] Endpoint : `GET/PATCH /settings/tenant/` (Directeur uniquement)
+- [x] Serializer de validation par modules
 
 **Checklist Frontend :**
-- [ ] Page `/app/settings/tenant` avec formulaire multi-section
-- [ ] Section "Identité" : logo upload, nom, code MINEDU, NIF
-- [ ] Section "Localisation" : fuseau, format date, langue par défaut, devises
-- [ ] Section "Éducation" : système éducatif, niveaux actifs, examens
-- [ ] Section "Modules" : toggle switches par module (avec indication plan requis)
+- [x] Page `/app/settings/tenant` avec formulaire multi-section
+- [x] Section "Identité" : logo upload, nom, code MINEDU, NIF
+- [x] Section "Localisation" : fuseau, format date, langue par défaut, devises
+- [x] Section "Éducation" : système éducatif, niveaux actifs, examens
+- [x] Section "Modules" : toggle switches par module (avec indication plan requis)
 
 **Labels :** `configuration` `tenant` `superadmin`
 

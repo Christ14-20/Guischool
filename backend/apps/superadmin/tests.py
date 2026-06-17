@@ -308,3 +308,104 @@ class NetworkConsolidationTestCase(TestCase):
         self.assertIn("École B", school_names)
         self.assertNotIn("École Isolée", school_names)
 
+
+class TenantSettingsTestCase(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.plan = Plan.objects.create(
+            name="PRO",
+            max_students=500,
+            max_staff=50,
+            modules_activated=["pedagogy", "finance", "internat", "transport", "whatsapp"],
+            storage_max_gb=20,
+        )
+        self.tenant = Tenant.objects.create(
+            name="École Config",
+            plan=self.plan,
+            status="ACTIVE",
+        )
+        self.director_role = Role.objects.create(
+            name="ADMIN_SCHOOL",
+            description="Directeur",
+        )
+        self.secretary_role = Role.objects.create(
+            name="SECRETAIRE",
+            description="Secrétaire",
+        )
+        self.director = User.objects.create_user(
+            email="director@test.com",
+            password="directorpass123",
+            tenant=self.tenant,
+            role=self.director_role,
+            first_name="Directeur",
+            last_name="Test",
+        )
+        self.secretary = User.objects.create_user(
+            email="secretary@test.com",
+            password="secretarypass123",
+            tenant=self.tenant,
+            role=self.secretary_role,
+            first_name="Secretaire",
+            last_name="Test",
+        )
+
+    def test_director_can_get_tenant_settings(self):
+        self.client.force_authenticate(user=self.director)
+        response = self.client.get("/api/v1/settings/tenant/")
+        self.assertEqual(response.status_code, 200)
+        data = response.json()["data"]
+        self.assertEqual(data["name"], "École Config")
+        self.assertEqual(data["education_system"], "GUINEEN")
+        self.assertEqual(data["plan_name"], "PRO")
+        self.assertTrue(data["module_availability"]["has_internat"]["available"])
+
+    def test_director_can_patch_tenant_settings(self):
+        self.client.force_authenticate(user=self.director)
+        response = self.client.patch(
+            "/api/v1/settings/tenant/",
+            {
+                "name": "École Config Mise à Jour",
+                "nif": "NIF-12345",
+                "education_system": "FRANCO_ARABE",
+                "active_levels": ["PRIMAIRE", "COLLEGE"],
+                "exams_prepared": ["CEP", "BEPC"],
+                "has_internat": True,
+                "has_transport": True,
+                "timezone": "Africa/Conakry",
+                "default_currency": "GNF",
+            },
+            format="json",
+        )
+        self.assertEqual(response.status_code, 200)
+        data = response.json()["data"]
+        self.assertEqual(data["name"], "École Config Mise à Jour")
+        self.assertEqual(data["nif"], "NIF-12345")
+        self.assertEqual(data["education_system"], "FRANCO_ARABE")
+        self.assertTrue(data["has_internat"])
+        self.tenant.refresh_from_db()
+        self.assertEqual(self.tenant.nif, "NIF-12345")
+
+    def test_module_not_in_plan_rejected(self):
+        self.client.force_authenticate(user=self.director)
+        response = self.client.patch(
+            "/api/v1/settings/tenant/",
+            {"has_payroll": True},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("has_payroll", response.json())
+
+    def test_secretary_forbidden(self):
+        self.client.force_authenticate(user=self.secretary)
+        response = self.client.get("/api/v1/settings/tenant/")
+        self.assertEqual(response.status_code, 403)
+
+    def test_invalid_active_level_rejected(self):
+        self.client.force_authenticate(user=self.director)
+        response = self.client.patch(
+            "/api/v1/settings/tenant/",
+            {"active_levels": ["INVALID_CYCLE"]},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 400)
+

@@ -142,13 +142,87 @@ class Tenant(models.Model):
         ("LYCEE", "Lycée"),
         ("MIXTE", "Mixte"),
     ]
+    EDUCATION_SYSTEM_CHOICES = [
+        ("GUINEEN", "Guinéen"),
+        ("FRANCO_ARABE", "Franco-arabe"),
+        ("IB", "IB"),
+        ("MIXTE", "Mixte"),
+    ]
+    DATE_FORMAT_CHOICES = [
+        ("DD/MM/YYYY", "JJ/MM/AAAA"),
+        ("MM/DD/YYYY", "MM/JJ/AAAA"),
+        ("YYYY-MM-DD", "AAAA-MM-JJ"),
+    ]
+    FIRST_DAY_WEEK_CHOICES = [
+        (0, "Dimanche"),
+        (1, "Lundi"),
+    ]
+    LANG_CHOICES = [
+        ("fr", "Français"),
+        ("en", "English"),
+        ("ar", "Arabe"),
+    ]
+    CURRENCY_CHOICES = [
+        ("GNF", "Franc guinéen"),
+        ("USD", "Dollar US"),
+        ("EUR", "Euro"),
+    ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=255, verbose_name="Nom de l'école")
     slug = models.SlugField(max_length=120, unique=True, blank=True)
+    logo = models.ImageField(
+        upload_to="tenants/logos/", null=True, blank=True, verbose_name="Logo",
+    )
     code_minedu = models.CharField(
         max_length=50, blank=True, unique=True, null=True,
         verbose_name="Code MEN (MINEDU)",
+    )
+    nif = models.CharField(max_length=50, blank=True, verbose_name="NIF")
+    registre_commerce = models.CharField(
+        max_length=100, blank=True, verbose_name="Registre de commerce",
+    )
+    timezone = models.CharField(
+        max_length=64, default="Africa/Conakry", verbose_name="Fuseau horaire",
+    )
+    date_format = models.CharField(
+        max_length=20, choices=DATE_FORMAT_CHOICES, default="DD/MM/YYYY",
+        verbose_name="Format de date",
+    )
+    first_day_week = models.PositiveSmallIntegerField(
+        choices=FIRST_DAY_WEEK_CHOICES, default=1, verbose_name="Premier jour de la semaine",
+    )
+    default_lang = models.CharField(
+        max_length=5, choices=LANG_CHOICES, default="fr", verbose_name="Langue par défaut",
+    )
+    default_currency = models.CharField(
+        max_length=3, choices=CURRENCY_CHOICES, default="GNF", verbose_name="Devise par défaut",
+    )
+    education_system = models.CharField(
+        max_length=20, choices=EDUCATION_SYSTEM_CHOICES, default="GUINEEN",
+        verbose_name="Système éducatif",
+    )
+    active_levels = models.JSONField(
+        default=list, blank=True,
+        help_text="Cycles actifs ex: ['PRIMAIRE', 'COLLEGE']",
+        verbose_name="Niveaux actifs",
+    )
+    exams_prepared = models.JSONField(
+        default=list, blank=True,
+        help_text="Examens préparés ex: ['CEP', 'BEPC', 'BAC']",
+        verbose_name="Examens préparés",
+    )
+    has_internat = models.BooleanField(default=False, verbose_name="Internat")
+    has_transport = models.BooleanField(default=False, verbose_name="Transport")
+    has_cantine = models.BooleanField(default=False, verbose_name="Cantine")
+    has_bibliotheque = models.BooleanField(default=False, verbose_name="Bibliothèque")
+    has_labo = models.BooleanField(default=False, verbose_name="Laboratoire")
+    has_official_exams = models.BooleanField(default=False, verbose_name="Examens officiels")
+    has_payroll = models.BooleanField(default=False, verbose_name="Paie")
+    has_whatsapp = models.BooleanField(default=False, verbose_name="WhatsApp")
+    has_offline_advanced = models.BooleanField(default=False, verbose_name="Offline avancé")
+    has_predictive_analytics = models.BooleanField(
+        default=False, verbose_name="Analytique prédictive",
     )
     type = models.CharField(max_length=20, choices=TYPE_CHOICES, default="PRIVE")
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="TRIAL")
