@@ -12,6 +12,7 @@ router = DefaultRouter()
 # Module pédagogie de base
 router.register("pedagogy/schoolyears", SchoolYearViewSet, basename="schoolyear")
 router.register("pedagogy/levels", LevelViewSet, basename="level")
+router.register("pedagogy/filieres", FiliereViewSet, basename="filiere")
 router.register("pedagogy/classes", ClassViewSet, basename="class")
 router.register("pedagogy/subjects", SubjectViewSet, basename="subject")
 router.register("pedagogy/timetable", TimetableSlotViewSet, basename="timetable")

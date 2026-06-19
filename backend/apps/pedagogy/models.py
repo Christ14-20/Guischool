@@ -91,10 +91,60 @@ class Level(models.Model):
         return f"{self.name} ({self.get_cycle_display()})"
 
 
+class Filiere(models.Model):
+    """Filière d'études (Lycée général, technique, CQP)."""
+    CODE_CHOICES = [
+        ("S", "Scientifique"),
+        ("L", "Littéraire"),
+        ("SE", "Sciences de l'Économique"),
+        ("SM", "Sciences de la Mathématique"),
+        ("SS", "Sciences de la Santé"),
+        ("T1", "Technique 1"),
+        ("T2", "Technique 2"),
+        ("T3", "Technique 3"),
+        ("T4", "Technique 4"),
+        ("BEP", "BEP"),
+        ("CAP", "CAP"),
+        ("BTS", "BTS"),
+    ]
+    CYCLE_CHOICES = [
+        ("LYCEE_GEN", "Lycée Général"),
+        ("LYCEE_TECH", "Lycée Technique"),
+        ("CQP", "CQP"),
+    ]
+    tenant = models.ForeignKey("superadmin.Tenant", on_delete=models.CASCADE, related_name="filieres")
+    code = models.CharField(max_length=10, choices=CODE_CHOICES, verbose_name="Code filière")
+    name = models.CharField(max_length=100, verbose_name="Nom de la filière")
+    cycle = models.CharField(max_length=20, choices=CYCLE_CHOICES, verbose_name="Cycle concerné")
+    matieres_dominantes = models.JSONField(
+        default=list,
+        blank=True,
+        verbose_name="Matières dominantes",
+        help_text="Liste des codes de matières ex: ['FR', 'MATH', 'PC']"
+    )
+
+    class Meta:
+        unique_together = [("tenant", "code")]
+        verbose_name = "Filière"
+        verbose_name_plural = "Filières"
+        ordering = ["cycle", "name"]
+
+    def __str__(self):
+        return f"{self.name} ({self.get_code_display()})"
+
+
 class Class(models.Model):
     tenant = models.ForeignKey("superadmin.Tenant", on_delete=models.CASCADE, related_name="classes")
     school_year = models.ForeignKey(SchoolYear, on_delete=models.CASCADE, related_name="classes")
     level = models.ForeignKey(Level, on_delete=models.PROTECT, related_name="classes")
+    filiere = models.ForeignKey(
+        Filiere,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="classes",
+        verbose_name="Filière",
+    )
     campus = models.ForeignKey(
         "superadmin.Campus", null=True, blank=True,
         on_delete=models.SET_NULL, related_name="classes",
@@ -115,6 +165,12 @@ class Class(models.Model):
 
     def __str__(self):
         return f"{self.name} ({self.school_year.label})"
+
+    def available_subjects(self):
+        """Renvoie les matières disponibles selon la filière."""
+        if self.filiere_id and self.filiere.matieres_dominantes:
+            return Subject.objects.filter(code__in=self.filiere.matieres_dominantes, tenant=self.tenant)
+        return Subject.objects.filter(tenant=self.tenant)
 
     def current_enrollment_count(self):
         return self.enrollments.filter(annee_scolaire=self.school_year).count()

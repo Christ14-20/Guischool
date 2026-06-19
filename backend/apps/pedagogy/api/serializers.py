@@ -6,7 +6,7 @@ Serializers pour : SchoolYear, Level, Class, Subject,
 import re
 from rest_framework import serializers
 from apps.pedagogy.models import (
-    SchoolYear, Level, Class, Subject, ClassSubject,
+    SchoolYear, Level, Class, Subject, ClassSubject, Filiere,
     Attendance, Evaluation, Student, Enrollment, Grade, YearEndDecision,
     TimetableSlot,
 )
@@ -16,6 +16,13 @@ GUINEE_PHONE_REGEX = re.compile(r"^\+224[0-9]{8,9}$")
 
 
 # ── Module pédagogie de base ──────────────────────────────────────
+
+class FiliereSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Filiere
+        fields = ["id", "tenant", "code", "name", "cycle", "matieres_dominantes"]
+        read_only_fields = ["id", "tenant"]
+
 
 class SchoolYearSerializer(serializers.ModelSerializer):
     class Meta:
@@ -37,15 +44,16 @@ class LevelSerializer(serializers.ModelSerializer):
 
 class ClassSerializer(serializers.ModelSerializer):
     level_name = serializers.CharField(source="level.name", read_only=True)
+    filiere_name = serializers.CharField(source="filiere.name", read_only=True)
     current_count = serializers.SerializerMethodField()
 
     class Meta:
         model = Class
         fields = [
             "id", "tenant", "school_year", "level", "level_name",
-            "name", "capacity", "room", "main_teacher", "current_count",
+            "filiere", "filiere_name", "name", "capacity", "room", "main_teacher", "current_count",
         ]
-        read_only_fields = ["id", "tenant", "level_name", "current_count"]
+        read_only_fields = ["id", "tenant", "level_name", "filiere_name", "current_count"]
 
     def get_current_count(self, obj):
         return obj.current_enrollment_count()

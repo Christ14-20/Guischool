@@ -407,16 +407,15 @@
 ---
 
 ### 🃏 [SUPERADMIN-03] Formulaire création d'école (`/superadmin/schools/new`)
-
 **Description :** Créer le formulaire de création d'une nouvelle école sur la plateforme.
 
 **Checklist :**
-- [x] Champs : nom, slug (auto-généré depuis le nom, éditable), code MINEDU, type d'établissement, localisation
+- [x] Champs : nom, slug (auto-généré depuis le nom, éditable), code MINEDU, type d'établissement
+- [x] Sélecteur du type de gestion (PUB/PRIV/FRAR...) avec indication pas de paie pour publique
 - [x] Sélection du plan (cards visuelles ou `Select`)
 - [x] Validation Zod : unicité du slug (vérification API async), format code MINEDU
 - [x] Bouton "Créer l'école" avec loading state
 - [x] Toast succès → redirection vers le détail de l'école
-- [x] `POST /superadmin/schools/`
 
 **Labels :** `superadmin` `formulaire`
 

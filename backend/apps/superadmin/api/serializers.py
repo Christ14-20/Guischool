@@ -44,18 +44,22 @@ class PlanSerializer(serializers.ModelSerializer):
 class TenantSerializer(serializers.ModelSerializer):
     plan_name = serializers.SerializerMethodField()
     users_count = serializers.SerializerMethodField()
+    can_use_payroll = serializers.SerializerMethodField()
 
     class Meta:
         model = Tenant
         fields = [
-            "id", "name", "slug", "code_minedu", "type", "status",
+            "id", "name", "slug", "code_minedu", "type", "school_type", "status",
             "plan", "plan_name", "address", "phone", "email",
-            "settings", "users_count", "created_at", "updated_at",
+            "settings", "can_use_payroll", "users_count", "created_at", "updated_at",
         ]
-        read_only_fields = ["id", "slug", "created_at", "updated_at", "plan_name", "users_count"]
+        read_only_fields = ["id", "slug", "created_at", "updated_at", "plan_name", "can_use_payroll", "users_count"]
 
     def get_plan_name(self, obj):
         return str(obj.plan) if obj.plan else None
+
+    def get_can_use_payroll(self, obj):
+        return obj.can_use_payroll()
 
     def get_users_count(self, obj):
         return obj.users.count()

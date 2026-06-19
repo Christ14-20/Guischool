@@ -82,11 +82,21 @@ export type ClassItem = {
   school_year: number;
   level: number;
   level_name: string;
+  filiere?: number;
+  filiere_name?: string;
   name: string;
   capacity: number;
   room: string;
   main_teacher: string | null;
   current_count: number;
+};
+
+export type FiliereItem = {
+  id: number;
+  code: 'S' | 'L' | 'SE' | 'SM' | 'SS' | 'T1' | 'T2' | 'T3' | 'T4' | 'BEP' | 'CAP' | 'BTS';
+  name: string;
+  cycle: 'LYCEE_GEN' | 'LYCEE_TECH' | 'CQP';
+  matieres_dominantes?: string[];
 };
 
 export type SubjectItem = {
@@ -197,6 +207,32 @@ export async function updateLevel(
 
 export async function deleteLevel(token: string, id: number) {
   return request(`/pedagogy/levels/${id}/`, { token, method: 'DELETE' });
+}
+
+export async function getFilieres(
+  token: string,
+  query?: Record<string, string | undefined>
+): Promise<PaginatedResult<FiliereItem>> {
+  const data = await request<any>('/pedagogy/filieres/', { token, query });
+  return { count: Number(data?.count ?? 0), results: Array.isArray(data?.results) ? data.results : [] };
+}
+
+export async function createFiliere(token: string, body: Record<string, unknown>) {
+  const data = await request<any>('/pedagogy/filieres/', { token, method: 'POST', body });
+  return data?.data ?? data;
+}
+
+export async function updateFiliere(
+  token: string,
+  id: number,
+  body: Record<string, unknown>
+) {
+  const data = await request<any>(`/pedagogy/filieres/${id}/`, { token, method: 'PATCH', body });
+  return data?.data ?? data;
+}
+
+export async function deleteFiliere(token: string, id: number) {
+  return request(`/pedagogy/filieres/${id}/`, { token, method: 'DELETE' });
 }
 
 // ─── Classes ─────────────────────────────────────────────────────────────────

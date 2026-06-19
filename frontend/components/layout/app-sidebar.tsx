@@ -43,14 +43,15 @@ const NAV_ITEMS: NavItem[] = [
     href: '/app/pedagogie',
     icon: GraduationCap,
     roles: [ROLES.ADMIN_SCHOOL, ROLES.SECRETAIRE, ROLES.ENSEIGNANT],
-    children: [
-      { label: 'Annees scolaires', href: '/app/pedagogie/school-years' },
-      { label: 'Classes', href: '/app/pedagogie/classes' },
-      { label: 'Matieres', href: '/app/pedagogie/subjects' },
-      { label: 'Emploi du temps', href: '/app/pedagogie/timetable' },
-      { label: 'Presences', href: '/app/pedagogie/attendance' },
-      { label: 'Fin d\'année', href: '/app/year-end', roles: [ROLES.ADMIN_SCHOOL] },
-    ],
+children: [
+        { label: 'Annees scolaires', href: '/app/pedagogie/school-years' },
+        { label: 'Niveaux', href: '/app/pedagogie/levels' },
+        { label: 'Classes', href: '/app/pedagogie/classes' },
+        { label: 'Matieres', href: '/app/pedagogie/subjects' },
+        { label: 'Emploi du temps', href: '/app/pedagogie/timetable' },
+        { label: 'Presences', href: '/app/pedagogie/attendance' },
+        { label: 'Fin d\'annee', href: '/app/year-end', roles: [ROLES.ADMIN_SCHOOL] },
+      ],
   },
   {
     label: 'Eleves',

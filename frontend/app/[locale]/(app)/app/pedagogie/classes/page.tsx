@@ -42,12 +42,14 @@ import {
   type ClassItem,
   type LevelItem,
   type SchoolYearItem,
+  type FiliereItem,
   createClass,
   createLevel,
   deleteClass,
   getClasses,
   getLevels,
   getSchoolYears,
+  getFilieres,
   updateClass,
 } from '@/lib/api/pedagogy';
 
@@ -55,6 +57,7 @@ const schema = z.object({
   name: z.string().min(1, 'Le nom est requis.'),
   school_year: z.string().min(1, 'L\'année scolaire est requise.'),
   level: z.string().min(1, 'Le niveau est requis.'),
+  filiere: z.string().optional(),
   capacity: z.coerce.number().min(1, 'La capacité doit être au moins 1.'),
   room: z.string().optional(),
 });
@@ -81,6 +84,7 @@ export default function ClassesPage() {
   const [classes, setClasses] = useState<ClassItem[]>([]);
   const [years, setYears] = useState<SchoolYearItem[]>([]);
   const [levels, setLevels] = useState<LevelItem[]>([]);
+  const [filieres, setFilieres] = useState<FiliereItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [cycleFilter, setCycleFilter] = useState<string>('all');
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
@@ -97,12 +101,14 @@ export default function ClassesPage() {
       getClasses(token),
       getSchoolYears(token),
       getLevels(token),
+      getFilieres(token),
     ])
-      .then(([classRes, yearRes, levelRes]) => {
+      .then(([classRes, yearRes, levelRes, filiereRes]) => {
         if (!mounted) return;
         setClasses(classRes.results);
         setYears(yearRes.results);
         setLevels(levelRes.results);
+        setFilieres(filiereRes.results);
       })
       .catch((e) => toast.error(e instanceof Error ? e.message : 'Erreur de chargement.'))
       .finally(() => { if (mounted) setLoading(false); });
@@ -248,12 +254,17 @@ export default function ClassesPage() {
                       <Badge variant="destructive" className="text-xs">Surcharge</Badge>
                     )}
                   </div>
-                  {level && (
-                    <p className="text-xs text-muted-foreground">
-                      {level.name} — {CYCLE_LABELS[level.cycle] ?? level.cycle}
-                    </p>
-                  )}
-                </CardHeader>
+{level && (
+                     <p className="text-xs text-muted-foreground">
+                       {level.name} — {CYCLE_LABELS[level.cycle] ?? level.cycle}
+                     </p>
+                   )}
+                   {c.filiere_name && (
+                     <p className="text-xs text-muted-foreground">
+                       Filière : {c.filiere_name}
+                     </p>
+                   )}
+                 </CardHeader>
                 <CardContent className="space-y-2 text-sm">
                   <div className="flex items-center justify-between">
                     <span className="text-muted-foreground">Effectif</span>
@@ -347,6 +358,7 @@ export default function ClassesPage() {
           token={token}
           years={years}
           levels={levels}
+          filieres={filieres}
           onClose={() => setDialogMode(null)}
           onSuccess={() => { setDialogMode(null); refresh(); }}
         />
@@ -362,6 +374,7 @@ function ClassFormDialog({
   token,
   years,
   levels,
+  filieres,
   onClose,
   onSuccess,
 }: {
@@ -369,6 +382,7 @@ function ClassFormDialog({
   token: string;
   years: SchoolYearItem[];
   levels: LevelItem[];
+  filieres: FiliereItem[];
   onClose: () => void;
   onSuccess: () => void;
 }) {
@@ -381,6 +395,7 @@ function ClassFormDialog({
       name: classe?.name ?? '',
       school_year: classe?.school_year ? String(classe.school_year) : '',
       level: classe?.level ? String(classe.level) : '',
+      filiere: classe?.filiere ? String(classe.filiere) : '',
       capacity: classe?.capacity ?? 40,
       room: classe?.room ?? '',
     },
@@ -388,13 +403,16 @@ function ClassFormDialog({
 
   const onSubmit = async (values: FormValues) => {
     try {
-      const body = {
+      const body: Record<string, unknown> = {
         name: values.name,
         school_year: Number(values.school_year),
         level: Number(values.level),
         capacity: values.capacity,
         room: values.room ?? '',
       };
+      if (values.filiere) {
+        body.filiere = Number(values.filiere);
+      }
       if (isEditing && classe) {
         await updateClass(token, classe.id, body);
         toast.success('Classe modifiée.');
@@ -480,22 +498,51 @@ function ClassFormDialog({
                             <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
                               {CYCLE_LABELS[cycle]}
                             </div>
-                            {cycleItems.map((l) => (
-                              <SelectItem key={l.id} value={String(l.id)}>
-                                {l.name}
-                              </SelectItem>
-                            ))}
-                          </div>
-                        );
-                      })}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+{cycleItems.map((l) => (
+                               <SelectItem key={l.id} value={String(l.id)}>
+                                 {l.name}
+                               </SelectItem>
+                             ))}
+                           </div>
+                         );
+                       })}
+                     </SelectContent>
+                   </Select>
+                   <FormMessage />
+                 </FormItem>
+               )}
+             />
 
-            <div className="grid grid-cols-2 gap-4">
+             <FormField
+               control={form.control}
+               name="filiere"
+               render={({ field }) => (
+                 <FormItem>
+                   <FormLabel>Filière (optionnel)</FormLabel>
+                   <Select value={field.value ?? ''} onValueChange={(value) => field.onChange(value === '' ? undefined : value)}>
+                     <FormControl>
+                       <SelectTrigger>
+                         <SelectValue placeholder="Aucune filière" />
+                       </SelectTrigger>
+                     </FormControl>
+                     <SelectContent>
+                       <SelectItem value="">Aucune</SelectItem>
+                         {filieres.map((f) => (
+                           <SelectItem key={f.id} value={String(f.id)}>
+                             {f.name} ({f.code})
+                           </SelectItem>
+                         ))}
+                       </SelectContent>
+                   </Select>
+                   <FormDescription>
+                     Pour les classes de lycée uniquement.
+                   </FormDescription>
+                   <FormMessage />
+                 </FormItem>
+               )}
+             />
+
+             <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
                 name="capacity"

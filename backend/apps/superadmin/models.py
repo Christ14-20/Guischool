@@ -184,6 +184,16 @@ class Tenant(models.Model):
         ("LYCEE", "Lycée"),
         ("MIXTE", "Mixte"),
     ]
+    SCHOOL_TYPE_CHOICES = [
+        ("PUB", "Publique"),
+        ("PRIV", "Privée"),
+        ("FRAR", "FRAR (Fonds de Roulement)"),
+        ("ETP", "École de Travail Professionnel"),
+        ("ETPR", "École Technique Privée"),
+        ("INT", "Internationale"),
+        ("COM", "Communautaire"),
+        ("INC", "Independente"),
+    ]
     EDUCATION_SYSTEM_CHOICES = [
         ("GUINEEN", "Guinéen"),
         ("FRANCO_ARABE", "Franco-arabe"),
@@ -267,6 +277,13 @@ class Tenant(models.Model):
         default=False, verbose_name="Analytique prédictive",
     )
     type = models.CharField(max_length=20, choices=TYPE_CHOICES, default="PRIVE")
+    school_type = models.CharField(
+        max_length=10,
+        choices=SCHOOL_TYPE_CHOICES,
+        default="PRIV",
+        verbose_name="Type d'établissement",
+        help_text="PUB = École publique (pas de module paie), PRIV = Privée",
+    )
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="TRIAL")
     plan = models.ForeignKey(
         Plan, null=True, blank=True, on_delete=models.SET_NULL,
@@ -302,6 +319,24 @@ class Tenant(models.Model):
     def get_setting(self, key, default=None):
         """Accès sécurisé aux paramètres d'école."""
         return self.settings.get(key, default)
+
+    def get_required_modules(self):
+        """Renvoie les modules requis selon le type d'établissement."""
+        MODULES_MAP = {
+            "PUB": ["pedagogy", "finance", "attendance"],
+            "PRIV": ["pedagogy", "finance", "attendance", "payroll"],
+            "FRAR": ["pedagogy", "finance", "attendance", "payroll"],
+            "ETP": ["pedagogy", "finance", "attendance", "payroll"],
+            "ETPR": ["pedagogy", "finance", "attendance", "payroll"],
+            "INT": ["pedagogy", "finance", "attendance", "payroll"],
+            "COM": ["pedagogy", "finance", "attendance", "payroll"],
+            "INC": ["pedagogy", "finance", "attendance", "payroll"],
+        }
+        return MODULES_MAP.get(self.school_type, MODULES_MAP["PRIV"])
+
+    def can_use_payroll(self):
+        """École publique = pas de paie (CNSS standard)."""
+        return self.school_type != "PUB"
 
     # ── Actions métier ──────────────────────────────────────────────
     def suspend(self):

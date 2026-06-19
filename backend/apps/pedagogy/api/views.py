@@ -9,12 +9,13 @@ from rest_framework.permissions import IsAuthenticated
 from django.shortcuts import get_object_or_404
 
 from apps.pedagogy.models import (
-    SchoolYear, Level, Class, Subject,
+    SchoolYear, Level, Class, Subject, Filiere,
     Student, Enrollment, Grade, YearEndDecision, Evaluation, Attendance,
     TimetableSlot,
 )
 from apps.pedagogy.api.serializers import (
     SchoolYearSerializer, LevelSerializer, ClassSerializer, SubjectSerializer,
+    FiliereSerializer,
     StudentListSerializer, StudentDetailSerializer, EnrollmentSerializer,
     GradeSerializer, GradeValidateSerializer,
     YearEndDecisionSerializer, BulkPromotionSerializer,
@@ -50,16 +51,29 @@ class LevelViewSet(viewsets.ModelViewSet):
         serializer.save(tenant=self.request.user.tenant)
 
 
+class FiliereViewSet(viewsets.ModelViewSet):
+    serializer_class = FiliereSerializer
+    permission_classes = [IsAuthenticated]
+    filterset_fields = ["cycle", "code"]
+    search_fields = ["name", "code"]
+
+    def get_queryset(self):
+        return Filiere.objects.filter(tenant=self.request.user.tenant)
+
+    def perform_create(self, serializer):
+        serializer.save(tenant=self.request.user.tenant)
+
+
 class ClassViewSet(viewsets.ModelViewSet):
     serializer_class = ClassSerializer
     permission_classes = [IsAuthenticated]
-    filterset_fields = ["school_year", "level"]
+    filterset_fields = ["school_year", "level", "filiere"]
     search_fields = ["name"]
 
     def get_queryset(self):
         return Class.objects.filter(
             tenant=self.request.user.tenant
-        ).select_related("level", "school_year", "main_teacher")
+        ).select_related("level", "school_year", "main_teacher", "filiere")
 
     def perform_create(self, serializer):
         serializer.save(tenant=self.request.user.tenant)

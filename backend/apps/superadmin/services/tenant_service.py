@@ -9,7 +9,15 @@ from django.utils import timezone
 def create_tenant(name: str, plan_name: str = "TRIAL", **kwargs) -> Tenant:
     """Créer un nouveau tenant (école) avec abonnement initial."""
     plan = Plan.objects.filter(name=plan_name.upper()).first()
-    tenant = Tenant.objects.create(name=name, plan=plan, **kwargs)
+    school_type = kwargs.pop("school_type", "PRIV")
+    tenant = Tenant.objects.create(name=name, plan=plan, school_type=school_type, **kwargs)
+
+    # Mapper modules selon type d'établissement
+    if school_type == "PUB":
+        # École publique = pas de paie
+        tenant.has_payroll = False
+    tenant.save(update_fields=["has_payroll"])
+
     # Créer l'abonnement initial
     if plan:
         Subscription.objects.create(

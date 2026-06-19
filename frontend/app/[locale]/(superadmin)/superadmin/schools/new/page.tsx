@@ -36,6 +36,7 @@ const schema = z.object({
     .min(3, 'Le code MINEDU est requis.')
     .regex(/^[A-Z0-9-]{3,20}$/i, 'Format code MINEDU invalide.'),
   type: z.string().min(1, 'Le type est requis.'),
+  school_type: z.string().min(1, 'Le type d\'etablissement est requis.'),
   location: z.string().min(2, 'La localisation est requise.'),
   plan: z.string().min(1, 'Le plan est requis.'),
   description: z.string().optional(),
@@ -72,6 +73,7 @@ export default function SuperadminNewSchoolPage() {
       slug: '',
       codeMinedu: '',
       type: '',
+      school_type: 'PRIV',
       location: '',
       plan: '',
       description: '',
@@ -150,6 +152,7 @@ export default function SuperadminNewSchoolPage() {
         slug: values.slug,
         code_minedu: values.codeMinedu,
         type: values.type,
+        school_type: values.school_type,
         address: values.location,
         plan: Number(values.plan),
         settings: values.description ? { description: values.description } : {},
@@ -265,6 +268,37 @@ export default function SuperadminNewSchoolPage() {
                         <SelectItem value="MIXTE">Mixte</SelectItem>
                       </SelectContent>
                     </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="school_type"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Type de gestion</FormLabel>
+                    <Select value={field.value} onValueChange={(value) => field.onChange(value ?? '')}>
+                      <FormControl>
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Selectionner" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="PUB">Publique (sans paie)</SelectItem>
+                        <SelectItem value="PRIV">Privée</SelectItem>
+                        <SelectItem value="FRAR">FRAR</SelectItem>
+                        <SelectItem value="ETP">École Technique Publique</SelectItem>
+                        <SelectItem value="ETPR">École Technique Privée</SelectItem>
+                        <SelectItem value="INT">Internationale</SelectItem>
+                        <SelectItem value="COM">Communautaire</SelectItem>
+                        <SelectItem value="INC">Indépendante</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormDescription>
+                      Les écoles publiques n'ont pas accès au module paie (CNSS standard).
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}

@@ -43,7 +43,7 @@ class SchoolViewSet(viewsets.ModelViewSet):
     """
     queryset = Tenant.objects.select_related("plan").all()
     serializer_class = TenantSerializer
-    filterset_fields = ["status", "type", "plan"]
+    filterset_fields = ["status", "type", "plan", "school_type"]
     search_fields = ["name", "slug", "code_minedu"]
     ordering_fields = ["name", "created_at"]
     ordering = ["-created_at"]

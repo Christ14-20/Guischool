@@ -108,9 +108,9 @@
 **Description :** Gérer les types d'établissements configurables (CDC §2.2).
 
 **Checklist Backend :**
-- [ ] Étendre modèle `Tenant` : `school_type` (PUB/PRIV/FRAR/ETP/ETPR/INT/COM/INC)
-- [ ] Mapping `school_type` → modules requis automatiquement activés
-- [ ] Restrictions spécifiques : école publique → pas de module paie (CNSS standard)
+- [x] Étendre modèle `Tenant` : `school_type` (PUB/PRIV/FRAR/ETP/ETPR/INT/COM/INC)
+- [x] Mapping `school_type` → modules requis automatiquement activés
+- [x] Restrictions spécifiques : école publique → pas de module paie (CNSS standard)
 
 **Labels :** `configuration`
 
@@ -120,13 +120,13 @@
 **Description :** Implémenter les filières secondaires et supérieures (CDC §2.3).
 
 **Checklist Backend :**
-- [ ] Créer modèle `Filiere` (code, nom, cycle, matières_dominantes)
-- [ ] Filières prédéfinies : S, L, SE, SM, SS (Lycée Général) / T1, T2, T3, T4 (Technique) / BEP, CAP, BTS
-- [ ] Association `Class.filiere` FK nullable
-- [ ] Filtrage des matières disponibles selon filière
+- [x] Créer modèle `Filiere` (code, nom, cycle, matières_dominantes)
+- [x] Filières prédéfinies : S, L, SE, SM, SS (Lycée Général) / T1, T2, T3, T4 (Technique) / BEP, CAP, BTS
+- [x] Association `Class.filiere` FK nullable
+- [x] Filtrage des matières disponibles selon filière
 
 **Checklist Frontend :**
-- [ ] Sélecteur filière dans le formulaire de création de classe
+- [x] Sélecteur filière dans le formulaire de création de classe
 - [ ] Filtre par filière dans la liste des classes
 
 **Labels :** `pédagogie` `filières`

@@ -325,7 +325,15 @@ export default function LevelsPage() {
                     <FormItem>
                       <FormLabel>Âge minimum</FormLabel>
                       <FormControl>
-                        <Input type="number" placeholder="6" {...field} />
+                        <Input
+                          type="number"
+                          placeholder="6"
+                          value={field.value ?? ''}
+                          onChange={field.onChange}
+                          onBlur={field.onBlur}
+                          name={field.name}
+                          ref={field.ref}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -338,7 +346,15 @@ export default function LevelsPage() {
                     <FormItem>
                       <FormLabel>Âge maximum</FormLabel>
                       <FormControl>
-                        <Input type="number" placeholder="12" {...field} />
+                        <Input
+                          type="number"
+                          placeholder="12"
+                          value={field.value ?? ''}
+                          onChange={field.onChange}
+                          onBlur={field.onBlur}
+                          name={field.name}
+                          ref={field.ref}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

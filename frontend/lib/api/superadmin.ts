@@ -53,9 +53,11 @@ export type SchoolItem = {
   slug: string;
   code_minedu?: string;
   type?: string;
+  school_type?: 'PUB' | 'PRIV' | 'FRAR' | 'ETP' | 'ETPR' | 'INT' | 'COM' | 'INC';
   status: string;
   plan: number | null;
   plan_name: string | null;
+  can_use_payroll?: boolean;
   created_at: string;
   updated_at: string;
   users_count?: number;
