@@ -157,10 +157,12 @@ class StudentViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         from apps.pedagogy.services.enrollment_service import validate_enrollment_data
+        from apps.superadmin.services.plan_limits import ensure_student_limit_available
         from django.core.exceptions import ValidationError as DjangoValidationError
         from rest_framework.exceptions import ValidationError as DRFValidationError
 
         data = serializer.validated_data
+        ensure_student_limit_available(self.request.user.tenant)
         classe = data.get("classe_actuelle")
         annee = data.get("annee_inscription")
         try:

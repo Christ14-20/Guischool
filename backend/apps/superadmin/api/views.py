@@ -17,6 +17,7 @@ from apps.superadmin.api.serializers import (
     CampusSerializer, CampusWriteSerializer,
 )
 from apps.superadmin.services import tenant_service
+from apps.superadmin.services.plan_limits import ensure_campus_limit_available
 from apps.authentication.permissions import (
     CanCreateSchool,
     CanViewSchools,
@@ -265,6 +266,7 @@ class CampusViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         tenant = self._get_tenant()
+        ensure_campus_limit_available(tenant)
         serializer.save(tenant=tenant)
 
     def list(self, request, *args, **kwargs):

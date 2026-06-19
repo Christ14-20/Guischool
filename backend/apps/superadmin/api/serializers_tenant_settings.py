@@ -56,10 +56,10 @@ class TenantSettingsSerializer(serializers.ModelSerializer):
     def get_plan_modules(self, obj):
         if not obj.plan:
             return []
-        return list(obj.plan.modules_activated or [])
+        return list(obj.plan.included_modules())
 
     def get_module_availability(self, obj):
-        plan_modules = set(obj.plan.modules_activated or []) if obj.plan else set()
+        plan_modules = set(obj.plan.included_modules()) if obj.plan else set()
         availability = {}
         for flag, module_key in TENANT_MODULE_FLAGS.items():
             availability[flag] = {
@@ -103,7 +103,7 @@ class TenantSettingsSerializer(serializers.ModelSerializer):
 
     def validate(self, attrs):
         tenant = self.instance
-        plan_modules = set(tenant.plan.modules_activated or []) if tenant and tenant.plan else set()
+        plan_modules = set(tenant.plan.included_modules()) if tenant and tenant.plan else set()
 
         for flag, module_key in TENANT_MODULE_FLAGS.items():
             if flag not in attrs:

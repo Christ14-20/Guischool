@@ -2,7 +2,7 @@
 
 import { ArrowLeft, Download, FileSpreadsheet, Loader2, Save, Trash2, Upload } from 'lucide-react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { toast } from 'sonner';
@@ -54,6 +54,8 @@ export default function GradesBulkPage() {
   const { data: session } = useSession();
   const token = session?.accessToken ?? '';
   const router = useRouter();
+  const params = useParams();
+  const locale = (params?.locale as string) ?? 'fr';
 
   const [classes, setClasses] = useState<ClassItem[]>([]);
   const [years, setYears] = useState<SchoolYearItem[]>([]);
@@ -186,7 +188,7 @@ export default function GradesBulkPage() {
     try {
       await bulkCreateGrades(token, payload);
       toast.success('Importation réussie.');
-      router.push('/app/grades');
+      router.push(`/${locale}/app/grades`);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Échec de l\'importation.');
     } finally {
@@ -197,7 +199,7 @@ export default function GradesBulkPage() {
   return (
     <div className="space-y-6 pb-20">
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <Link href="/app/grades" className="flex items-center hover:text-foreground">
+        <Link href={`/${locale}/app/grades`} className="flex items-center hover:text-foreground">
           <ArrowLeft className="mr-1 h-4 w-4" /> Retour à la saisie
         </Link>
       </div>

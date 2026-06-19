@@ -54,12 +54,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: [
-    '/',
-    '/(fr|en)/:path*',
-    '/app/:path*',
-    '/superadmin/:path*',
-    // Exclure les fichiers statiques et les routes API internes
-    '/((?!_next/static|_next/image|favicon.ico|api/auth).*)',
-  ],
+  matcher: ['/', '/(fr|en)/:path*'],
 };

@@ -1,5 +1,10 @@
 import { redirect } from 'next/navigation';
 
-export default function FinancePage() {
-  redirect('/app/finance/payments');
+export default async function FinancePage({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
+  redirect(`/${locale}/app/finance/payments`);
 }

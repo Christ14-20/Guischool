@@ -100,6 +100,7 @@ export default function ClassRankingPage() {
   const token = session?.accessToken ?? '';
   const params = useParams();
   const classId = params.id as string;
+  const locale = (params?.locale as string) ?? 'fr';
 
   const [years, setYears] = useState<SchoolYearItem[]>([]);
   const [yearId, setYearId] = useState('');
@@ -134,7 +135,7 @@ export default function ClassRankingPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <Link href="/app/pedagogie/classes" className="flex items-center hover:text-foreground">
+        <Link href={`/${locale}/app/pedagogie/classes`} className="flex items-center hover:text-foreground">
           <ArrowLeft className="mr-1 h-4 w-4" /> Retour aux classes
         </Link>
       </div>

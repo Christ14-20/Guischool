@@ -11,20 +11,51 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 class Plan(models.Model):
     """Plan d'abonnement SaaS (Starter, Pro, Enterprise)."""
     PLAN_CHOICES = [
+        ("TRIAL", "Trial"),
         ("STARTER", "Starter"),
         ("PRO", "Pro"),
+        ("PREMIUM", "Premium"),
         ("ENTERPRISE", "Enterprise"),
     ]
+    PLAN_TYPE_CHOICES = [
+        ("individual", "Individuel"),
+        ("standard", "Standard"),
+        ("network", "Réseau"),
+        ("ministry", "Ministère"),
+        ("international", "International"),
+    ]
     name = models.CharField(max_length=50, unique=True, choices=PLAN_CHOICES)
+    plan_type = models.CharField(
+        max_length=20,
+        choices=PLAN_TYPE_CHOICES,
+        default="standard",
+        verbose_name="Type de plan",
+    )
+    max_campuses = models.PositiveIntegerField(
+        default=1,
+        verbose_name="Nombre maximal de campus",
+        help_text="0 = illimité.",
+    )
     max_students = models.PositiveIntegerField(default=500)
     max_staff = models.PositiveIntegerField(default=50)
     modules_activated = models.JSONField(
         default=list,
         help_text="Liste des modules activés ex: ['pedagogy','finance']",
     )
+    modules_included = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="Modules inclus dans le plan CDC ex: ['pedagogy','finance']",
+    )
     storage_max_gb = models.PositiveIntegerField(default=10, verbose_name="Stockage max (Go)")
     price_monthly = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     price_annual = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    price_per_student = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+        verbose_name="Prix par élève",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -35,6 +66,17 @@ class Plan(models.Model):
 
     def __str__(self):
         return self.get_name_display()
+
+    def included_modules(self):
+        """Retourne les modules CDC inclus, avec fallback sur l'ancien champ."""
+        return self.modules_included or self.modules_activated or []
+
+    def calculate_monthly_amount(self, tenant):
+        """Facturation mensuelle, par élève pour les plans réseau."""
+        if self.plan_type != "network":
+            return self.price_monthly
+        students_count = tenant.students.count() if tenant else 0
+        return self.price_monthly + (self.price_per_student * students_count)
 
 
 class Campus(models.Model):

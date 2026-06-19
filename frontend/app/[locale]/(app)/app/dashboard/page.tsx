@@ -87,7 +87,13 @@ const RECENT_ACTIVITY = [
   },
 ];
 
-export default function AppDashboardPage() {
+export default async function AppDashboardPage({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
+
   return (
     <section className="space-y-5">
       <PageHeader
@@ -95,11 +101,11 @@ export default function AppDashboardPage() {
         description="Suivi des indicateurs cle, operations quotidiennes et activites recentes de l etablissement."
         actions={
           <>
-            <Button variant="outline" nativeButton={false} render={<Link href="/app/pedagogie" />}>
+            <Button variant="outline" nativeButton={false} render={<Link href={`/${locale}/app/pedagogie`} />}>
               <BookOpen className="mr-2 h-4 w-4" />
               Ouvrir pedagogie
             </Button>
-            <Button nativeButton={false} render={<Link href="/app/finance" />}>
+            <Button nativeButton={false} render={<Link href={`/${locale}/app/finance`} />}>
               <CreditCard className="mr-2 h-4 w-4" />
               Aller en finance
             </Button>
@@ -160,7 +166,7 @@ export default function AppDashboardPage() {
                 variant="outline"
                 className="w-full justify-between border-border/70"
                 nativeButton={false}
-                render={<Link href={action.href} />}
+                render={<Link href={`/${locale}${action.href}`} />}
               >
                 <span>{action.label}</span>
                 <ArrowRight className="h-4 w-4" />

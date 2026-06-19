@@ -1,7 +1,14 @@
 from django.test import TestCase
+from datetime import date
+from decimal import Decimal
 from apps.superadmin.models import Tenant, Plan, Campus
+from apps.superadmin.services.plan_limits import (
+    ensure_campus_limit_available,
+    ensure_student_limit_available,
+)
 from apps.authentication.models import User, Role
 from apps.authentication.services.auth_service import get_tokens_for_user, _get_user_campus_id
+from rest_framework.exceptions import ValidationError
 
 
 class CampusIsolationTestCase(TestCase):
@@ -393,7 +400,7 @@ class TenantSettingsTestCase(TestCase):
             format="json",
         )
         self.assertEqual(response.status_code, 400)
-        self.assertIn("has_payroll", response.json())
+        self.assertIn("has_payroll", response.json().get("errors", {}))
 
     def test_secretary_forbidden(self):
         self.client.force_authenticate(user=self.secretary)
@@ -409,3 +416,80 @@ class TenantSettingsTestCase(TestCase):
         )
         self.assertEqual(response.status_code, 400)
 
+
+class PlanAdvancedBillingTestCase(TestCase):
+    def setUp(self):
+        self.plan = Plan.objects.create(
+            name="ENTERPRISE",
+            plan_type="network",
+            max_campuses=1,
+            max_students=1,
+            max_staff=100,
+            price_monthly=Decimal("1000000"),
+            price_per_student=Decimal("25000"),
+            modules_activated=["pedagogy"],
+            modules_included=["pedagogy", "finance"],
+        )
+        self.tenant = Tenant.objects.create(
+            name="Réseau Test",
+            plan=self.plan,
+            status="ACTIVE",
+        )
+        self.role = Role.objects.create(
+            name="ADMIN_SCHOOL",
+            description="Directeur",
+        )
+        self.user = User.objects.create_user(
+            email="billing@test.com",
+            password="billingpass123",
+            tenant=self.tenant,
+            role=self.role,
+            first_name="Billing",
+            last_name="Admin",
+        )
+        self.school_year = SchoolYear.objects.create(
+            tenant=self.tenant,
+            label="2026-2027",
+            start_date=date(2026, 9, 1),
+            end_date=date(2027, 6, 30),
+        )
+
+    def test_network_plan_billing_is_based_on_students(self):
+        Student.objects.create(
+            tenant=self.tenant,
+            nom="Diallo",
+            prenom="Mamadou",
+            date_naissance="2015-05-10",
+            sexe="M",
+            tuteur_nom="Diallo Père",
+            tuteur_telephone="+224622111111",
+            annee_inscription=self.school_year,
+            created_by=self.user,
+        )
+
+        self.assertEqual(
+            self.plan.calculate_monthly_amount(self.tenant),
+            Decimal("1025000"),
+        )
+
+    def test_campus_limit_rejects_creation_when_max_reached(self):
+        Campus.objects.create(tenant=self.tenant, name="Campus Centre")
+
+        with self.assertRaises(ValidationError):
+            ensure_campus_limit_available(self.tenant)
+
+    def test_student_limit_rejects_creation_when_max_reached(self):
+        Student.objects.create(
+            tenant=self.tenant,
+            nom="Barry",
+            prenom="Aissatou",
+            date_naissance="2016-08-15",
+            sexe="F",
+            tuteur_nom="Barry Père",
+            tuteur_telephone="+224622111112",
+            annee_inscription=self.school_year,
+            created_by=self.user,
+        )
+
+        with self.assertRaises(ValidationError):
+            ensure_student_limit_available(self.tenant)

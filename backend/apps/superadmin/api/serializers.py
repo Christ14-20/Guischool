@@ -8,14 +8,37 @@ from apps.authentication.models import User, Role
 
 
 class PlanSerializer(serializers.ModelSerializer):
+    billing_preview = serializers.SerializerMethodField()
+
     class Meta:
         model = Plan
         fields = [
-            "id", "name", "max_students", "max_staff",
-            "modules_activated", "storage_max_gb",
-            "price_monthly", "price_annual", "created_at",
+            "id", "name", "plan_type", "max_campuses", "max_students", "max_staff",
+            "modules_activated", "modules_included", "storage_max_gb",
+            "price_monthly", "price_annual", "price_per_student",
+            "billing_preview", "created_at",
         ]
-        read_only_fields = ["id", "created_at"]
+        read_only_fields = ["id", "billing_preview", "created_at"]
+
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
+        plan_type = attrs.get("plan_type", getattr(self.instance, "plan_type", "standard"))
+        price_per_student = attrs.get(
+            "price_per_student",
+            getattr(self.instance, "price_per_student", 0),
+        )
+        if plan_type == "network" and price_per_student < 0:
+            raise serializers.ValidationError({
+                "price_per_student": "Le prix par élève ne peut pas être négatif.",
+            })
+        return attrs
+
+    def get_billing_preview(self, obj):
+        return {
+            "billing_model": "per_student" if obj.plan_type == "network" else "flat",
+            "base_monthly": obj.price_monthly,
+            "price_per_student": obj.price_per_student,
+        }
 
 
 class TenantSerializer(serializers.ModelSerializer):

@@ -3,8 +3,15 @@ from .models import Plan, Tenant, Subscription, TenantNetwork
 
 @admin.register(Plan)
 class PlanAdmin(admin.ModelAdmin):
-    list_display = ("name", "max_students", "max_staff", "price_monthly", "price_annual")
-    list_editable = ("max_students", "max_staff", "price_monthly", "price_annual")
+    list_display = (
+        "name", "plan_type", "max_campuses", "max_students", "max_staff",
+        "price_monthly", "price_per_student", "price_annual",
+    )
+    list_editable = (
+        "plan_type", "max_campuses", "max_students", "max_staff",
+        "price_monthly", "price_per_student", "price_annual",
+    )
+    list_filter = ("plan_type",)
 
 @admin.register(TenantNetwork)
 class TenantNetworkAdmin(admin.ModelAdmin):
