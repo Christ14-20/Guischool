@@ -74,9 +74,9 @@
 **Description :** Étendre la gestion des plans selon le CDC (§1.3).
 
 **Checklist Backend :**
-- [ ] Étendre modèle `Plan` : `plan_type` (individual/standard/network/ministry/international), `max_campuses`, `max_students`, `modules_included`, `price_per_student`
-- [ ] Logique de facturation par élève (pour plans réseau)
-- [ ] Endpoint contrôle de limites : middleware qui vérifie `max_students` et `max_campuses` avant création
+- [x] Étendre modèle `Plan` : `plan_type` (individual/standard/network/ministry/international), `max_campuses`, `max_students`, `modules_included`, `price_per_student`
+- [x] Logique de facturation par élève (pour plans réseau)
+- [x] Endpoint contrôle de limites : middleware qui vérifie `max_students` et `max_campuses` avant création
 
 **Labels :** `plans` `billing`
 
@@ -91,14 +91,14 @@
 **Description :** Implémenter tous les cycles du système éducatif guinéen (CDC §2.1).
 
 **Checklist Backend :**
-- [ ] Étendre modèle `Level` : `cycle` (MATERNELLE/PRIMAIRE/CQP/COLLEGE/LYCEE_GEN/LYCEE_TECH/ETFP_A/ETFP_B), `code_officiel_minedu`, `age_min`, `age_max`, `diplome_final`, `duree_annees`
-- [ ] Spécificité maternelle : `evaluation_type = 'DESCRIPTIVE'` (pas de notes chiffrées)
-- [ ] Données initiales (fixtures) : TPS, PS, MS, GS / CP1→CM2 / 6ème→3ème / 2nde→Tle / BEP, CAP, BTS
-- [ ] Endpoint : `GET /pedagogy/levels/` avec filtre par `cycle`
+- [x] Étendre modèle `Level` : `cycle` (MATERNELLE/PRIMAIRE/CQP/COLLEGE/LYCEE_GEN/LYCEE_TECH/ETFP_A/ETFP_B), `code_officiel_minedu`, `age_min`, `age_max`, `diplome_final`, `duree_annees`
+- [x] Spécificité maternelle : `evaluation_type = 'DESCRIPTIVE'` (pas de notes chiffrées)
+- [x] Données initiales (fixtures) : TPS, PS, MS, GS / CP1→CM2 / 6ème→3ème / 2nde→Tle / BEP, CAP, BTS
+- [x] Endpoint : `GET /pedagogy/levels/` avec filtre par `cycle`
 
 **Checklist Frontend :**
-- [ ] Page `/app/pedagogy/levels` : liste par cycle avec icônes
-- [ ] Création de niveau avec sélecteur de cycle et type d'évaluation
+- [x] Page `/app/pedagogy/levels` : liste par cycle avec icônes
+- [x] Création de niveau avec sélecteur de cycle et type d'évaluation
 
 **Labels :** `pédagogie` `niveaux`
 

@@ -474,7 +474,6 @@
 ---
 
 ### 🃏 [PEDAGOGY-01] Années Scolaires (`/app/pedagogy/school-years`)
-
 **Description :** Créer la page de gestion des années scolaires.
 
 **Checklist :**
@@ -486,6 +485,22 @@
 - [x] Validation : une seule année peut être active à la fois
 - [x] Actions par ligne : Activer, Clôturer (`ConfirmDialog`)
 - [x] `GET/POST /pedagogy/school-years/`
+
+
+### 🃏 [PEDAGOGY-00] Gestion des Niveaux (`/app/pedagogy/levels`)
+**Description :** Créer la page de gestion des niveaux éducatifs.
+
+**Checklist :**
+- [x] Liste par cycle avec icônes (Baby, BookOpen, GraduationCap, School)
+- [x] Tableaux par cycle : nom, code MINEDU, âge, diplôme, type éval.
+- [x] Bouton "Nouveau niveau" → Dialog avec sélecteur de cycle et type d'évaluation
+- [x] Formulaire : cycle (MATERNELLE/PRIMAIRE/CQP/COLLEGE/LYCEE_GEN/LYCEE_TECH/ETFP_A/ETFP_B), nom, code, âge min/max, diplôme, type (NUMERIC/DESCRIPTIVE)
+- [x] `GET /pedagogy/levels/` avec filtre par `cycle`
+- [x] `POST /pedagogy/levels/` pour création
+- [x] `PATCH /pedagogy/levels/{id}/` pour modification
+- [x] `DELETE /pedagogy/levels/{id}/` pour suppression
+
+**Labels :** `pédagogie` `niveaux`
 
 **Labels :** `pédagogie`
 

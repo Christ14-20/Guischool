@@ -27,7 +27,11 @@ class SchoolYearSerializer(serializers.ModelSerializer):
 class LevelSerializer(serializers.ModelSerializer):
     class Meta:
         model = Level
-        fields = ["id", "tenant", "cycle", "name", "order_index"]
+        fields = [
+            "id", "tenant", "cycle", "name", "code_officiel_minedu",
+            "age_min", "age_max", "diplome_final", "duree_annees",
+            "evaluation_type", "order_index",
+        ]
         read_only_fields = ["id", "tenant"]
 
 

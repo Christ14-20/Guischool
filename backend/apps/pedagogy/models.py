@@ -47,14 +47,39 @@ class SchoolYear(models.Model):
 
 class Level(models.Model):
     CYCLE_CHOICES = [
+        ("MATERNELLE", "Maternelle"),
         ("PRIMAIRE", "Primaire"),
+        ("CQP", "Cours Professionnels Qualifiants (BEP/CAP)"),
         ("COLLEGE", "Collège"),
-        ("LYCEE", "Lycée"),
-        ("SUPERIEUR", "Supérieur"),
+        ("LYCEE_GEN", "Lycée Général"),
+        ("LYCEE_TECH", "Lycée Technique"),
+        ("ETFP_A", "Etudes Fondamentales de 1er Cycle (A)"),
+        ("ETFP_B", "Etudes Fondamentales de 2nd Cycle (B)"),
+    ]
+    EVALUATION_TYPE_CHOICES = [
+        ("NUMERIC", "Numérique"),
+        ("DESCRIPTIVE", "Descriptive"),
     ]
     tenant = models.ForeignKey("superadmin.Tenant", on_delete=models.CASCADE, related_name="levels")
-    cycle = models.CharField(max_length=20, choices=CYCLE_CHOICES)
-    name = models.CharField(max_length=50, help_text="Ex: 6ème, Terminale S")
+    cycle = models.CharField(max_length=20, choices=CYCLE_CHOICES, verbose_name="Cycle éducatif")
+    name = models.CharField(max_length=50, help_text="Ex: TPS, 6ème, Terminale S")
+    code_officiel_minedu = models.CharField(
+        max_length=20, blank=True, verbose_name="Code officiel MINEDU"
+    )
+    age_min = models.PositiveSmallIntegerField(null=True, blank=True, verbose_name="Âge minimum")
+    age_max = models.PositiveSmallIntegerField(null=True, blank=True, verbose_name="Âge maximum")
+    diplome_final = models.CharField(
+        max_length=100, blank=True, verbose_name="Diplôme final"
+    )
+    duree_annees = models.PositiveSmallIntegerField(
+        default=1, verbose_name="Durée en années"
+    )
+    evaluation_type = models.CharField(
+        max_length=15,
+        choices=EVALUATION_TYPE_CHOICES,
+        default="NUMERIC",
+        verbose_name="Type d'évaluation",
+    )
     order_index = models.PositiveSmallIntegerField(default=0)
 
     class Meta:

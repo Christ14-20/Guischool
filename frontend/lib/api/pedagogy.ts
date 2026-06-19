@@ -66,8 +66,14 @@ export type SchoolYearItem = {
 
 export type LevelItem = {
   id: number;
-  cycle: 'PRIMAIRE' | 'COLLEGE' | 'LYCEE' | 'SUPERIEUR';
+  cycle: 'MATERNELLE' | 'PRIMAIRE' | 'CQP' | 'COLLEGE' | 'LYCEE_GEN' | 'LYCEE_TECH' | 'ETFP_A' | 'ETFP_B';
   name: string;
+  code_officiel_minedu?: string;
+  age_min?: number;
+  age_max?: number;
+  diplome_final?: string;
+  duree_annees?: number;
+  evaluation_type?: 'NUMERIC' | 'DESCRIPTIVE';
   order_index: number;
 };
 
@@ -178,6 +184,19 @@ export async function getLevels(
 export async function createLevel(token: string, body: Record<string, unknown>) {
   const data = await request<any>('/pedagogy/levels/', { token, method: 'POST', body });
   return data?.data ?? data;
+}
+
+export async function updateLevel(
+  token: string,
+  id: number,
+  body: Record<string, unknown>
+) {
+  const data = await request<any>(`/pedagogy/levels/${id}/`, { token, method: 'PATCH', body });
+  return data?.data ?? data;
+}
+
+export async function deleteLevel(token: string, id: number) {
+  return request(`/pedagogy/levels/${id}/`, { token, method: 'DELETE' });
 }
 
 // ─── Classes ─────────────────────────────────────────────────────────────────

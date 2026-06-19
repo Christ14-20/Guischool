@@ -64,11 +64,17 @@ type ViewMode = 'grid' | 'list';
 type DialogMode = { type: 'create' } | { type: 'edit'; classe: ClassItem };
 
 const CYCLE_LABELS: Record<string, string> = {
+  MATERNELLE: 'Maternelle',
   PRIMAIRE: 'Primaire',
+  CQP: 'CQP (BEP/CAP)',
   COLLEGE: 'Collège',
-  LYCEE: 'Lycée',
-  SUPERIEUR: 'Supérieur',
+  LYCEE_GEN: 'Lycée Général',
+  LYCEE_TECH: 'Lycée Technique',
+  ETFP_A: 'ETFP A',
+  ETFP_B: 'ETFP B',
 };
+
+const CYCLES = ['MATERNELLE', 'PRIMAIRE', 'CQP', 'COLLEGE', 'LYCEE_GEN', 'LYCEE_TECH', 'ETFP_A', 'ETFP_B'] as const;
 
 export default function ClassesPage() {
   const { data: session } = useSession();
@@ -402,7 +408,7 @@ function ClassFormDialog({
     }
   };
 
-  const CYCLES = ['PRIMAIRE', 'COLLEGE', 'LYCEE', 'SUPERIEUR'] as const;
+  const CYCLES = ['MATERNELLE', 'PRIMAIRE', 'CQP', 'COLLEGE', 'LYCEE_GEN', 'LYCEE_TECH', 'ETFP_A', 'ETFP_B'] as const;
 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>

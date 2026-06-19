@@ -15,10 +15,16 @@ const MODULES = [
     icon: CalendarDays,
   },
   {
+    title: 'Niveaux',
+    description: 'Catalogue des niveaux du système éducatif guinéen.',
+    href: '/app/pedagogie/levels',
+    icon: GraduationCap,
+  },
+  {
     title: 'Classes',
     description: 'Créez et gérez les classes par cycle et niveau.',
     href: '/app/pedagogie/classes',
-    icon: GraduationCap,
+    icon: BookOpen,
   },
   {
     title: 'Matières',
