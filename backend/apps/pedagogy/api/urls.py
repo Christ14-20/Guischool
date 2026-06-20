@@ -2,7 +2,7 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from apps.pedagogy.api.views import (
-    SchoolYearViewSet, LevelViewSet, ClassViewSet, SubjectViewSet,
+    SchoolYearViewSet, LevelViewSet, FiliereViewSet, ClassViewSet, SubjectViewSet,
     TimetableSlotViewSet, EvaluationViewSet, AttendanceViewSet,
     StudentViewSet, GradeViewSet, YearEndDecisionViewSet, BulkPromotionView,
 )
