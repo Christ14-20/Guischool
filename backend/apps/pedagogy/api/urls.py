@@ -6,6 +6,7 @@ from apps.pedagogy.api.views import (
     TimetableSlotViewSet, EvaluationViewSet, AttendanceViewSet,
     StudentViewSet, GradeViewSet, YearEndDecisionViewSet, BulkPromotionView,
     MixedClassViewSet, ClassGroupViewSet, SubGroupViewSet,
+    ClassSubjectViewSet, TeacherViewSet,
 )
 
 router = DefaultRouter()
@@ -22,6 +23,12 @@ router.register("pedagogy/attendances", AttendanceViewSet, basename="attendance"
 
 # Classes mixtes
 router.register("pedagogy/mixed-classes", MixedClassViewSet, basename="mixed-class")
+
+# Matières de classe
+router.register("pedagogy/class-subjects", ClassSubjectViewSet, basename="class-subject")
+
+# Enseignants
+router.register("pedagogy/teachers", TeacherViewSet, basename="teacher")
 
 # Groupes et sous-groupes
 router.register("pedagogy/groups", ClassGroupViewSet, basename="group")

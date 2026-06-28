@@ -127,10 +127,32 @@ export type SubjectItem = {
   is_official: boolean;
 };
 
+export type TeacherItem = {
+  id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+};
+
+export type ClassSubjectItem = {
+  id: number;
+  classe: number;
+  classe_name: string;
+  subject: number;
+  subject_name: string;
+  coefficient: number;
+  weekly_hours: number;
+  teacher: string | null;
+  teacher_name: string | null;
+};
+
 export type TimetableSlotItem = {
   id: number;
   classe: number;
+  group: number | null;
+  group_name: string | null;
   teacher: string;
+  teacher_name: string | null;
   subject: number;
   room: string;
   day_of_week: string;
@@ -343,6 +365,40 @@ export async function updateTimetableSlot(token: string, id: number, body: Recor
 
 export async function deleteTimetableSlot(token: string, id: number) {
   return request(`/pedagogy/timetable/${id}/`, { token, method: 'DELETE' });
+}
+
+// ─── ClassSubjects ───────────────────────────────────────────────────────────
+
+export async function getClassSubjects(
+  token: string,
+  query?: Record<string, string | number | undefined>
+): Promise<PaginatedResult<ClassSubjectItem>> {
+  const data = await request<any>('/pedagogy/class-subjects/', { token, query });
+  return { count: Number(data?.count ?? 0), results: Array.isArray(data?.results) ? data.results : [] };
+}
+
+export async function createClassSubject(token: string, body: Record<string, unknown>) {
+  const data = await request<any>('/pedagogy/class-subjects/', { token, method: 'POST', body });
+  return data?.data ?? data;
+}
+
+export async function updateClassSubject(token: string, id: number, body: Record<string, unknown>) {
+  const data = await request<any>(`/pedagogy/class-subjects/${id}/`, { token, method: 'PATCH', body });
+  return data?.data ?? data;
+}
+
+export async function deleteClassSubject(token: string, id: number) {
+  return request(`/pedagogy/class-subjects/${id}/`, { token, method: 'DELETE' });
+}
+
+// ─── Teachers ────────────────────────────────────────────────────────────────
+
+export async function getTeachers(
+  token: string,
+  query?: Record<string, string | number | undefined>
+): Promise<PaginatedResult<TeacherItem>> {
+  const data = await request<any>('/pedagogy/teachers/', { token, query });
+  return { count: Number(data?.count ?? 0), results: Array.isArray(data?.results) ? data.results : [] };
 }
 
 // ─── Attendance ──────────────────────────────────────────────────────────────

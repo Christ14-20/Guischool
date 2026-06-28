@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { BookOpen, CalendarDays, ClipboardList, GraduationCap, Layout, ListTree } from 'lucide-react';
+import { BookOpen, CalendarDays, ClipboardList, GraduationCap, Layout, ListTree, Puzzle } from 'lucide-react';
 
 import { PageHeader } from '@/components/layout/page-header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -49,6 +49,12 @@ const MODULES = [
     description: 'Enregistrez les présences et consultez les statistiques.',
     href: '/app/pedagogie/attendance',
     icon: ClipboardList,
+  },
+  {
+    title: 'Matières par classe',
+    description: 'Associez les matières aux classes avec coefficient et enseignant.',
+    href: '/app/pedagogie/class-subjects',
+    icon: BookOpen,
   },
 ];
 

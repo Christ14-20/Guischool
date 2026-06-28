@@ -34,6 +34,7 @@ import {
   type LevelItem,
   type SchoolYearItem,
   type SubjectItem,
+  type TeacherItem,
   type TimetableSlotItem,
   createTimetableSlot,
   deleteTimetableSlot,
@@ -41,6 +42,7 @@ import {
   getLevels,
   getSchoolYears,
   getSubjects,
+  getTeachers,
   getTimetableSlots,
   updateTimetableSlot,
 } from '@/lib/api/pedagogy';
@@ -83,6 +85,7 @@ const slotSchema = z.object({
   start_time: z.string().min(1, 'L\'heure de début est requise.'),
   end_time: z.string().min(1, 'L\'heure de fin est requise.'),
   subject: z.string().min(1, 'La matière est requise.'),
+  teacher: z.string().min(1, 'L\'enseignant est requis.'),
   room: z.string().optional(),
   mixed_level: z.string().optional(),
 }).refine((d) => d.end_time > d.start_time, {
@@ -99,6 +102,7 @@ export default function TimetablePage() {
   const [years, setYears] = useState<SchoolYearItem[]>([]);
   const [subjects, setSubjects] = useState<SubjectItem[]>([]);
   const [levels, setLevels] = useState<LevelItem[]>([]);
+  const [teachers, setTeachers] = useState<TeacherItem[]>([]);
   const [slots, setSlots] = useState<TimetableSlotItem[]>([]);
   const [selectedClass, setSelectedClass] = useState<string>('');
   const [loading, setLoading] = useState(true);
@@ -110,12 +114,13 @@ export default function TimetablePage() {
   // Load classes and subjects once
   useEffect(() => {
     if (!token) return;
-    Promise.all([getClasses(token), getSubjects(token), getSchoolYears(token), getLevels(token)])
-      .then(([classRes, subjectRes, yearRes, levelRes]) => {
+    Promise.all([getClasses(token), getSubjects(token), getSchoolYears(token), getLevels(token), getTeachers(token)])
+      .then(([classRes, subjectRes, yearRes, levelRes, teacherRes]) => {
         setClasses(classRes.results);
         setSubjects(subjectRes.results);
         setYears(yearRes.results);
         setLevels(levelRes.results);
+        setTeachers(teacherRes.results);
         // Auto-select current year's first class
         const currentYear = yearRes.results.find((y) => y.is_current);
         if (currentYear) {
@@ -235,6 +240,11 @@ export default function TimetablePage() {
                           </p>
                         )}
                         {slot.room && <p className="truncate text-[10px] opacity-75">{slot.room}</p>}
+                        {slot.teacher_name && (
+                          <p className="mt-0.5 truncate text-[10px] opacity-60">
+                            {slot.teacher_name}
+                          </p>
+                        )}
                         <div className="mt-1.5 flex gap-1">
                           <Button
                             size="sm"
@@ -289,6 +299,7 @@ export default function TimetablePage() {
           token={token}
           classeId={Number(selectedClass)}
           subjects={subjects}
+          teachers={teachers}
           isMixed={selectedClassInfo?.is_mixed ?? false}
           mixedLevels={selectedClassInfo?.mixed_levels ?? []}
           levels={levels}
@@ -307,6 +318,7 @@ function SlotFormDialog({
   token,
   classeId,
   subjects,
+  teachers,
   isMixed,
   mixedLevels,
   levels,
@@ -317,6 +329,7 @@ function SlotFormDialog({
   token: string;
   classeId: number;
   subjects: SubjectItem[];
+  teachers: TeacherItem[];
   isMixed: boolean;
   mixedLevels: ClassItem['mixed_levels'];
   levels: LevelItem[];
@@ -334,6 +347,7 @@ function SlotFormDialog({
       start_time: slot?.start_time.slice(0, 5) ?? '08:00',
       end_time: slot?.end_time.slice(0, 5) ?? '09:00',
       subject: slot?.subject ? String(slot.subject) : '',
+      teacher: slot?.teacher ? String(slot.teacher) : '',
       room: slot?.room ?? '',
       mixed_level: slot?.mixed_level ? String(slot.mixed_level) : '',
     },
@@ -347,6 +361,7 @@ function SlotFormDialog({
         start_time: values.start_time,
         end_time: values.end_time,
         subject: Number(values.subject),
+        teacher: Number(values.teacher),
         room: values.room ?? '',
       };
       if (isMixed && values.mixed_level) {
@@ -496,6 +511,31 @@ function SlotFormDialog({
                 )}
               />
             )}
+
+            <FormField
+              control={form.control}
+              name="teacher"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Enseignant *</FormLabel>
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Sélectionner un enseignant" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {teachers.map((t) => (
+                        <SelectItem key={t.id} value={String(t.id)}>
+                          {t.last_name} {t.first_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             <FormField
               control={form.control}

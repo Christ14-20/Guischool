@@ -5,6 +5,10 @@ Serializers pour : SchoolYear, Level, Class, Subject,
 """
 import re
 from rest_framework import serializers
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
+
 from apps.pedagogy.models import (
     SchoolYear, Level, Class, Subject, ClassSubject, Filiere,
     Attendance, Evaluation, Student, Enrollment, Grade, YearEndDecision,
@@ -147,20 +151,52 @@ class SubjectSerializer(serializers.ModelSerializer):
         read_only_fields = ["id", "tenant"]
 
 
+class ClassSubjectSerializer(serializers.ModelSerializer):
+    subject_name = serializers.CharField(source="subject.name", read_only=True)
+    teacher_name = serializers.SerializerMethodField()
+    classe_name = serializers.CharField(source="classe.name", read_only=True)
+
+    class Meta:
+        model = ClassSubject
+        fields = [
+            "id", "classe", "classe_name", "subject", "subject_name",
+            "coefficient", "weekly_hours", "teacher", "teacher_name",
+        ]
+
+    def get_teacher_name(self, obj):
+        if not obj.teacher:
+            return None
+        return f"{obj.teacher.last_name} {obj.teacher.first_name}".strip() or str(obj.teacher)
+
+
+class TeacherSerializer(serializers.ModelSerializer):
+    """Serializer léger pour lister les enseignants d'un tenant."""
+
+    class Meta:
+        model = User
+        fields = ["id", "first_name", "last_name", "email"]
+
+
 class TimetableSlotSerializer(serializers.ModelSerializer):
     subject_name = serializers.CharField(source="subject.name", read_only=True)
     mixed_level_name = serializers.CharField(source="mixed_level.name", read_only=True)
     group_name = serializers.CharField(source="group.name", read_only=True)
+    teacher_name = serializers.SerializerMethodField()
 
     class Meta:
         model = TimetableSlot
         fields = [
             "id", "tenant", "classe", "group", "group_name",
-            "teacher", "subject", "subject_name",
+            "teacher", "teacher_name", "subject", "subject_name",
             "room", "day_of_week", "start_time", "end_time",
             "is_recurring", "specific_date", "mixed_level", "mixed_level_name",
         ]
-        read_only_fields = ["id", "tenant", "subject_name", "mixed_level_name", "group_name"]
+        read_only_fields = ["id", "tenant", "subject_name", "mixed_level_name", "group_name", "teacher_name"]
+
+    def get_teacher_name(self, obj):
+        if not obj.teacher:
+            return None
+        return f"{obj.teacher.last_name} {obj.teacher.first_name}".strip() or str(obj.teacher)
 
 
 class ClassGroupSerializer(serializers.ModelSerializer):

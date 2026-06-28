@@ -8,14 +8,19 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django.shortcuts import get_object_or_404
 
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
+
 from apps.pedagogy.models import (
     SchoolYear, Level, Class, Subject, Filiere,
     Student, Enrollment, Grade, YearEndDecision, Evaluation, Attendance,
-    TimetableSlot, MixedClass, ClassGroup, SubGroup,
+    TimetableSlot, MixedClass, ClassGroup, SubGroup, ClassSubject,
 )
 from apps.pedagogy.api.serializers import (
     SchoolYearSerializer, LevelSerializer, ClassSerializer, SubjectSerializer,
     FiliereSerializer, MixedClassSerializer, ClassGroupSerializer, SubGroupSerializer,
+    ClassSubjectSerializer, TeacherSerializer,
     StudentListSerializer, StudentDetailSerializer, EnrollmentSerializer,
     GradeSerializer, GradeValidateSerializer,
     YearEndDecisionSerializer, BulkPromotionSerializer,
@@ -169,6 +174,38 @@ class SubjectViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(tenant=self.request.user.tenant)
+
+
+class ClassSubjectViewSet(viewsets.ModelViewSet):
+    serializer_class = ClassSubjectSerializer
+    permission_classes = [IsAuthenticated]
+    filterset_fields = ["classe", "subject", "teacher"]
+
+    def get_queryset(self):
+        return ClassSubject.objects.filter(
+            classe__tenant=self.request.user.tenant
+        ).select_related("subject", "teacher", "classe")
+
+    def perform_create(self, serializer):
+        classe = serializer.validated_data.get("classe")
+        if classe.tenant_id != self.request.user.tenant_id:
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("Cette classe ne vous appartient pas.")
+        serializer.save()
+
+
+class TeacherViewSet(viewsets.ReadOnlyModelViewSet):
+    """Liste les enseignants (users avec rôle ENSEIGNANT) du tenant courant."""
+    serializer_class = TeacherSerializer
+    permission_classes = [IsAuthenticated]
+    search_fields = ["first_name", "last_name", "email"]
+
+    def get_queryset(self):
+        return User.objects.filter(
+            tenant=self.request.user.tenant,
+            role__name="ENSEIGNANT",
+            is_active=True,
+        )
 
 
 class TimetableSlotViewSet(viewsets.ModelViewSet):
