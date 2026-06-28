@@ -11,11 +11,11 @@ from django.shortcuts import get_object_or_404
 from apps.pedagogy.models import (
     SchoolYear, Level, Class, Subject, Filiere,
     Student, Enrollment, Grade, YearEndDecision, Evaluation, Attendance,
-    TimetableSlot, MixedClass,
+    TimetableSlot, MixedClass, ClassGroup, SubGroup,
 )
 from apps.pedagogy.api.serializers import (
     SchoolYearSerializer, LevelSerializer, ClassSerializer, SubjectSerializer,
-    FiliereSerializer, MixedClassSerializer,
+    FiliereSerializer, MixedClassSerializer, ClassGroupSerializer, SubGroupSerializer,
     StudentListSerializer, StudentDetailSerializer, EnrollmentSerializer,
     GradeSerializer, GradeValidateSerializer,
     YearEndDecisionSerializer, BulkPromotionSerializer,
@@ -120,6 +120,42 @@ class MixedClassViewSet(viewsets.ModelViewSet):
         return MixedClass.objects.filter(
             classe_physique__tenant=self.request.user.tenant
         ).select_related("classe_physique").prefetch_related("niveaux__level")
+
+
+class ClassGroupViewSet(viewsets.ModelViewSet):
+    serializer_class = ClassGroupSerializer
+    permission_classes = [IsAuthenticated]
+    filterset_fields = ["classe_mere", "type", "enseignant"]
+
+    def get_queryset(self):
+        qs = ClassGroup.objects.filter(
+            tenant=self.request.user.tenant
+        ).select_related("enseignant")
+        classe_id = self.kwargs.get("classe_pk")
+        if classe_id:
+            qs = qs.filter(classe_mere_id=classe_id)
+        return qs
+
+    def perform_create(self, serializer):
+        classe_id = self.kwargs.get("classe_pk")
+        if classe_id:
+            serializer.save(tenant=self.request.user.tenant, classe_mere_id=classe_id)
+        else:
+            serializer.save(tenant=self.request.user.tenant)
+
+
+class SubGroupViewSet(viewsets.ModelViewSet):
+    serializer_class = SubGroupSerializer
+    permission_classes = [IsAuthenticated]
+    filterset_fields = ["type", "enseignant"]
+
+    def get_queryset(self):
+        return SubGroup.objects.filter(
+            tenant=self.request.user.tenant
+        ).prefetch_related("classes")
+
+    def perform_create(self, serializer):
+        serializer.save(tenant=self.request.user.tenant)
 
 
 class SubjectViewSet(viewsets.ModelViewSet):

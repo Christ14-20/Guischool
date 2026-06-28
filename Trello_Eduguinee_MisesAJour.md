@@ -138,9 +138,9 @@
 
 **Checklist Backend :**
 - [x] Créer modèle `MixedClass` (classe_physique, classes_logiques via MixedClassLevel, type_mixte, répartition)
-- [ ] Présences prises sur classe physique, notes sur classe logique
+- [x] Présences prises sur classe physique, notes sur classe logique
 - [x] Validation : max 3 niveaux par classe mixte, sinon validation inspection requise
-- [ ] Emploi du temps adapté (alternance)
+- [x] Emploi du temps adapté (alternance)
 
 **Checklist Frontend :**
 - [x] Option "Classe mixte" dans la création de classe
@@ -155,10 +155,10 @@
 **Description :** Implémenter les groupes de TD/TP et sous-groupes (CDC §5.1).
 
 **Checklist Backend :**
-- [ ] Créer modèle `ClassGroup` (type: TD/TP/LANGUE, classe_mere FK, capacite, enseignant, horaire_specifique)
-- [ ] Créer modèle `SubGroup` (type: NIVEAU_COMBINE/FILIERE_PARTAGEE, classes M2M)
-- [ ] Association `TimetableSlot.group` FK nullable
-- [ ] Endpoints CRUD : `GET/POST /pedagogy/classes/{id}/groups/`
+- [x] Créer modèle `ClassGroup` (type: TD/TP/LANGUE, classe_mere FK, capacite, enseignant, horaire_specifique)
+- [x] Créer modèle `SubGroup` (type: NIVEAU_COMBINE/FILIERE_PARTAGEE, classes M2M)
+- [x] Association `TimetableSlot.group` FK nullable
+- [x] Endpoints CRUD : `GET/POST /pedagogy/classes/{id}/groups/`
 
 **Labels :** `pédagogie` `groupes`
 

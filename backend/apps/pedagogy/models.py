@@ -298,6 +298,65 @@ class ClassSubject(models.Model):
         return f"{self.classe.name} — {self.subject.name} (coeff {self.coefficient})"
 
 
+# ─────────────────────────────────────────────────────────────────────
+# Module 5 : Groupes et Sous-Groupes
+# ─────────────────────────────────────────────────────────────────────
+
+class ClassGroup(models.Model):
+    TYPE_CHOICES = [
+        ("TD", "Travaux Dirigés"),
+        ("TP", "Travaux Pratiques"),
+        ("LANGUE", "Groupe de langue"),
+    ]
+    tenant = models.ForeignKey("superadmin.Tenant", on_delete=models.CASCADE, related_name="class_groups")
+    classe_mere = models.ForeignKey(Class, on_delete=models.CASCADE, related_name="groups")
+    type = models.CharField(max_length=10, choices=TYPE_CHOICES, verbose_name="Type de groupe")
+    name = models.CharField(max_length=100, help_text="Ex: TD1, Groupe A")
+    capacite = models.PositiveSmallIntegerField(default=30)
+    enseignant = models.ForeignKey(
+        "authentication.User", null=True, blank=True,
+        on_delete=models.SET_NULL, related_name="class_groups",
+    )
+    horaire_specifique = models.JSONField(
+        default=dict, blank=True,
+        verbose_name="Horaire spécifique",
+        help_text="Horaire optionnel du groupe (jour, début, fin, salle)",
+    )
+
+    class Meta:
+        unique_together = [("tenant", "classe_mere", "name")]
+        verbose_name = "Groupe de classe"
+        verbose_name_plural = "Groupes de classe"
+        ordering = ["classe_mere", "type", "name"]
+
+    def __str__(self):
+        return f"{self.classe_mere.name} — {self.name} ({self.get_type_display()})"
+
+
+class SubGroup(models.Model):
+    TYPE_CHOICES = [
+        ("NIVEAU_COMBINE", "Niveaux combinés"),
+        ("FILIERE_PARTAGEE", "Filière partagée"),
+    ]
+    tenant = models.ForeignKey("superadmin.Tenant", on_delete=models.CASCADE, related_name="subgroups")
+    type = models.CharField(max_length=20, choices=TYPE_CHOICES, verbose_name="Type de sous-groupe")
+    name = models.CharField(max_length=100, help_text="Ex: Groupe inter-niveaux, Sciences")
+    classes = models.ManyToManyField(Class, related_name="subgroups")
+    capacite = models.PositiveSmallIntegerField(default=30)
+    enseignant = models.ForeignKey(
+        "authentication.User", null=True, blank=True,
+        on_delete=models.SET_NULL, related_name="subgroups",
+    )
+
+    class Meta:
+        verbose_name = "Sous-groupe"
+        verbose_name_plural = "Sous-groupes"
+        ordering = ["tenant", "type", "name"]
+
+    def __str__(self):
+        return f"{self.name} ({self.get_type_display()})"
+
+
 class TimetableSlot(models.Model):
     DAY_CHOICES = [(str(i), d) for i, d in enumerate(
         ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"], start=1
@@ -309,6 +368,12 @@ class TimetableSlot(models.Model):
         verbose_name="Campus",
     )
     classe = models.ForeignKey(Class, on_delete=models.CASCADE, related_name="timetable_slots")
+    group = models.ForeignKey(
+        ClassGroup, null=True, blank=True, on_delete=models.CASCADE,
+        related_name="timetable_slots",
+        verbose_name="Groupe (TD/TP/Langue)",
+        help_text="Groupe associé pour les créneaux de TD, TP ou langue",
+    )
     mixed_level = models.ForeignKey(
         Level, null=True, blank=True, on_delete=models.SET_NULL,
         related_name="timetable_slots",

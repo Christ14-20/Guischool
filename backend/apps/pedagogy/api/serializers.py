@@ -8,7 +8,7 @@ from rest_framework import serializers
 from apps.pedagogy.models import (
     SchoolYear, Level, Class, Subject, ClassSubject, Filiere,
     Attendance, Evaluation, Student, Enrollment, Grade, YearEndDecision,
-    TimetableSlot, MixedClass, MixedClassLevel,
+    TimetableSlot, MixedClass, MixedClassLevel, ClassGroup, SubGroup,
 )
 
 
@@ -150,15 +150,55 @@ class SubjectSerializer(serializers.ModelSerializer):
 class TimetableSlotSerializer(serializers.ModelSerializer):
     subject_name = serializers.CharField(source="subject.name", read_only=True)
     mixed_level_name = serializers.CharField(source="mixed_level.name", read_only=True)
+    group_name = serializers.CharField(source="group.name", read_only=True)
 
     class Meta:
         model = TimetableSlot
         fields = [
-            "id", "tenant", "classe", "teacher", "subject", "subject_name",
+            "id", "tenant", "classe", "group", "group_name",
+            "teacher", "subject", "subject_name",
             "room", "day_of_week", "start_time", "end_time",
             "is_recurring", "specific_date", "mixed_level", "mixed_level_name",
         ]
-        read_only_fields = ["id", "tenant", "subject_name", "mixed_level_name"]
+        read_only_fields = ["id", "tenant", "subject_name", "mixed_level_name", "group_name"]
+
+
+class ClassGroupSerializer(serializers.ModelSerializer):
+    enseignant_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ClassGroup
+        fields = [
+            "id", "tenant", "classe_mere", "type", "name", "capacite",
+            "enseignant", "enseignant_name", "horaire_specifique",
+        ]
+        read_only_fields = ["id", "tenant", "enseignant_name"]
+
+    def get_enseignant_name(self, obj):
+        if not obj.enseignant:
+            return None
+        return f"{obj.enseignant.last_name} {obj.enseignant.first_name}".strip() or str(obj.enseignant)
+
+
+class SubGroupSerializer(serializers.ModelSerializer):
+    enseignant_name = serializers.SerializerMethodField()
+    class_names = serializers.SerializerMethodField()
+
+    class Meta:
+        model = SubGroup
+        fields = [
+            "id", "tenant", "type", "name", "classes", "class_names",
+            "capacite", "enseignant", "enseignant_name",
+        ]
+        read_only_fields = ["id", "tenant", "enseignant_name", "class_names"]
+
+    def get_enseignant_name(self, obj):
+        if not obj.enseignant:
+            return None
+        return f"{obj.enseignant.last_name} {obj.enseignant.first_name}".strip() or str(obj.enseignant)
+
+    def get_class_names(self, obj):
+        return [c.name for c in obj.classes.all()]
 
 
 class EvaluationSerializer(serializers.ModelSerializer):

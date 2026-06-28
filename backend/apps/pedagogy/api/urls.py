@@ -5,7 +5,7 @@ from apps.pedagogy.api.views import (
     SchoolYearViewSet, LevelViewSet, FiliereViewSet, ClassViewSet, SubjectViewSet,
     TimetableSlotViewSet, EvaluationViewSet, AttendanceViewSet,
     StudentViewSet, GradeViewSet, YearEndDecisionViewSet, BulkPromotionView,
-    MixedClassViewSet,
+    MixedClassViewSet, ClassGroupViewSet, SubGroupViewSet,
 )
 
 router = DefaultRouter()
@@ -23,12 +23,30 @@ router.register("pedagogy/attendances", AttendanceViewSet, basename="attendance"
 # Classes mixtes
 router.register("pedagogy/mixed-classes", MixedClassViewSet, basename="mixed-class")
 
+# Groupes et sous-groupes
+router.register("pedagogy/groups", ClassGroupViewSet, basename="group")
+router.register("pedagogy/subgroups", SubGroupViewSet, basename="subgroup")
+
 # Module 4.5 — Élèves & Notes
 router.register("students", StudentViewSet, basename="student")
 router.register("grades", GradeViewSet, basename="grade")
 router.register("year-end-decisions", YearEndDecisionViewSet, basename="year-end-decision")
 router.register("promotions", BulkPromotionView, basename="bulk-promotion")
 
+# Nested: /pedagogy/classes/{id}/groups/
+nested_groups = ClassGroupViewSet.as_view({
+    "get": "list",
+    "post": "create",
+})
+nested_group_detail = ClassGroupViewSet.as_view({
+    "get": "retrieve",
+    "put": "update",
+    "patch": "partial_update",
+    "delete": "destroy",
+})
+
 urlpatterns = [
     path("", include(router.urls)),
+    path("pedagogy/classes/<int:classe_pk>/groups/", nested_groups, name="class-group-list"),
+    path("pedagogy/classes/<int:classe_pk>/groups/<int:pk>/", nested_group_detail, name="class-group-detail"),
 ]

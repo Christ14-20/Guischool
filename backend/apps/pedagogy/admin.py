@@ -1,7 +1,8 @@
 from django.contrib import admin
 from .models import (
     SchoolYear, Level, Class, Subject, ClassSubject, TimetableSlot,
-    Attendance, Evaluation, Student, Enrollment, Grade, YearEndDecision
+    Attendance, Evaluation, Student, Enrollment, Grade, YearEndDecision,
+    ClassGroup, SubGroup,
 )
 
 @admin.register(SchoolYear)
@@ -69,6 +70,18 @@ class EvaluationAdmin(admin.ModelAdmin):
 class TimetableSlotAdmin(admin.ModelAdmin):
     list_display = ("classe", "subject", "teacher", "day_of_week", "start_time", "end_time")
     list_filter = ("day_of_week", "tenant", "classe")
+
+@admin.register(ClassGroup)
+class ClassGroupAdmin(admin.ModelAdmin):
+    list_display = ("name", "classe_mere", "type", "capacite", "enseignant")
+    list_filter = ("type", "tenant")
+    search_fields = ("name",)
+
+@admin.register(SubGroup)
+class SubGroupAdmin(admin.ModelAdmin):
+    list_display = ("name", "type", "capacite", "enseignant")
+    list_filter = ("type", "tenant")
+    search_fields = ("name",)
 
 @admin.register(YearEndDecision)
 class YearEndDecisionAdmin(admin.ModelAdmin):
