@@ -157,6 +157,7 @@ class Class(models.Model):
         "authentication.User", null=True, blank=True,
         on_delete=models.SET_NULL, related_name="main_classes",
     )
+    is_mixed = models.BooleanField(default=False, verbose_name="Classe mixte")
 
     class Meta:
         unique_together = [("tenant", "school_year", "name")]
@@ -177,6 +178,74 @@ class Class(models.Model):
 
     def is_full(self):
         return self.current_enrollment_count() >= self.capacity
+
+    def mixed_levels_list(self):
+        """Renvoie la liste de tous les niveaux (propre + niveaux mixtes supplémentaires)."""
+        levels = [self.level]
+        if self.is_mixed:
+            try:
+                mc = self.mixed_config
+                levels.extend(
+                    ml.level for ml in mc.niveaux.select_related("level").order_by("ordre")
+                )
+            except MixedClass.DoesNotExist:
+                pass
+        return levels
+
+    def get_all_level_names(self):
+        """Chaîne affichable comme 'CP1, CE1, CM1'."""
+        return ", ".join(l.name for l in self.mixed_levels_list())
+
+
+class MixedClass(models.Model):
+    MIX_TYPE_CHOICES = [
+        ("ALTERNATE_DAY", "Alternance jour par jour"),
+        ("ALTERNATE_WEEK", "Alternance semaine par semaine"),
+        ("ALTERNATE_HALF_DAY", "Alternance demi-journée"),
+        ("SIMULTANEOUS", "Simultané (moniteur)"),
+    ]
+    classe_physique = models.OneToOneField(
+        Class, on_delete=models.CASCADE, related_name="mixed_config",
+        verbose_name="Classe physique",
+    )
+    type_mixte = models.CharField(
+        max_length=30, choices=MIX_TYPE_CHOICES, default="ALTERNATE_DAY",
+        verbose_name="Type de mixité",
+    )
+    repartition = models.JSONField(
+        default=dict, blank=True,
+        verbose_name="Répartition",
+        help_text="Répartition du temps d'enseignement par niveau (JSON)",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Classe mixte"
+        verbose_name_plural = "Classes mixtes"
+
+    def __str__(self):
+        return f"Mixte: {self.classe_physique.name}"
+
+
+class MixedClassLevel(models.Model):
+    mixed_class = models.ForeignKey(
+        MixedClass, on_delete=models.CASCADE, related_name="niveaux",
+        verbose_name="Classe mixte",
+    )
+    level = models.ForeignKey(
+        Level, on_delete=models.CASCADE, verbose_name="Niveau supplémentaire",
+    )
+    capacite = models.PositiveSmallIntegerField(default=30, verbose_name="Capacité par niveau")
+    ordre = models.PositiveSmallIntegerField(default=0, verbose_name="Ordre d'affichage")
+
+    class Meta:
+        verbose_name = "Niveau de classe mixte"
+        verbose_name_plural = "Niveaux de classe mixte"
+        ordering = ["ordre"]
+        unique_together = [("mixed_class", "level")]
+
+    def __str__(self):
+        return f"{self.mixed_class.classe_physique.name} → {self.level.name}"
 
 
 class Subject(models.Model):

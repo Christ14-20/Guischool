@@ -8,7 +8,7 @@ from rest_framework import serializers
 from apps.pedagogy.models import (
     SchoolYear, Level, Class, Subject, ClassSubject, Filiere,
     Attendance, Evaluation, Student, Enrollment, Grade, YearEndDecision,
-    TimetableSlot,
+    TimetableSlot, MixedClass, MixedClassLevel,
 )
 
 
@@ -42,21 +42,102 @@ class LevelSerializer(serializers.ModelSerializer):
         read_only_fields = ["id", "tenant"]
 
 
+class MixedClassLevelSerializer(serializers.ModelSerializer):
+    level_name = serializers.CharField(source="level.name", read_only=True)
+
+    class Meta:
+        model = MixedClassLevel
+        fields = ["id", "level", "level_name", "capacite", "ordre"]
+        read_only_fields = ["id"]
+
+
+class MixedClassSerializer(serializers.ModelSerializer):
+    niveaux = MixedClassLevelSerializer(many=True, read_only=True)
+    classe_name = serializers.CharField(source="classe_physique.name", read_only=True)
+
+    class Meta:
+        model = MixedClass
+        fields = ["id", "classe_physique", "classe_name", "type_mixte", "repartition", "niveaux", "created_at"]
+        read_only_fields = ["id", "created_at"]
+
+
 class ClassSerializer(serializers.ModelSerializer):
     level_name = serializers.CharField(source="level.name", read_only=True)
     filiere_name = serializers.CharField(source="filiere.name", read_only=True)
     current_count = serializers.SerializerMethodField()
+    mixed_levels = serializers.SerializerMethodField()
+
+    # Champs pour la création d'une classe mixte
+    extra_levels = serializers.ListField(
+        child=serializers.IntegerField(), required=False, write_only=True
+    )
+    mix_type = serializers.ChoiceField(
+        choices=MixedClass.MIX_TYPE_CHOICES, required=False, write_only=True
+    )
+    repartition = serializers.JSONField(required=False, write_only=True)
 
     class Meta:
         model = Class
         fields = [
             "id", "tenant", "school_year", "level", "level_name",
-            "filiere", "filiere_name", "name", "capacity", "room", "main_teacher", "current_count",
+            "filiere", "filiere_name", "name", "capacity", "room",
+            "main_teacher", "current_count", "is_mixed", "mixed_levels",
+            "extra_levels", "mix_type", "repartition",
         ]
-        read_only_fields = ["id", "tenant", "level_name", "filiere_name", "current_count"]
+        read_only_fields = ["id", "tenant", "level_name", "filiere_name", "current_count", "mixed_levels"]
 
     def get_current_count(self, obj):
         return obj.current_enrollment_count()
+
+    def get_mixed_levels(self, obj):
+        if not obj.is_mixed:
+            return []
+        try:
+            mc = obj.mixed_config
+            return MixedClassLevelSerializer(mc.niveaux.all(), many=True).data
+        except MixedClass.DoesNotExist:
+            return []
+
+    def validate(self, attrs):
+        is_mixed = attrs.get("is_mixed", False)
+        extra_levels = attrs.get("extra_levels", [])
+        if is_mixed and not extra_levels:
+            raise serializers.ValidationError(
+                {"extra_levels": "Une classe mixte doit avoir au moins un niveau supplémentaire."}
+            )
+        if extra_levels and len(extra_levels) > 2:
+            raise serializers.ValidationError(
+                {"extra_levels": "Maximum 2 niveaux supplémentaires (3 niveaux total)."}
+            )
+        if extra_levels:
+            level_id = attrs.get("level")
+            if level_id and level_id in extra_levels:
+                raise serializers.ValidationError(
+                    {"extra_levels": "Le niveau principal ne peut pas être aussi dans les niveaux supplémentaires."}
+                )
+        return attrs
+
+    def create(self, validated_data):
+        extra_levels = validated_data.pop("extra_levels", [])
+        mix_type = validated_data.pop("mix_type", "ALTERNATE_DAY")
+        repartition = validated_data.pop("repartition", {})
+
+        classe = Class.objects.create(**validated_data)
+
+        if extra_levels:
+            mixed_class = MixedClass.objects.create(
+                classe_physique=classe,
+                type_mixte=mix_type,
+                repartition=repartition,
+            )
+            for i, level_id in enumerate(extra_levels):
+                MixedClassLevel.objects.create(
+                    mixed_class=mixed_class,
+                    level_id=level_id,
+                    ordre=i + 1,
+                )
+
+        return classe
 
 
 class SubjectSerializer(serializers.ModelSerializer):

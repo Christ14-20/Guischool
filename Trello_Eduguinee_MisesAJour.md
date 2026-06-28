@@ -137,15 +137,15 @@
 **Description :** Gérer les classes physiques accueillant plusieurs niveaux (CDC §5.2).
 
 **Checklist Backend :**
-- [ ] Créer modèle `MixedClass` (classe_physique, classes_logiques M2M, type_mixte, répartition)
+- [x] Créer modèle `MixedClass` (classe_physique, classes_logiques via MixedClassLevel, type_mixte, répartition)
 - [ ] Présences prises sur classe physique, notes sur classe logique
-- [ ] Validation : max 3 niveaux par classe mixte, sinon validation inspection requise
+- [x] Validation : max 3 niveaux par classe mixte, sinon validation inspection requise
 - [ ] Emploi du temps adapté (alternance)
 
 **Checklist Frontend :**
-- [ ] Option "Classe mixte" dans la création de classe
-- [ ] Interface de sélection des niveaux combinés
-- [ ] Avertissement si > 2 niveaux : "Validation inspection requise"
+- [x] Option "Classe mixte" dans la création de classe
+- [x] Interface de sélection des niveaux combinés
+- [x] Avertissement si > 2 niveaux : "Validation inspection requise"
 
 **Labels :** `pédagogie` `classes-mixtes`
 

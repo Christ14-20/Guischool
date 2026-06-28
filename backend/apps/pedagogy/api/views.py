@@ -11,11 +11,11 @@ from django.shortcuts import get_object_or_404
 from apps.pedagogy.models import (
     SchoolYear, Level, Class, Subject, Filiere,
     Student, Enrollment, Grade, YearEndDecision, Evaluation, Attendance,
-    TimetableSlot,
+    TimetableSlot, MixedClass,
 )
 from apps.pedagogy.api.serializers import (
     SchoolYearSerializer, LevelSerializer, ClassSerializer, SubjectSerializer,
-    FiliereSerializer,
+    FiliereSerializer, MixedClassSerializer,
     StudentListSerializer, StudentDetailSerializer, EnrollmentSerializer,
     GradeSerializer, GradeValidateSerializer,
     YearEndDecisionSerializer, BulkPromotionSerializer,
@@ -67,7 +67,7 @@ class FiliereViewSet(viewsets.ModelViewSet):
 class ClassViewSet(viewsets.ModelViewSet):
     serializer_class = ClassSerializer
     permission_classes = [IsAuthenticated]
-    filterset_fields = ["school_year", "level", "filiere"]
+    filterset_fields = ["school_year", "level", "filiere", "is_mixed"]
     search_fields = ["name"]
 
     def get_queryset(self):
@@ -75,8 +75,14 @@ class ClassViewSet(viewsets.ModelViewSet):
             tenant=self.request.user.tenant
         ).select_related("level", "school_year", "main_teacher", "filiere")
 
-    def perform_create(self, serializer):
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
         serializer.save(tenant=self.request.user.tenant)
+        return Response(
+            {"status": "success", "data": ClassSerializer(serializer.instance, context=self.get_serializer_context()).data},
+            status=status.HTTP_201_CREATED,
+        )
 
     @action(detail=True, methods=["get"], url_path="classement")
     def classement(self, request, pk=None):
@@ -91,6 +97,17 @@ class ClassViewSet(viewsets.ModelViewSet):
             )
         ranking = grading_service.compute_class_ranking(classe.id, annee_scolaire_id, periode)
         return Response({"status": "success", "data": ranking})
+
+
+class MixedClassViewSet(viewsets.ModelViewSet):
+    serializer_class = MixedClassSerializer
+    permission_classes = [IsAuthenticated]
+    filterset_fields = ["type_mixte"]
+
+    def get_queryset(self):
+        return MixedClass.objects.filter(
+            classe_physique__tenant=self.request.user.tenant
+        ).select_related("classe_physique").prefetch_related("niveaux__level")
 
 
 class SubjectViewSet(viewsets.ModelViewSet):

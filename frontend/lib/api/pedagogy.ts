@@ -89,6 +89,26 @@ export type ClassItem = {
   room: string;
   main_teacher: string | null;
   current_count: number;
+  is_mixed: boolean;
+  mixed_levels: MixedClassLevelItem[];
+};
+
+export type MixedClassLevelItem = {
+  id: number;
+  level: number;
+  level_name: string;
+  capacite: number;
+  ordre: number;
+};
+
+export type MixedClassItem = {
+  id: number;
+  classe_physique: number;
+  classe_name: string;
+  type_mixte: 'ALTERNATE_DAY' | 'ALTERNATE_WEEK' | 'ALTERNATE_HALF_DAY' | 'SIMULTANEOUS';
+  repartition: Record<string, unknown>;
+  niveaux: MixedClassLevelItem[];
+  created_at: string;
 };
 
 export type FiliereItem = {
@@ -257,6 +277,21 @@ export async function updateClass(token: string, id: number, body: Record<string
 
 export async function deleteClass(token: string, id: number) {
   return request(`/pedagogy/classes/${id}/`, { token, method: 'DELETE' });
+}
+
+// ─── Mixed Classes ──────────────────────────────────────────────────────────
+
+export async function getMixedClasses(
+  token: string,
+  query?: Record<string, string | undefined>
+): Promise<PaginatedResult<MixedClassItem>> {
+  const data = await request<any>('/pedagogy/mixed-classes/', { token, query });
+  return { count: Number(data?.count ?? 0), results: Array.isArray(data?.results) ? data.results : [] };
+}
+
+export async function getMixedClass(token: string, id: number): Promise<MixedClassItem> {
+  const data = await request<any>(`/pedagogy/mixed-classes/${id}/`, { token });
+  return data?.data ?? data;
 }
 
 // ─── Subjects ────────────────────────────────────────────────────────────────

@@ -6,7 +6,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
-import { LayoutGrid, List } from 'lucide-react';
+import { LayoutGrid, List, Users } from 'lucide-react';
 
 import { PageHeader } from '@/components/layout/page-header';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
@@ -30,7 +30,9 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import {
   Table,
   TableBody,
@@ -61,6 +63,8 @@ const schema = z.object({
   filiere: z.string().optional(),
   capacity: z.coerce.number().min(1, 'La capacité doit être au moins 1.'),
   room: z.string().optional(),
+  is_mixed: z.boolean().optional(),
+  extra_levels: z.array(z.string()).optional(),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -269,13 +273,26 @@ export default function ClassesPage() {
                 <CardHeader className="pb-2">
                   <div className="flex items-start justify-between gap-2">
                     <CardTitle className="text-base">{c.name}</CardTitle>
-                    {isOverloaded && (
-                      <Badge variant="destructive" className="text-xs">Surcharge</Badge>
-                    )}
+                    <div className="flex gap-1">
+                      {c.is_mixed && (
+                        <Badge variant="secondary" className="text-xs">
+                          <Users className="mr-1 h-3 w-3" />
+                          Mixte
+                        </Badge>
+                      )}
+                      {isOverloaded && (
+                        <Badge variant="destructive" className="text-xs">Surcharge</Badge>
+                      )}
+                    </div>
                   </div>
 {level && (
                      <p className="text-xs text-muted-foreground">
-                       {level.name} — {CYCLE_LABELS[level.cycle] ?? level.cycle}
+                       {c.is_mixed
+                         ? c.mixed_levels?.length
+                           ? `${level.name}, ${c.mixed_levels.map((ml) => ml.level_name).join(', ')}`
+                           : `${level.name} + niveaux`
+                         : `${level.name} — ${CYCLE_LABELS[level.cycle] ?? level.cycle}`
+                       }
                      </p>
                    )}
                    {c.filiere_name && (
@@ -335,9 +352,22 @@ export default function ClassesPage() {
                 const level = levels.find((l) => l.id === c.level);
                 return (
                   <TableRow key={c.id}>
-                    <TableCell className="font-medium">{c.name}</TableCell>
+                    <TableCell className="font-medium">
+                      {c.name}
+                      {c.is_mixed && (
+                        <Badge variant="secondary" className="ml-2 text-xs">
+                          <Users className="mr-1 h-3 w-3" />
+                          Mixte
+                        </Badge>
+                      )}
+                    </TableCell>
                     <TableCell>
-                      {level ? `${level.name} / ${CYCLE_LABELS[level.cycle] ?? level.cycle}` : '—'}
+                      {c.is_mixed && c.mixed_levels?.length
+                        ? `${level?.name ?? '?'}, ${c.mixed_levels.map((ml) => ml.level_name).join(', ')}`
+                        : level
+                          ? `${level.name} / ${CYCLE_LABELS[level.cycle] ?? level.cycle}`
+                          : '—'
+                      }
                     </TableCell>
                     <TableCell>{c.filiere_name || '—'}</TableCell>
                     <TableCell>
@@ -419,6 +449,8 @@ function ClassFormDialog({
       filiere: classe?.filiere ? String(classe.filiere) : '',
       capacity: classe?.capacity ?? 40,
       room: classe?.room ?? '',
+      is_mixed: false,
+      extra_levels: [],
     },
   });
 
@@ -433,6 +465,12 @@ function ClassFormDialog({
       };
       if (values.filiere) {
         body.filiere = Number(values.filiere);
+      }
+      if (values.is_mixed && values.extra_levels && values.extra_levels.length > 0) {
+        body.is_mixed = true;
+        body.extra_levels = values.extra_levels.map(Number);
+        body.mix_type = 'ALTERNATE_DAY';
+        body.repartition = {};
       }
       if (isEditing && classe) {
         await updateClass(token, classe.id, body);
@@ -561,12 +599,80 @@ function ClassFormDialog({
                    <FormMessage />
                  </FormItem>
                )}
-             />
-
-             <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="capacity"
+              />
+ 
+              <div className="flex items-center gap-3 rounded-lg border p-3">
+                <FormField
+                  control={form.control}
+                  name="is_mixed"
+                  render={({ field }) => (
+                    <FormItem className="flex items-center gap-2 space-y-0">
+                      <FormControl>
+                        <Switch
+                          checked={field.value ?? false}
+                          onCheckedChange={field.onChange}
+                          disabled={isEditing}
+                        />
+                      </FormControl>
+                      <FormLabel className="cursor-pointer">Classe mixte (multi-niveaux)</FormLabel>
+                    </FormItem>
+                  )}
+                />
+              </div>
+ 
+              {form.watch('is_mixed') && (
+                <FormField
+                  control={form.control}
+                  name="extra_levels"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Niveaux supplémentaires</FormLabel>
+                      <div className="space-y-1">
+                        {levels
+                          .filter((l) => String(l.id) !== form.watch('level'))
+                          .map((l) => (
+                            <Label
+                              key={l.id}
+                              className="flex items-center gap-2 rounded-md border p-2 has-[:checked]:border-primary has-[:checked]:bg-primary/5"
+                            >
+                              <input
+                                type="checkbox"
+                                className="h-4 w-4 accent-primary"
+                                value={String(l.id)}
+                                checked={field.value?.includes(String(l.id)) ?? false}
+                                onChange={(e) => {
+                                  const current = field.value ?? [];
+                                  if (e.target.checked) {
+                                    field.onChange([...current, e.target.value]);
+                                  } else {
+                                    field.onChange(current.filter((v) => v !== e.target.value));
+                                  }
+                                }}
+                              />
+                              {l.name}
+                            </Label>
+                          ))}
+                      </div>
+                      {(field.value?.length ?? 0) + 1 > 2 && (
+                        <p className="text-xs text-amber-600 font-medium">
+                          ⚠️ Au-delà de 2 niveaux, une validation inspection est requise.
+                        </p>
+                      )}
+                      {field.value?.length === 0 && (
+                        <FormDescription>
+                          Sélectionnez au moins un niveau à combiner dans cette classe.
+                        </FormDescription>
+                      )}
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+ 
+              <div className="grid grid-cols-2 gap-4">
+               <FormField
+                 control={form.control}
+                 name="capacity"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Capacité max</FormLabel>
