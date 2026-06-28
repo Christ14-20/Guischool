@@ -98,6 +98,18 @@ class ClassViewSet(viewsets.ModelViewSet):
         ranking = grading_service.compute_class_ranking(classe.id, annee_scolaire_id, periode)
         return Response({"status": "success", "data": ranking})
 
+    @action(detail=True, methods=["get"], url_path="students-by-level")
+    def students_by_level(self, request, pk=None):
+        """GET /pedagogy/classes/{id}/students-by-level/?niveau=
+        Retourne les inscrits d'une classe mixte, filtrés par niveau."""
+        from apps.pedagogy.api.serializers import EnrollmentSerializer
+
+        classe = self.get_object()
+        level_id = request.query_params.get("niveau")
+        enrollments = classe.students_by_level(level_id)
+        serializer = EnrollmentSerializer(enrollments, many=True)
+        return Response({"status": "success", "data": serializer.data})
+
 
 class MixedClassViewSet(viewsets.ModelViewSet):
     serializer_class = MixedClassSerializer
@@ -126,12 +138,12 @@ class SubjectViewSet(viewsets.ModelViewSet):
 class TimetableSlotViewSet(viewsets.ModelViewSet):
     serializer_class = TimetableSlotSerializer
     permission_classes = [IsAuthenticated]
-    filterset_fields = ["classe", "day_of_week", "subject"]
+    filterset_fields = ["classe", "day_of_week", "subject", "mixed_level"]
 
     def get_queryset(self):
         return TimetableSlot.objects.filter(
             tenant=self.request.user.tenant
-        ).select_related("subject", "teacher")
+        ).select_related("subject", "teacher", "mixed_level")
 
     def perform_create(self, serializer):
         serializer.save(tenant=self.request.user.tenant)
@@ -177,9 +189,21 @@ class StudentViewSet(viewsets.ModelViewSet):
     ordering_fields = ["nom", "prenom", "matricule", "created_at"]
 
     def get_queryset(self):
-        return Student.objects.filter(
+        qs = Student.objects.filter(
             tenant=self.request.user.tenant
         ).select_related("classe_actuelle", "annee_inscription")
+        niveau = self.request.query_params.get("niveau")
+        if niveau:
+            classe = self.request.query_params.get("classe_actuelle")
+            annee = self.request.query_params.get("annee_inscription")
+            if classe and annee:
+                student_ids = Enrollment.objects.filter(
+                    classe_id=int(classe),
+                    annee_scolaire_id=int(annee),
+                    niveau_mixte_id=int(niveau),
+                ).values_list("eleve_id", flat=True)
+                qs = qs.filter(id__in=student_ids)
+        return qs
 
     def get_serializer_class(self):
         if self.action == "list":
@@ -216,13 +240,17 @@ class StudentViewSet(viewsets.ModelViewSet):
         )
         # Créer l'enrollment initial
         if classe and annee:
-            Enrollment.objects.create(
-                eleve=student,
-                classe=classe,
-                annee_scolaire=annee,
-                inscrit_par=self.request.user,
-                type_inscription="NOUVELLE_INSCRIPTION",
-            )
+            enrollment_kwargs = {
+                "eleve": student,
+                "classe": classe,
+                "annee_scolaire": annee,
+                "inscrit_par": self.request.user,
+                "type_inscription": "NOUVELLE_INSCRIPTION",
+            }
+            niveau_mixte = self.request.data.get("niveau_mixte")
+            if niveau_mixte:
+                enrollment_kwargs["niveau_mixte_id"] = int(niveau_mixte)
+            Enrollment.objects.create(**enrollment_kwargs)
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)

@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { getClasses, getSchoolYears, bulkCreateGrades, type ClassItem, type SchoolYearItem, type SubjectItem, getSubjects } from '@/lib/api/pedagogy';
+import { getClasses, getLevels, getSchoolYears, bulkCreateGrades, type ClassItem, type LevelItem, type SchoolYearItem, type SubjectItem, getSubjects } from '@/lib/api/pedagogy';
 import { getStudents, type StudentItem } from '@/lib/api/students';
 import { PERMISSIONS } from '@/lib/constants';
 import { cn } from '@/lib/utils';
@@ -49,6 +49,7 @@ export default function GradesPage() {
 
   const [classes, setClasses] = useState<ClassItem[]>([]);
   const [years, setYears] = useState<SchoolYearItem[]>([]);
+  const [levels, setLevels] = useState<LevelItem[]>([]);
   const [subjects, setSubjects] = useState<SubjectItem[]>([]);
   const [students, setStudents] = useState<StudentItem[]>([]);
   
@@ -59,10 +60,16 @@ export default function GradesPage() {
   const [classId, setClassId] = useState<string>(searchParams.get('classe') || '');
   const [yearId, setYearId] = useState<string>(searchParams.get('annee') || '');
   const [subjectId, setSubjectId] = useState<string>(searchParams.get('matiere') || '');
+  const [niveauFilter, setNiveauFilter] = useState<string>('');
   const [period, setPeriod] = useState<string>(searchParams.get('periode') || 'TRIMESTRE_1');
   const [evalType, setEvalType] = useState<string>(searchParams.get('type') || 'INTERROGATION');
   const [maxScore, setMaxScore] = useState<string>('20');
   const [coef, setCoef] = useState<string>('1');
+
+  const selectedClass = useMemo(
+    () => classes.find(c => String(c.id) === classId) ?? null,
+    [classes, classId]
+  );
 
   const [entries, setEntries] = useState<Record<string, { score: string; comment: string }>>({});
 
@@ -71,12 +78,13 @@ export default function GradesPage() {
     let mounted = true;
     setLoadingFilters(true);
 
-    Promise.all([getClasses(token), getSchoolYears(token), getSubjects(token)])
-      .then(([classRes, yearRes, subjectRes]) => {
+    Promise.all([getClasses(token), getSchoolYears(token), getSubjects(token), getLevels(token)])
+      .then(([classRes, yearRes, subjectRes, levelRes]) => {
         if (!mounted) return;
         setClasses(classRes.results);
         setYears(yearRes.results);
         setSubjects(subjectRes.results);
+        setLevels(levelRes.results);
         
         // Auto-select current year if not set
         if (!yearId && yearRes.results.length > 0) {
@@ -104,7 +112,11 @@ export default function GradesPage() {
 
     let mounted = true;
     setLoadingStudents(true);
-    getStudents(token, { classe: classId, page_size: 200 })
+    const query: Record<string, string | number | undefined> = { classe: classId, page_size: 200, annee_inscription: yearId || undefined };
+    if (niveauFilter && selectedClass?.is_mixed) {
+      query.niveau = niveauFilter;
+    }
+    getStudents(token, query)
       .then((res) => {
         if (!mounted) return;
         setStudents(res.results);
@@ -125,7 +137,7 @@ export default function GradesPage() {
     return () => {
       mounted = false;
     };
-  }, [token, classId]);
+  }, [token, classId, yearId, niveauFilter]);
 
   const handleKeyDown = (e: React.KeyboardEvent, studentId: string, field: 'score' | 'comment') => {
     const currentIndex = students.findIndex(s => s.id === studentId);
@@ -326,6 +338,28 @@ export default function GradesPage() {
                 </SelectContent>
               </Select>
             </div>
+
+            {selectedClass?.is_mixed && (
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-muted-foreground uppercase">Niveau (classe mixte)</label>
+                <Select value={niveauFilter} onValueChange={(val) => setNiveauFilter(val ?? '')}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Tous les niveaux" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Tous les niveaux</SelectItem>
+                    {selectedClass.mixed_levels.map(ml => {
+                      const level = levels.find(l => l.id === ml.level);
+                      return (
+                        <SelectItem key={ml.id} value={String(ml.level)}>
+                          {ml.level_name}
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
             <div className="space-y-2">
               <label className="text-xs font-medium text-muted-foreground uppercase">Période</label>

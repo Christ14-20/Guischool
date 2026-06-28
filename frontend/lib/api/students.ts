@@ -156,6 +156,7 @@ export type CreateStudentPayload = {
   tuteur_email?: string;
   annee_inscription: number;
   classe_actuelle: number;
+  niveau_mixte?: number;
   contact_provisoire?: boolean;
 };
 

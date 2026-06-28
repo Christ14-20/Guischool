@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -31,12 +31,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   type ClassItem,
+  type LevelItem,
   type SchoolYearItem,
   type SubjectItem,
   type TimetableSlotItem,
   createTimetableSlot,
   deleteTimetableSlot,
   getClasses,
+  getLevels,
   getSchoolYears,
   getSubjects,
   getTimetableSlots,
@@ -82,6 +84,7 @@ const slotSchema = z.object({
   end_time: z.string().min(1, 'L\'heure de fin est requise.'),
   subject: z.string().min(1, 'La matière est requise.'),
   room: z.string().optional(),
+  mixed_level: z.string().optional(),
 }).refine((d) => d.end_time > d.start_time, {
   message: 'L\'heure de fin doit être après l\'heure de début.',
   path: ['end_time'],
@@ -95,6 +98,7 @@ export default function TimetablePage() {
   const [classes, setClasses] = useState<ClassItem[]>([]);
   const [years, setYears] = useState<SchoolYearItem[]>([]);
   const [subjects, setSubjects] = useState<SubjectItem[]>([]);
+  const [levels, setLevels] = useState<LevelItem[]>([]);
   const [slots, setSlots] = useState<TimetableSlotItem[]>([]);
   const [selectedClass, setSelectedClass] = useState<string>('');
   const [loading, setLoading] = useState(true);
@@ -106,11 +110,12 @@ export default function TimetablePage() {
   // Load classes and subjects once
   useEffect(() => {
     if (!token) return;
-    Promise.all([getClasses(token), getSubjects(token), getSchoolYears(token)])
-      .then(([classRes, subjectRes, yearRes]) => {
+    Promise.all([getClasses(token), getSubjects(token), getSchoolYears(token), getLevels(token)])
+      .then(([classRes, subjectRes, yearRes, levelRes]) => {
         setClasses(classRes.results);
         setSubjects(subjectRes.results);
         setYears(yearRes.results);
+        setLevels(levelRes.results);
         // Auto-select current year's first class
         const currentYear = yearRes.results.find((y) => y.is_current);
         if (currentYear) {
@@ -136,6 +141,11 @@ export default function TimetablePage() {
   }, [token, selectedClass, refreshKey]);
 
   const refresh = () => setRefreshKey((k) => k + 1);
+
+  const selectedClassInfo = useMemo(
+    () => classes.find((c) => String(c.id) === selectedClass) ?? null,
+    [classes, selectedClass]
+  );
 
   const handleDelete = async (slot: TimetableSlotItem) => {
     try {
@@ -219,6 +229,11 @@ export default function TimetablePage() {
                         <p className="mt-0.5">
                           {slot.start_time.slice(0, 5)} – {slot.end_time.slice(0, 5)}
                         </p>
+                        {slot.mixed_level_name && (
+                          <p className="truncate text-[10px] font-semibold opacity-75">
+                            {slot.mixed_level_name}
+                          </p>
+                        )}
                         {slot.room && <p className="truncate text-[10px] opacity-75">{slot.room}</p>}
                         <div className="mt-1.5 flex gap-1">
                           <Button
@@ -274,6 +289,9 @@ export default function TimetablePage() {
           token={token}
           classeId={Number(selectedClass)}
           subjects={subjects}
+          isMixed={selectedClassInfo?.is_mixed ?? false}
+          mixedLevels={selectedClassInfo?.mixed_levels ?? []}
+          levels={levels}
           onClose={() => setDialogMode(null)}
           onSuccess={() => { setDialogMode(null); refresh(); }}
         />
@@ -289,6 +307,9 @@ function SlotFormDialog({
   token,
   classeId,
   subjects,
+  isMixed,
+  mixedLevels,
+  levels,
   onClose,
   onSuccess,
 }: {
@@ -296,6 +317,9 @@ function SlotFormDialog({
   token: string;
   classeId: number;
   subjects: SubjectItem[];
+  isMixed: boolean;
+  mixedLevels: ClassItem['mixed_levels'];
+  levels: LevelItem[];
   onClose: () => void;
   onSuccess: () => void;
 }) {
@@ -311,12 +335,13 @@ function SlotFormDialog({
       end_time: slot?.end_time.slice(0, 5) ?? '09:00',
       subject: slot?.subject ? String(slot.subject) : '',
       room: slot?.room ?? '',
+      mixed_level: slot?.mixed_level ? String(slot.mixed_level) : '',
     },
   });
 
   const onSubmit = async (values: SlotFormValues) => {
     try {
-      const body = {
+      const body: Record<string, unknown> = {
         classe: classeId,
         day_of_week: values.day_of_week,
         start_time: values.start_time,
@@ -324,6 +349,9 @@ function SlotFormDialog({
         subject: Number(values.subject),
         room: values.room ?? '',
       };
+      if (isMixed && values.mixed_level) {
+        body.mixed_level = Number(values.mixed_level);
+      }
       if (isEditing && slot) {
         await updateTimetableSlot(token, slot.id, body);
         toast.success('Créneau modifié.');
@@ -440,6 +468,34 @@ function SlotFormDialog({
                 </FormItem>
               )}
             />
+
+            {isMixed && (
+              <FormField
+                control={form.control}
+                name="mixed_level"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Niveau (classe mixte)</FormLabel>
+                    <Select value={field.value ?? ''} onValueChange={(value) => field.onChange(value ?? '')}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Tous les niveaux" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="">Tous les niveaux</SelectItem>
+                        {mixedLevels.map((ml) => (
+                          <SelectItem key={ml.id} value={String(ml.level)}>
+                            {ml.level_name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
 
             <FormField
               control={form.control}

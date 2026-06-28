@@ -136,6 +136,8 @@ export type TimetableSlotItem = {
   day_of_week: string;
   start_time: string;
   end_time: string;
+  mixed_level: number | null;
+  mixed_level_name: string | null;
 };
 
 export type EvaluationItem = {

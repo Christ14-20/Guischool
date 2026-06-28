@@ -149,15 +149,16 @@ class SubjectSerializer(serializers.ModelSerializer):
 
 class TimetableSlotSerializer(serializers.ModelSerializer):
     subject_name = serializers.CharField(source="subject.name", read_only=True)
+    mixed_level_name = serializers.CharField(source="mixed_level.name", read_only=True)
 
     class Meta:
         model = TimetableSlot
         fields = [
             "id", "tenant", "classe", "teacher", "subject", "subject_name",
             "room", "day_of_week", "start_time", "end_time",
-            "is_recurring", "specific_date",
+            "is_recurring", "specific_date", "mixed_level", "mixed_level_name",
         ]
-        read_only_fields = ["id", "tenant", "subject_name"]
+        read_only_fields = ["id", "tenant", "subject_name", "mixed_level_name"]
 
 
 class EvaluationSerializer(serializers.ModelSerializer):
@@ -223,6 +224,7 @@ class StudentDetailSerializer(serializers.ModelSerializer):
 class EnrollmentSerializer(serializers.ModelSerializer):
     classe_name = serializers.CharField(source="classe.name", read_only=True)
     annee_scolaire_label = serializers.CharField(source="annee_scolaire.label", read_only=True)
+    niveau_mixte_name = serializers.CharField(source="niveau_mixte.name", read_only=True)
 
     class Meta:
         model = Enrollment
@@ -231,8 +233,9 @@ class EnrollmentSerializer(serializers.ModelSerializer):
             "annee_scolaire", "annee_scolaire_label",
             "type_inscription", "date_inscription",
             "inscrit_par", "frais_payes", "observations",
+            "niveau_mixte", "niveau_mixte_name",
         ]
-        read_only_fields = ["id", "date_inscription", "inscrit_par", "classe_name", "annee_scolaire_label"]
+        read_only_fields = ["id", "date_inscription", "inscrit_par", "classe_name", "annee_scolaire_label", "niveau_mixte_name"]
 
 
 class GradeSerializer(serializers.ModelSerializer):

@@ -196,6 +196,13 @@ class Class(models.Model):
         """Chaîne affichable comme 'CP1, CE1, CM1'."""
         return ", ".join(l.name for l in self.mixed_levels_list())
 
+    def students_by_level(self, level_id=None):
+        """Renvoie les inscriptions filtrées par niveau (pour classe mixte)."""
+        qs = self.enrollments.select_related("eleve", "niveau_mixte")
+        if level_id:
+            qs = qs.filter(niveau_mixte_id=level_id)
+        return qs
+
 
 class MixedClass(models.Model):
     MIX_TYPE_CHOICES = [
@@ -302,6 +309,12 @@ class TimetableSlot(models.Model):
         verbose_name="Campus",
     )
     classe = models.ForeignKey(Class, on_delete=models.CASCADE, related_name="timetable_slots")
+    mixed_level = models.ForeignKey(
+        Level, null=True, blank=True, on_delete=models.SET_NULL,
+        related_name="timetable_slots",
+        verbose_name="Niveau (classe mixte)",
+        help_text="Niveau concerné pour les classes mixtes à alternance",
+    )
     teacher = models.ForeignKey("authentication.User", on_delete=models.CASCADE, related_name="timetable_slots")
     subject = models.ForeignKey(Subject, on_delete=models.CASCADE, related_name="timetable_slots")
     room = models.CharField(max_length=50, blank=True)
@@ -484,6 +497,12 @@ class Enrollment(models.Model):
     inscrit_par = models.ForeignKey("authentication.User", on_delete=models.PROTECT, related_name="enrollments_made")
     frais_payes = models.BooleanField(default=False)
     observations = models.TextField(blank=True)
+    niveau_mixte = models.ForeignKey(
+        Level, null=True, blank=True, on_delete=models.SET_NULL,
+        related_name="mixed_enrollments",
+        verbose_name="Niveau dans la classe mixte",
+        help_text="Niveau spécifique de l'élève au sein d'une classe mixte",
+    )
 
     class Meta:
         unique_together = [("eleve", "annee_scolaire")]

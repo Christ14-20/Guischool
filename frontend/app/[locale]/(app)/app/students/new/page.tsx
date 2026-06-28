@@ -34,7 +34,7 @@ import { Input } from '@/components/ui/input';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { type ClassItem, type SchoolYearItem, getClasses, getSchoolYears } from '@/lib/api/pedagogy';
+import { type ClassItem, type LevelItem, type SchoolYearItem, getClasses, getLevels, getSchoolYears } from '@/lib/api/pedagogy';
 import { createStudent, getStudents, type StudentItem } from '@/lib/api/students';
 
 const phoneRegex = /^\+224[0-9]{9}$/;
@@ -60,6 +60,7 @@ const schema = z.object({
   guardian_email: z.string().email('Email invalide.').optional().or(z.literal('')),
   school_year: z.string().min(1, "L'année scolaire est requise."),
   classe: z.string().min(1, 'La classe est requise.'),
+  niveau_mixte: z.string().optional(),
   registration_type: z.enum(['NOUVELLE', 'REINSCRIPTION', 'TRANSFERT_ENTRANT'], {
     error: "Le type d'inscription est requis.",
   } as any),
@@ -86,6 +87,7 @@ export default function NewStudentPage() {
 
   const [years, setYears] = useState<SchoolYearItem[]>([]);
   const [classes, setClasses] = useState<ClassItem[]>([]);
+  const [levels, setLevels] = useState<LevelItem[]>([]);
   const [showClassFullAlert, setShowClassFullAlert] = useState(false);
   const [pendingValues, setPendingValues] = useState<FormValues | null>(null);
 
@@ -117,11 +119,12 @@ export default function NewStudentPage() {
     if (!token) return;
     let mounted = true;
 
-    Promise.all([getSchoolYears(token), getClasses(token)])
-      .then(([yearsRes, classesRes]) => {
+    Promise.all([getSchoolYears(token), getClasses(token), getLevels(token)])
+      .then(([yearsRes, classesRes, levelsRes]) => {
         if (!mounted) return;
         setYears(yearsRes.results);
         setClasses(classesRes.results);
+        setLevels(levelsRes.results);
 
         const defaultYear = yearsRes.results.find((year) =>
           ['OUVERTE', 'EN_COURS'].includes(year.status)
@@ -153,7 +156,7 @@ export default function NewStudentPage() {
   );
 
   const selectedClassInfo = useMemo(
-    () => classes.find((classe) => String(classe.id) === selectedClass),
+    () => classes.find((c) => String(c.id) === selectedClass) ?? null,
     [classes, selectedClass]
   );
 
@@ -196,6 +199,7 @@ export default function NewStudentPage() {
       tuteur_email: values.guardian_email || undefined,
       annee_inscription: Number(values.school_year),
       classe_actuelle: Number(values.classe),
+      niveau_mixte: values.niveau_mixte ? Number(values.niveau_mixte) : undefined,
       contact_provisoire: false,
     } as const;
 
@@ -494,6 +498,33 @@ export default function NewStudentPage() {
                   </FormItem>
                 )}
               />
+
+              {selectedClassInfo?.is_mixed && (
+                <FormField
+                  control={form.control}
+                  name="niveau_mixte"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Niveau dans la classe mixte *</FormLabel>
+                      <Select value={field.value ?? ''} onValueChange={(value) => field.onChange(value ?? '')}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Sélectionner un niveau" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {selectedClassInfo.mixed_levels.map((ml) => (
+                            <SelectItem key={ml.id} value={String(ml.level)}>
+                              {ml.level_name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
 
               <FormField
                 control={form.control}
