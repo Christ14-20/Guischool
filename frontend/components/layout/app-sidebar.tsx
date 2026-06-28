@@ -46,6 +46,7 @@ const NAV_ITEMS: NavItem[] = [
 children: [
         { label: 'Annees scolaires', href: '/app/pedagogie/school-years' },
         { label: 'Niveaux', href: '/app/pedagogie/levels' },
+        { label: 'Filières', href: '/app/pedagogie/filieres' },
         { label: 'Classes', href: '/app/pedagogie/classes' },
         { label: 'Matieres', href: '/app/pedagogie/subjects' },
         { label: 'Emploi du temps', href: '/app/pedagogie/timetable' },

@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { BookOpen, CalendarDays, ClipboardList, GraduationCap, Layout } from 'lucide-react';
+import { BookOpen, CalendarDays, ClipboardList, GraduationCap, Layout, ListTree } from 'lucide-react';
 
 import { PageHeader } from '@/components/layout/page-header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -19,6 +19,12 @@ const MODULES = [
     description: 'Catalogue des niveaux du système éducatif guinéen.',
     href: '/app/pedagogie/levels',
     icon: GraduationCap,
+  },
+  {
+    title: 'Filières',
+    description: 'Gérez les filières d\'études (Scientifique, Littéraire, Technique...).',
+    href: '/app/pedagogie/filieres',
+    icon: ListTree,
   },
   {
     title: 'Classes',
