@@ -127,7 +127,7 @@
 
 **Checklist Frontend :**
 - [x] Sélecteur filière dans le formulaire de création de classe
-- [ ] Filtre par filière dans la liste des classes
+- [x] Filtre par filière dans la liste des classes
 
 **Labels :** `pédagogie` `filières`
 

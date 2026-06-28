@@ -88,6 +88,7 @@ export default function ClassesPage() {
   const [filieres, setFilieres] = useState<FiliereItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [cycleFilter, setCycleFilter] = useState<string>('all');
+  const [filiereFilter, setFiliereFilter] = useState<string>('all');
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [refreshKey, setRefreshKey] = useState(0);
   const [dialogMode, setDialogMode] = useState<DialogMode | null>(null);
@@ -123,13 +124,16 @@ export default function ClassesPage() {
     return acc;
   }, {});
 
-  const filteredClasses =
-    cycleFilter === 'all'
-      ? classes
-      : classes.filter((c) => {
-          const level = levels.find((l) => l.id === c.level);
-          return level?.cycle === cycleFilter;
-        });
+  const filteredClasses = classes.filter((c) => {
+    if (cycleFilter !== 'all') {
+      const level = levels.find((l) => l.id === c.level);
+      if (level?.cycle !== cycleFilter) return false;
+    }
+    if (filiereFilter !== 'all') {
+      if (String(c.filiere) !== filiereFilter) return false;
+    }
+    return true;
+  });
 
   const handleDelete = async (classe: ClassItem) => {
     try {
@@ -198,6 +202,20 @@ export default function ClassesPage() {
             <SelectItem value="PRIMAIRE">Primaire</SelectItem>
             <SelectItem value="COLLEGE">Collège</SelectItem>
             <SelectItem value="LYCEE">Lycée</SelectItem>
+          </SelectContent>
+        </Select>
+
+        <Select value={filiereFilter} onValueChange={(v) => setFiliereFilter(v ?? 'all')}>
+          <SelectTrigger className="w-44">
+            <SelectValue placeholder="Filière" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Toutes les filières</SelectItem>
+            {filieres.map((f) => (
+              <SelectItem key={f.id} value={String(f.id)}>
+                {f.name} ({f.code})
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
 
@@ -305,6 +323,7 @@ export default function ClassesPage() {
               <TableRow>
                 <TableHead>Classe</TableHead>
                 <TableHead>Niveau / Cycle</TableHead>
+                <TableHead>Filière</TableHead>
                 <TableHead>Effectif / Max</TableHead>
                 <TableHead>Salle</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
@@ -320,6 +339,7 @@ export default function ClassesPage() {
                     <TableCell>
                       {level ? `${level.name} / ${CYCLE_LABELS[level.cycle] ?? level.cycle}` : '—'}
                     </TableCell>
+                    <TableCell>{c.filiere_name || '—'}</TableCell>
                     <TableCell>
                       <span className={isOverloaded ? 'font-semibold text-destructive' : ''}>
                         {c.current_count} / {c.capacity}
