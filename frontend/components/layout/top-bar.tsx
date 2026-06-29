@@ -1,22 +1,22 @@
-'use client';
+"use client";
 
-import { Bell, Building2, Menu, Moon, Sun } from 'lucide-react';
-import { useTheme } from 'next-themes';
-import { useParams, usePathname, useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { Bell, Building2, Menu, Moon, Sun } from "lucide-react";
+import { useTheme } from "next-themes";
+import { useParams, usePathname, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
-import { BreadcrumbNav } from '@/components/layout/breadcrumb-nav';
-import { useCampus } from '@/components/layout/campus-provider';
-import { useSchoolYear } from '@/components/layout/school-year-provider';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import { BreadcrumbNav } from "@/components/layout/breadcrumb-nav";
+import { useCampus } from "@/components/layout/campus-provider";
+import { useSchoolYear } from "@/components/layout/school-year-provider";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from "@/components/ui/select";
 
 type TopBarProps = {
   onHamburgerClick?: () => void;
@@ -28,12 +28,13 @@ export function TopBar({ onHamburgerClick }: TopBarProps) {
   const router = useRouter();
   const pathname = usePathname();
   const params = useParams();
-  const locale = (params?.locale as string) ?? 'fr';
+  const locale = (params?.locale as string) ?? "fr";
 
   const { schoolYear, setSchoolYear, availableYears } = useSchoolYear();
   const { campus, setCampus, availableCampuses, isMultiCampus } = useCampus();
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- hydration guard, must run after mount
     setIsMounted(true);
   }, []);
 
@@ -91,7 +92,7 @@ export function TopBar({ onHamburgerClick }: TopBarProps) {
 
         {/* Sélecteur de campus — visible seulement si multi-campus activé */}
         {isMultiCampus && (
-          <Select value={campus?.id ?? ''} onValueChange={handleCampusChange}>
+          <Select value={campus?.id ?? ""} onValueChange={handleCampusChange}>
             <SelectTrigger
               className="w-[160px] border-border/70 bg-background/70"
               aria-label="Sélectionner un campus"
@@ -116,19 +117,31 @@ export function TopBar({ onHamburgerClick }: TopBarProps) {
           </Select>
         )}
 
-        <Button variant="outline" size="icon" className="relative border-border/70 bg-background/70" aria-label="Notifications">
+        <Button
+          variant="outline"
+          size="icon"
+          className="relative border-border/70 bg-background/70"
+          aria-label="Notifications"
+        >
           <Bell className="h-4 w-4" />
-          <Badge className="absolute -top-1 -right-1 h-5 min-w-5 rounded-full border border-background px-1 text-[10px]">3</Badge>
+          <Badge className="absolute -top-1 -right-1 h-5 min-w-5 rounded-full border border-background px-1 text-[10px]">
+            3
+          </Badge>
         </Button>
 
         <Button
           variant="outline"
           size="icon"
-          onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}
+          onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
           className="border-border/70 bg-background/70"
           aria-label="Basculer le theme"
         >
-          {isMounted && (resolvedTheme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />)}
+          {isMounted &&
+            (resolvedTheme === "dark" ? (
+              <Sun className="h-4 w-4" />
+            ) : (
+              <Moon className="h-4 w-4" />
+            ))}
         </Button>
 
         <Select value={locale} onValueChange={switchLocale}>

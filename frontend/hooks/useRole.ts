@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import { useSession } from 'next-auth/react';
-import { type Role } from '@/lib/constants';
+import { useSession } from "next-auth/react";
+import { type Role } from "@/lib/constants";
 
 /**
  * Retourne true si le rôle de l'utilisateur connecté fait partie des rôles autorisés.

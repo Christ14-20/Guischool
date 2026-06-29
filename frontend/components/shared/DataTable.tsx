@@ -1,15 +1,15 @@
-'use client';
+"use client";
 
-import { ArrowDown, ArrowUp, ArrowUpDown, Search } from 'lucide-react';
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { useEffect, useMemo, useState } from 'react';
+import { ArrowDown, ArrowUp, ArrowUpDown, Search } from "lucide-react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
 
-import { EmptyState } from '@/components/shared/EmptyState';
-import { type Permission } from '@/lib/constants';
-import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Input } from '@/components/ui/input';
-import { Skeleton } from '@/components/ui/skeleton';
+import { EmptyState } from "@/components/shared/EmptyState";
+import { type Permission } from "@/lib/constants";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
   TableBody,
@@ -17,8 +17,8 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
-import { cn } from '@/lib/utils';
+} from "@/components/ui/table";
+import { cn } from "@/lib/utils";
 
 export type DataTableColumn<T> = {
   key: string;
@@ -66,40 +66,41 @@ export function DataTable<T>({
   selectable = false,
   selectedRowKeys,
   onSelectionChange,
-  searchPlaceholder = 'Rechercher...',
-  emptyTitle = 'Aucun resultat',
-  emptyDescription = 'Aucune donnee ne correspond a vos criteres.',
+  searchPlaceholder = "Rechercher...",
+  emptyTitle = "Aucun resultat",
+  emptyDescription = "Aucune donnee ne correspond a vos criteres.",
   emptyIcon,
   emptyAction,
   emptyActionPermission,
   className,
-  pageParamKey = 'page',
-  pageSizeParamKey = 'page_size',
-  queryParamKey = 'q',
-  sortByParamKey = 'sort_by',
-  sortOrderParamKey = 'sort_order',
+  pageParamKey = "page",
+  pageSizeParamKey = "page_size",
+  queryParamKey = "q",
+  sortByParamKey = "sort_by",
+  sortOrderParamKey = "sort_order",
   onRowClick,
 }: DataTableProps<T>) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  const sortBy = searchParams.get(sortByParamKey) || '';
-  const sortOrder = searchParams.get(sortOrderParamKey) || 'asc';
+  const sortBy = searchParams.get(sortByParamKey) || "";
+  const sortOrder = searchParams.get(sortOrderParamKey) || "asc";
   const searchParamsString = searchParams.toString();
-  const [query, setQuery] = useState(searchParams.get(queryParamKey) ?? '');
-
-  useEffect(() => {
-    setQuery(searchParams.get(queryParamKey) ?? '');
-  }, [queryParamKey, searchParams]);
+  const [query, setQuery] = useState(
+    () => searchParams.get(queryParamKey) ?? "",
+  );
 
   useEffect(() => {
     const timeout = setTimeout(() => {
       const params = new URLSearchParams(searchParams.toString());
-      const currentQuery = searchParams.get(queryParamKey) ?? '';
+      const currentQuery = searchParams.get(queryParamKey) ?? "";
       const nextQuery = query.trim();
 
-      if (currentQuery === nextQuery && (searchParams.get(pageParamKey) ?? '1') === '1') {
+      if (
+        currentQuery === nextQuery &&
+        (searchParams.get(pageParamKey) ?? "1") === "1"
+      ) {
         return;
       }
 
@@ -108,7 +109,7 @@ export function DataTable<T>({
       } else {
         params.delete(queryParamKey);
       }
-      params.set(pageParamKey, '1');
+      params.set(pageParamKey, "1");
       router.replace(`${pathname}?${params.toString()}`);
     }, 350);
 
@@ -128,22 +129,26 @@ export function DataTable<T>({
   const onSort = (columnKey: string) => {
     setParamAndNavigate((params) => {
       const currentSortBy = params.get(sortByParamKey);
-      const currentSortOrder = params.get(sortOrderParamKey) || 'asc';
+      const currentSortOrder = params.get(sortOrderParamKey) || "asc";
 
       if (currentSortBy === columnKey) {
-        params.set(sortOrderParamKey, currentSortOrder === 'asc' ? 'desc' : 'asc');
+        params.set(
+          sortOrderParamKey,
+          currentSortOrder === "asc" ? "desc" : "asc",
+        );
       } else {
         params.set(sortByParamKey, columnKey);
-        params.set(sortOrderParamKey, 'asc');
+        params.set(sortOrderParamKey, "asc");
       }
-      params.set(pageParamKey, '1');
+      params.set(pageParamKey, "1");
     });
   };
 
   const currentSelection = selectedRowKeys ?? [];
   const selectableKeys = useMemo(() => data.map(rowKey), [data, rowKey]);
   const allCurrentChecked =
-    selectableKeys.length > 0 && selectableKeys.every((key) => currentSelection.includes(key));
+    selectableKeys.length > 0 &&
+    selectableKeys.every((key) => currentSelection.includes(key));
 
   const updateSelection = (nextSelection: string[]) => {
     onSelectionChange?.(nextSelection);
@@ -151,12 +156,16 @@ export function DataTable<T>({
 
   const toggleAllCurrentRows = (checked: boolean) => {
     if (checked) {
-      const merged = Array.from(new Set([...currentSelection, ...selectableKeys]));
+      const merged = Array.from(
+        new Set([...currentSelection, ...selectableKeys]),
+      );
       updateSelection(merged);
       return;
     }
 
-    updateSelection(currentSelection.filter((key) => !selectableKeys.includes(key)));
+    updateSelection(
+      currentSelection.filter((key) => !selectableKeys.includes(key)),
+    );
   };
 
   const toggleOneRow = (key: string, checked: boolean) => {
@@ -169,12 +178,17 @@ export function DataTable<T>({
   };
 
   const renderSortIcon = (columnKey: string) => {
-    if (sortBy !== columnKey) return <ArrowUpDown className="h-3.5 w-3.5 opacity-60" />;
-    return sortOrder === 'desc' ? <ArrowDown className="h-3.5 w-3.5" /> : <ArrowUp className="h-3.5 w-3.5" />;
+    if (sortBy !== columnKey)
+      return <ArrowUpDown className="h-3.5 w-3.5 opacity-60" />;
+    return sortOrder === "desc" ? (
+      <ArrowDown className="h-3.5 w-3.5" />
+    ) : (
+      <ArrowUp className="h-3.5 w-3.5" />
+    );
   };
 
   return (
-    <div className={cn('space-y-4', className)}>
+    <div className={cn("space-y-4", className)}>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="relative w-full sm:max-w-sm">
           <Search className="pointer-events-none absolute top-2 left-2.5 h-4 w-4 text-muted-foreground" />
@@ -196,7 +210,9 @@ export function DataTable<T>({
                 <TableHead className="w-10">
                   <Checkbox
                     checked={allCurrentChecked}
-                    onCheckedChange={(value) => toggleAllCurrentRows(Boolean(value))}
+                    onCheckedChange={(value) =>
+                      toggleAllCurrentRows(Boolean(value))
+                    }
                     aria-label="Selectionner toutes les lignes"
                   />
                 </TableHead>
@@ -223,25 +239,30 @@ export function DataTable<T>({
 
           <TableBody>
             {loading
-              ? Array.from({ length: Math.min(pageSize, 8) }).map((_, index) => (
-                  <TableRow key={`skeleton-${index}`}>
-                    {selectable ? (
-                      <TableCell>
-                        <Skeleton className="h-4 w-4" />
-                      </TableCell>
-                    ) : null}
-                    {columns.map((column) => (
-                      <TableCell key={`${column.key}-skeleton-${index}`}>
-                        <Skeleton className="h-4 w-full max-w-[180px]" />
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                ))
+              ? Array.from({ length: Math.min(pageSize, 8) }).map(
+                  (_, index) => (
+                    <TableRow key={`skeleton-${index}`}>
+                      {selectable ? (
+                        <TableCell>
+                          <Skeleton className="h-4 w-4" />
+                        </TableCell>
+                      ) : null}
+                      {columns.map((column) => (
+                        <TableCell key={`${column.key}-skeleton-${index}`}>
+                          <Skeleton className="h-4 w-full max-w-[180px]" />
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ),
+                )
               : null}
 
             {!loading && data.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={columns.length + (selectable ? 1 : 0)} className="p-6">
+                <TableCell
+                  colSpan={columns.length + (selectable ? 1 : 0)}
+                  className="p-6"
+                >
                   <EmptyState
                     icon={emptyIcon}
                     title={emptyTitle}
@@ -262,21 +283,30 @@ export function DataTable<T>({
                   return (
                     <TableRow
                       key={key}
-                      data-state={checked ? 'selected' : undefined}
-                      className={cn(onRowClick ? 'cursor-pointer hover:bg-muted/40' : undefined)}
+                      data-state={checked ? "selected" : undefined}
+                      className={cn(
+                        onRowClick
+                          ? "cursor-pointer hover:bg-muted/40"
+                          : undefined,
+                      )}
                       onClick={onRowClick ? () => onRowClick(row) : undefined}
                     >
                       {selectable ? (
                         <TableCell>
                           <Checkbox
                             checked={checked}
-                            onCheckedChange={(value) => toggleOneRow(key, Boolean(value))}
+                            onCheckedChange={(value) =>
+                              toggleOneRow(key, Boolean(value))
+                            }
                             aria-label="Selectionner la ligne"
                           />
                         </TableCell>
                       ) : null}
                       {columns.map((column) => (
-                        <TableCell key={`${key}-${column.key}`} className={column.className}>
+                        <TableCell
+                          key={`${key}-${column.key}`}
+                          className={column.className}
+                        >
                           {column.accessor ? column.accessor(row) : null}
                         </TableCell>
                       ))}
@@ -316,7 +346,10 @@ export function DataTable<T>({
             disabled={page >= totalPages}
             onClick={() =>
               setParamAndNavigate((params) => {
-                params.set(pageParamKey, String(Math.min(totalPages, page + 1)));
+                params.set(
+                  pageParamKey,
+                  String(Math.min(totalPages, page + 1)),
+                );
                 if (!params.get(pageSizeParamKey)) {
                   params.set(pageSizeParamKey, String(pageSize));
                 }

@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { useParams } from 'next/navigation';
-import { useSession } from 'next-auth/react';
-import { useEffect, useState } from 'react';
+import { useParams } from "next/navigation";
+import { useSession } from "next-auth/react";
+import { useEffect, useState } from "react";
 import {
   Building2,
   CheckCircle2,
@@ -14,44 +14,44 @@ import {
   Plus,
   Star,
   Users,
-} from 'lucide-react';
-import { toast } from 'sonner';
+} from "lucide-react";
+import { toast } from "sonner";
 
-import { PageHeader } from '@/components/layout/page-header';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { PageHeader } from "@/components/layout/page-header";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Switch } from '@/components/ui/switch';
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Switch } from "@/components/ui/switch";
 import {
   type CampusCreateBody,
   type CampusItem,
   createCampus,
   getCampuses,
   updateCampus,
-} from '@/lib/api/superadmin';
+} from "@/lib/api/superadmin";
 
 // ── Cycles disponibles ───────────────────────────────────────────────────────
 
 const AVAILABLE_CYCLES = [
-  { value: 'MATERNELLE', label: 'Maternelle' },
-  { value: 'PRIMAIRE', label: 'Primaire' },
-  { value: 'CQP', label: 'CQP' },
-  { value: 'COLLEGE', label: 'Collège' },
-  { value: 'LYCEE_GEN', label: 'Lycée Général' },
-  { value: 'LYCEE_TECH', label: 'Lycée Technique' },
-  { value: 'ETFP_A', label: 'ETFP A' },
-  { value: 'ETFP_B', label: 'ETFP B' },
-  { value: 'SUPERIEUR', label: 'Supérieur' },
+  { value: "MATERNELLE", label: "Maternelle" },
+  { value: "PRIMAIRE", label: "Primaire" },
+  { value: "CQP", label: "CQP" },
+  { value: "COLLEGE", label: "Collège" },
+  { value: "LYCEE_GEN", label: "Lycée Général" },
+  { value: "LYCEE_TECH", label: "Lycée Technique" },
+  { value: "ETFP_A", label: "ETFP A" },
+  { value: "ETFP_B", label: "ETFP B" },
+  { value: "SUPERIEUR", label: "Supérieur" },
 ] as const;
 
 // ── Campus Form Dialog ────────────────────────────────────────────────────────
@@ -71,14 +71,14 @@ type CampusFormState = {
 };
 
 const EMPTY_FORM: CampusFormState = {
-  name: '',
-  address: '',
-  city: '',
-  prefecture: '',
-  phone: '',
-  email: '',
-  latitude: '',
-  longitude: '',
+  name: "",
+  address: "",
+  city: "",
+  prefecture: "",
+  phone: "",
+  email: "",
+  latitude: "",
+  longitude: "",
   active_levels: [],
   is_main: false,
   is_active: true,
@@ -92,8 +92,8 @@ function campusToForm(campus: CampusItem): CampusFormState {
     prefecture: campus.prefecture,
     phone: campus.phone,
     email: campus.email,
-    latitude: campus.latitude ?? '',
-    longitude: campus.longitude ?? '',
+    latitude: campus.latitude ?? "",
+    longitude: campus.longitude ?? "",
     active_levels: campus.active_levels,
     is_main: campus.is_main,
     is_active: campus.is_active,
@@ -114,10 +114,6 @@ function CampusFormDialog({
   isSaving: boolean;
 }) {
   const [form, setForm] = useState<CampusFormState>(initialData);
-
-  useEffect(() => {
-    setForm(initialData);
-  }, [initialData, open]);
 
   const toggleCycle = (cycle: string) => {
     setForm((prev) => ({
@@ -152,10 +148,16 @@ function CampusFormDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Building2 className="h-5 w-5 text-primary" />
-            {initialData === EMPTY_FORM ? 'Nouveau campus' : 'Modifier le campus'}
+            {initialData === EMPTY_FORM
+              ? "Nouveau campus"
+              : "Modifier le campus"}
           </DialogTitle>
         </DialogHeader>
-        <form id="campus-form" onSubmit={handleSubmit} className="space-y-4 py-2">
+        <form
+          id="campus-form"
+          onSubmit={handleSubmit}
+          className="space-y-4 py-2"
+        >
           {/* Nom */}
           <div className="space-y-1.5">
             <Label htmlFor="campus-name">Nom du campus *</Label>
@@ -174,7 +176,9 @@ function CampusFormDialog({
             <Input
               id="campus-address"
               value={form.address}
-              onChange={(e) => setForm((p) => ({ ...p, address: e.target.value }))}
+              onChange={(e) =>
+                setForm((p) => ({ ...p, address: e.target.value }))
+              }
               placeholder="Quartier, rue…"
             />
           </div>
@@ -185,7 +189,9 @@ function CampusFormDialog({
               <Input
                 id="campus-city"
                 value={form.city}
-                onChange={(e) => setForm((p) => ({ ...p, city: e.target.value }))}
+                onChange={(e) =>
+                  setForm((p) => ({ ...p, city: e.target.value }))
+                }
                 placeholder="Conakry"
               />
             </div>
@@ -194,7 +200,9 @@ function CampusFormDialog({
               <Input
                 id="campus-pref"
                 value={form.prefecture}
-                onChange={(e) => setForm((p) => ({ ...p, prefecture: e.target.value }))}
+                onChange={(e) =>
+                  setForm((p) => ({ ...p, prefecture: e.target.value }))
+                }
                 placeholder="Coyah"
               />
             </div>
@@ -209,7 +217,9 @@ function CampusFormDialog({
                 type="number"
                 step="0.000001"
                 value={form.latitude}
-                onChange={(e) => setForm((p) => ({ ...p, latitude: e.target.value }))}
+                onChange={(e) =>
+                  setForm((p) => ({ ...p, latitude: e.target.value }))
+                }
                 placeholder="9.537500"
               />
             </div>
@@ -220,7 +230,9 @@ function CampusFormDialog({
                 type="number"
                 step="0.000001"
                 value={form.longitude}
-                onChange={(e) => setForm((p) => ({ ...p, longitude: e.target.value }))}
+                onChange={(e) =>
+                  setForm((p) => ({ ...p, longitude: e.target.value }))
+                }
                 placeholder="-13.677330"
               />
             </div>
@@ -233,7 +245,9 @@ function CampusFormDialog({
               <Input
                 id="campus-phone"
                 value={form.phone}
-                onChange={(e) => setForm((p) => ({ ...p, phone: e.target.value }))}
+                onChange={(e) =>
+                  setForm((p) => ({ ...p, phone: e.target.value }))
+                }
                 placeholder="+224 XXX XXX XXX"
               />
             </div>
@@ -243,7 +257,9 @@ function CampusFormDialog({
                 id="campus-email"
                 type="email"
                 value={form.email}
-                onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))}
+                onChange={(e) =>
+                  setForm((p) => ({ ...p, email: e.target.value }))
+                }
                 placeholder="campus@ecole.gn"
               />
             </div>
@@ -262,8 +278,8 @@ function CampusFormDialog({
                     onClick={() => toggleCycle(c.value)}
                     className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
                       active
-                        ? 'border-primary bg-primary/10 text-primary'
-                        : 'border-border bg-muted text-muted-foreground hover:border-primary/50'
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "border-border bg-muted text-muted-foreground hover:border-primary/50"
                     }`}
                   >
                     {active && <CheckCircle2 className="mr-1 inline h-3 w-3" />}
@@ -279,7 +295,9 @@ function CampusFormDialog({
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium">Campus principal</p>
-                <p className="text-xs text-muted-foreground">Siège de l'établissement</p>
+                <p className="text-xs text-muted-foreground">
+                  Siège de l&apos;établissement
+                </p>
               </div>
               <Switch
                 id="campus-main"
@@ -290,22 +308,30 @@ function CampusFormDialog({
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium">Campus actif</p>
-                <p className="text-xs text-muted-foreground">Visible et opérationnel</p>
+                <p className="text-xs text-muted-foreground">
+                  Visible et opérationnel
+                </p>
               </div>
               <Switch
                 id="campus-active"
                 checked={form.is_active}
-                onCheckedChange={(v) => setForm((p) => ({ ...p, is_active: v }))}
+                onCheckedChange={(v) =>
+                  setForm((p) => ({ ...p, is_active: v }))
+                }
               />
             </div>
           </div>
         </form>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSaving}>
+          <Button
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={isSaving}
+          >
             Annuler
           </Button>
           <Button form="campus-form" type="submit" disabled={isSaving}>
-            {isSaving ? 'Enregistrement…' : 'Enregistrer'}
+            {isSaving ? "Enregistrement…" : "Enregistrer"}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -325,7 +351,7 @@ function CampusCard({
   return (
     <Card
       className={`relative overflow-hidden transition-shadow hover:shadow-md ${
-        !campus.is_active ? 'opacity-60' : ''
+        !campus.is_active ? "opacity-60" : ""
       }`}
     >
       {/* Bande colorée campus principal */}
@@ -346,8 +372,11 @@ function CampusCard({
                 Principal
               </Badge>
             )}
-            <Badge variant={campus.is_active ? 'outline' : 'secondary'} className="text-xs">
-              {campus.is_active ? 'Actif' : 'Inactif'}
+            <Badge
+              variant={campus.is_active ? "outline" : "secondary"}
+              className="text-xs"
+            >
+              {campus.is_active ? "Actif" : "Inactif"}
             </Badge>
             <Button
               variant="ghost"
@@ -368,7 +397,9 @@ function CampusCard({
           <div className="flex items-start gap-2 text-sm text-muted-foreground">
             <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" />
             <span className="line-clamp-2">
-              {[campus.address, campus.city, campus.prefecture].filter(Boolean).join(', ')}
+              {[campus.address, campus.city, campus.prefecture]
+                .filter(Boolean)
+                .join(", ")}
             </span>
           </div>
         )}
@@ -378,7 +409,8 @@ function CampusCard({
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <Globe2 className="h-3.5 w-3.5 shrink-0" />
             <span>
-              {parseFloat(campus.latitude).toFixed(4)}, {parseFloat(campus.longitude).toFixed(4)}
+              {parseFloat(campus.latitude).toFixed(4)},{" "}
+              {parseFloat(campus.longitude).toFixed(4)}
             </span>
           </div>
         )}
@@ -407,7 +439,8 @@ function CampusCard({
                 key={level}
                 className="rounded-full bg-primary/8 px-2 py-0.5 text-[10px] font-medium text-primary"
               >
-                {AVAILABLE_CYCLES.find((c) => c.value === level)?.label ?? level}
+                {AVAILABLE_CYCLES.find((c) => c.value === level)?.label ??
+                  level}
               </span>
             ))}
           </div>
@@ -418,15 +451,21 @@ function CampusCard({
           <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <Users className="h-3.5 w-3.5" />
             <span>
-              <strong className="text-foreground">{campus.students_count}</strong> élève
-              {campus.students_count !== 1 ? 's' : ''}
+              <strong className="text-foreground">
+                {campus.students_count}
+              </strong>{" "}
+              élève
+              {campus.students_count !== 1 ? "s" : ""}
             </span>
           </div>
           <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <Building2 className="h-3.5 w-3.5" />
             <span>
-              <strong className="text-foreground">{campus.classes_count}</strong> classe
-              {campus.classes_count !== 1 ? 's' : ''}
+              <strong className="text-foreground">
+                {campus.classes_count}
+              </strong>{" "}
+              classe
+              {campus.classes_count !== 1 ? "s" : ""}
             </span>
           </div>
         </div>
@@ -441,7 +480,7 @@ export default function CampusesPage() {
   const params = useParams();
   const schoolId = params?.id as string;
   const { data: session } = useSession();
-  const token = (session as any)?.accessToken as string;
+  const token = session?.accessToken ?? "";
 
   const [campuses, setCampuses] = useState<CampusItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -453,22 +492,22 @@ export default function CampusesPage() {
     ? campusToForm(editingCampus)
     : EMPTY_FORM;
 
-  const loadCampuses = async () => {
-    if (!token || !schoolId) return;
-    try {
-      setIsLoading(true);
-      const data = await getCampuses(token, schoolId);
-      setCampuses(data);
-    } catch (err: any) {
-      toast.error(err?.message ?? 'Erreur lors du chargement des campus.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   useEffect(() => {
-    loadCampuses();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    if (!token || !schoolId) return;
+    getCampuses(token, schoolId)
+      .then((data) => {
+        setCampuses(data);
+      })
+      .catch((err: unknown) => {
+        toast.error(
+          err instanceof Error
+            ? err.message
+            : "Erreur lors de l'enregistrement.",
+        );
+      })
+      .finally(() => {
+        setIsLoading(false);
+      });
   }, [token, schoolId]);
 
   const openCreate = () => {
@@ -486,8 +525,15 @@ export default function CampusesPage() {
     setIsSaving(true);
     try {
       if (editingCampus) {
-        const updated = await updateCampus(token, schoolId, editingCampus.id, body);
-        setCampuses((prev) => prev.map((c) => (c.id === updated.id ? updated : c)));
+        const updated = await updateCampus(
+          token,
+          schoolId,
+          editingCampus.id,
+          body,
+        );
+        setCampuses((prev) =>
+          prev.map((c) => (c.id === updated.id ? updated : c)),
+        );
         toast.success(`Campus "${updated.name}" mis à jour.`);
       } else {
         const created = await createCampus(token, schoolId, body);
@@ -495,8 +541,10 @@ export default function CampusesPage() {
         toast.success(`Campus "${created.name}" créé avec succès.`);
       }
       setDialogOpen(false);
-    } catch (err: any) {
-      toast.error(err?.message ?? 'Erreur lors de l\'enregistrement.');
+    } catch (err: unknown) {
+      toast.error(
+        err instanceof Error ? err.message : "Erreur lors de l'enregistrement.",
+      );
     } finally {
       setIsSaving(false);
     }
@@ -506,7 +554,7 @@ export default function CampusesPage() {
     <div className="space-y-6">
       <PageHeader
         title="Campus"
-        description={`${campuses.length} campus configuré${campuses.length !== 1 ? 's' : ''} pour cet établissement`}
+        description={`${campuses.length} campus configuré${campuses.length !== 1 ? "s" : ""} pour cet établissement`}
         actions={
           <Button onClick={openCreate} className="gap-2">
             <Plus className="h-4 w-4" />
@@ -553,6 +601,7 @@ export default function CampusesPage() {
 
       {/* Dialog création / édition */}
       <CampusFormDialog
+        key={editingCampus?.id ?? "new"}
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         initialData={formInitialData}

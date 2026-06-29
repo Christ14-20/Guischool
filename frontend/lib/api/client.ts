@@ -1,9 +1,9 @@
-import axios from 'axios';
+import axios from "axios";
 
 const apiClient = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1',
+  baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1",
   headers: {
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
   },
 });
 
@@ -24,7 +24,7 @@ apiClient.interceptors.response.use(
       // Refresh logic here
     }
     return Promise.reject(error);
-  }
+  },
 );
 
 export default apiClient;

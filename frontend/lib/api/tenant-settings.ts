@@ -3,7 +3,8 @@
  * API pour la configuration avancée tenant (ARCH-03).
  */
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
+const API_BASE =
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
 
 export type ModuleAvailability = {
   available: boolean;
@@ -46,11 +47,20 @@ export type TenantSettings = {
 };
 
 export type TenantSettingsUpdate = Partial<
-  Omit<TenantSettings, 'id' | 'slug' | 'logo_url' | 'plan_name' | 'plan_modules' | 'module_availability' | 'updated_at'>
+  Omit<
+    TenantSettings,
+    | "id"
+    | "slug"
+    | "logo_url"
+    | "plan_name"
+    | "plan_modules"
+    | "module_availability"
+    | "updated_at"
+  >
 > & { logo?: File | null };
 
 async function parseResponse<T>(response: Response): Promise<T> {
-  let payload: any = null;
+  let payload: unknown = null;
   try {
     payload = await response.json();
   } catch {
@@ -58,15 +68,22 @@ async function parseResponse<T>(response: Response): Promise<T> {
   }
 
   if (!response.ok) {
-    const fieldErrors = payload && typeof payload === 'object' ? Object.values(payload).flat().join(' ') : '';
-    const message = fieldErrors || payload?.message || payload?.detail || 'Une erreur est survenue.';
-    throw new Error(typeof message === 'string' ? message : 'Une erreur est survenue.');
+    const p = payload as Record<string, unknown> | null;
+    const fieldErrors =
+      p && typeof p === "object" ? Object.values(p).flat().join(" ") : "";
+    const message =
+      fieldErrors || p?.message || p?.detail || "Une erreur est survenue.";
+    throw new Error(
+      typeof message === "string" ? message : "Une erreur est survenue.",
+    );
   }
 
-  return (payload?.data ?? payload) as T;
+  return ((payload as Record<string, unknown>)?.data ?? payload) as T;
 }
 
-export async function getTenantSettings(token: string): Promise<TenantSettings> {
+export async function getTenantSettings(
+  token: string,
+): Promise<TenantSettings> {
   const response = await fetch(`${API_BASE}/settings/tenant/`, {
     headers: { Authorization: `Bearer ${token}` },
   });
@@ -75,16 +92,19 @@ export async function getTenantSettings(token: string): Promise<TenantSettings> 
 
 export async function updateTenantSettings(
   token: string,
-  body: TenantSettingsUpdate
+  body: TenantSettingsUpdate,
 ): Promise<TenantSettings> {
   const { logo, ...jsonFields } = body;
   const hasFile = logo instanceof File;
 
   const response = await fetch(`${API_BASE}/settings/tenant/`, {
-    method: 'PATCH',
+    method: "PATCH",
     headers: hasFile
       ? { Authorization: `Bearer ${token}` }
-      : { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      : {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
     body: hasFile
       ? (() => {
           const formData = new FormData();
@@ -96,7 +116,7 @@ export async function updateTenantSettings(
               formData.append(key, String(value));
             }
           });
-          formData.append('logo', logo);
+          formData.append("logo", logo);
           return formData;
         })()
       : JSON.stringify(jsonFields),

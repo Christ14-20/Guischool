@@ -1,14 +1,14 @@
-'use client';
+"use client";
 
-import { zodResolver } from '@hookform/resolvers/zod';
-import { Loader2, Plus, Ticket } from 'lucide-react';
-import { useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { toast } from 'sonner';
-import { z } from 'zod';
-import { useSession } from 'next-auth/react';
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Loader2, Plus, Ticket } from "lucide-react";
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { toast } from "sonner";
+import { z } from "zod";
+import { useSession } from "next-auth/react";
 
-import { Button } from '@/components/ui/button';
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -17,7 +17,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from '@/components/ui/dialog';
+} from "@/components/ui/dialog";
 import {
   Form,
   FormControl,
@@ -25,44 +25,49 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 
-import { createTicket } from '@/lib/api/support';
+import { createTicket } from "@/lib/api/support";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const CATEGORIES = [
-  { value: 'TECHNIQUE', label: 'Technique' },
-  { value: 'FACTURATION', label: 'Facturation' },
-  { value: 'FONCTIONNEL', label: 'Fonctionnel' },
-  { value: 'FEATURE', label: 'Demande de fonctionnalité' },
-  { value: 'BLOCAGE', label: 'Blocage' },
-  { value: 'PAIEMENT', label: 'Paiement' },
+  { value: "TECHNIQUE", label: "Technique" },
+  { value: "FACTURATION", label: "Facturation" },
+  { value: "FONCTIONNEL", label: "Fonctionnel" },
+  { value: "FEATURE", label: "Demande de fonctionnalité" },
+  { value: "BLOCAGE", label: "Blocage" },
+  { value: "PAIEMENT", label: "Paiement" },
 ];
 
 const PRIORITIES = [
-  { value: 'BLOQUANT', label: '🔴 Bloquant' },
-  { value: 'MAJEUR', label: '🟠 Majeur' },
-  { value: 'MINEUR', label: '🔵 Mineur' },
-  { value: 'QUESTION', label: '⚪ Question' },
+  { value: "BLOQUANT", label: "🔴 Bloquant" },
+  { value: "MAJEUR", label: "🟠 Majeur" },
+  { value: "MINEUR", label: "🔵 Mineur" },
+  { value: "QUESTION", label: "⚪ Question" },
 ];
 
 // ─── Schema ───────────────────────────────────────────────────────────────────
 
 const ticketSchema = z.object({
-  subject: z.string().min(5, 'Le sujet doit comporter au moins 5 caractères.').max(200),
-  category: z.string().min(1, 'La catégorie est requise.'),
-  priority: z.string().min(1, 'La priorité est requise.'),
-  description: z.string().min(20, 'La description doit comporter au moins 20 caractères.'),
+  subject: z
+    .string()
+    .min(5, "Le sujet doit comporter au moins 5 caractères.")
+    .max(200),
+  category: z.string().min(1, "La catégorie est requise."),
+  priority: z.string().min(1, "La priorité est requise."),
+  description: z
+    .string()
+    .min(20, "La description doit comporter au moins 20 caractères."),
 });
 
 type TicketFormValues = z.infer<typeof ticketSchema>;
@@ -75,16 +80,16 @@ type NewTicketDialogProps = {
 
 export function NewTicketDialog({ onCreated }: NewTicketDialogProps) {
   const { data: session } = useSession();
-  const token = session?.accessToken ?? '';
+  const token = session?.accessToken ?? "";
   const [open, setOpen] = useState(false);
 
   const form = useForm<TicketFormValues>({
-    resolver: zodResolver(ticketSchema) as any,
+    resolver: zodResolver(ticketSchema),
     defaultValues: {
-      subject: '',
-      category: '',
-      priority: 'MINEUR',
-      description: '',
+      subject: "",
+      category: "",
+      priority: "MINEUR",
+      description: "",
     },
   });
 
@@ -92,12 +97,18 @@ export function NewTicketDialog({ onCreated }: NewTicketDialogProps) {
     if (!token) return;
     try {
       await createTicket(token, values);
-      toast.success('Ticket créé avec succès ! Notre équipe vous répondra rapidement.');
+      toast.success(
+        "Ticket créé avec succès ! Notre équipe vous répondra rapidement.",
+      );
       setOpen(false);
       form.reset();
       onCreated?.();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Erreur lors de la création du ticket.');
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Erreur lors de la création du ticket.",
+      );
     }
   };
 
@@ -119,12 +130,16 @@ export function NewTicketDialog({ onCreated }: NewTicketDialogProps) {
             Ouvrir un ticket de support
           </DialogTitle>
           <DialogDescription>
-            Décrivez votre problème en détail. Notre équipe vous répondra dans les plus brefs délais.
+            Décrivez votre problème en détail. Notre équipe vous répondra dans
+            les plus brefs délais.
           </DialogDescription>
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-2">
+          <form
+            onSubmit={form.handleSubmit(onSubmit)}
+            className="space-y-4 pt-2"
+          >
             {/* Sujet */}
             <FormField
               control={form.control}
@@ -133,7 +148,10 @@ export function NewTicketDialog({ onCreated }: NewTicketDialogProps) {
                 <FormItem>
                   <FormLabel>Sujet *</FormLabel>
                   <FormControl>
-                    <Input placeholder="Décrivez brièvement votre problème…" {...field} />
+                    <Input
+                      placeholder="Décrivez brièvement votre problème…"
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -224,14 +242,18 @@ export function NewTicketDialog({ onCreated }: NewTicketDialogProps) {
               >
                 Annuler
               </Button>
-              <Button type="submit" disabled={form.formState.isSubmitting} id="btn-submit-ticket">
+              <Button
+                type="submit"
+                disabled={form.formState.isSubmitting}
+                id="btn-submit-ticket"
+              >
                 {form.formState.isSubmitting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Envoi en cours…
                   </>
                 ) : (
-                  'Envoyer le ticket'
+                  "Envoyer le ticket"
                 )}
               </Button>
             </DialogFooter>

@@ -1,7 +1,12 @@
-'use client';
+"use client";
 
-import { useSession } from 'next-auth/react';
-import { PERMISSIONS, ROLE_PERMISSIONS, type Permission, type Role } from '@/lib/constants';
+import { useSession } from "next-auth/react";
+import {
+  PERMISSIONS,
+  ROLE_PERMISSIONS,
+  type Permission,
+  type Role,
+} from "@/lib/constants";
 
 /**
  * Retourne true si l'utilisateur connecté possède la permission demandée.

@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 /**
  * campus-provider.tsx
@@ -8,9 +8,15 @@
  * - Exposé via `useCampus()` hook
  */
 
-import { createContext, useCallback, useContext, useEffect, useState } from 'react';
-import { useSession } from 'next-auth/react';
-import { getCampuses, type CampusItem } from '@/lib/api/superadmin';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
+import { useSession } from "next-auth/react";
+import { getCampuses, type CampusItem } from "@/lib/api/superadmin";
 
 type CampusContextValue = {
   campus: CampusItem | null;
@@ -28,12 +34,12 @@ const CampusContext = createContext<CampusContextValue>({
   isLoading: false,
 });
 
-const STORAGE_KEY = 'eduguinee_active_campus_id';
+const STORAGE_KEY = "eduguinee_active_campus_id";
 
 export function CampusProvider({ children }: { children: React.ReactNode }) {
   const { data: session } = useSession();
-  const token = (session as any)?.accessToken as string | undefined;
-  const tenantId = (session as any)?.user?.tenant_id as string | undefined;
+  const token = session?.accessToken;
+  const tenantId = (session?.user as { tenant_id?: string })?.tenant_id;
 
   const [availableCampuses, setAvailableCampuses] = useState<CampusItem[]>([]);
   const [campus, setCampusState] = useState<CampusItem | null>(null);

@@ -1,17 +1,33 @@
-'use client';
+"use client";
 
-import { useEffect, useMemo, useState } from 'react';
-import { useParams, usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { useSession } from 'next-auth/react';
-import { toast } from 'sonner';
+import { useEffect, useState } from "react";
+import {
+  useParams,
+  usePathname,
+  useRouter,
+  useSearchParams,
+} from "next/navigation";
+import { useSession } from "next-auth/react";
+import { toast } from "sonner";
 
-import { PageHeader } from '@/components/layout/page-header';
-import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
-import { DataTable, type DataTableColumn } from '@/components/shared/DataTable';
-import { StatusBadge } from '@/components/shared/StatusBadge';
-import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { getPlans, getSchools, reactivateSchool, suspendSchool } from '@/lib/api/superadmin';
+import { PageHeader } from "@/components/layout/page-header";
+import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
+import { DataTable, type DataTableColumn } from "@/components/shared/DataTable";
+import { StatusBadge } from "@/components/shared/StatusBadge";
+import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  getPlans,
+  getSchools,
+  reactivateSchool,
+  suspendSchool,
+} from "@/lib/api/superadmin";
 
 type SchoolRow = {
   id: string;
@@ -24,7 +40,7 @@ type SchoolRow = {
 };
 
 function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString('fr-FR');
+  return new Date(iso).toLocaleDateString("fr-FR");
 }
 
 function normalizeStatus(status: string) {
@@ -32,16 +48,16 @@ function normalizeStatus(status: string) {
 }
 
 function toOrdering(sortBy: string, sortOrder: string) {
-  if (!sortBy) return '-created_at';
+  if (!sortBy) return "-created_at";
 
   const map: Record<string, string> = {
-    name: 'name',
-    createdAt: 'created_at',
-    created_at: 'created_at',
+    name: "name",
+    createdAt: "created_at",
+    created_at: "created_at",
   };
 
   const backendField = map[sortBy] ?? sortBy;
-  return sortOrder === 'desc' ? `-${backendField}` : backendField;
+  return sortOrder === "desc" ? `-${backendField}` : backendField;
 }
 
 export default function SuperadminSchoolsPage() {
@@ -50,41 +66,42 @@ export default function SuperadminSchoolsPage() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { data: session } = useSession();
-  const locale = (params?.locale as string) ?? 'fr';
+  const locale = (params?.locale as string) ?? "fr";
 
   const [schools, setSchools] = useState<SchoolRow[]>([]);
   const [total, setTotal] = useState(0);
-  const [planOptions, setPlanOptions] = useState<Array<{ id: number; label: string }>>([]);
+  const [planOptions, setPlanOptions] = useState<
+    Array<{ id: number; label: string }>
+  >([]);
   const [loading, setLoading] = useState(true);
   const [refreshKey, setRefreshKey] = useState(0);
 
-  const statusFilter = searchParams.get('status') ?? 'all';
-  const planFilter = searchParams.get('plan') ?? 'all';
-  const query = searchParams.get('q') ?? '';
-  const page = Number(searchParams.get('page') ?? '1');
-  const pageSize = Number(searchParams.get('page_size') ?? '5');
-  const sortBy = searchParams.get('sort_by') ?? '';
-  const sortOrder = searchParams.get('sort_order') ?? 'asc';
+  const statusFilter = searchParams.get("status") ?? "all";
+  const planFilter = searchParams.get("plan") ?? "all";
+  const query = searchParams.get("q") ?? "";
+  const page = Number(searchParams.get("page") ?? "1");
+  const pageSize = Number(searchParams.get("page_size") ?? "5");
+  const sortBy = searchParams.get("sort_by") ?? "";
+  const sortOrder = searchParams.get("sort_order") ?? "asc";
 
   useEffect(() => {
     const accessToken = session?.accessToken;
-    if (!accessToken) {
-      setLoading(false);
-      return;
-    }
+    if (!accessToken) return;
 
     let isMounted = true;
 
     async function loadSchools() {
-      setLoading(true);
       try {
         const [plans, schoolsPage] = await Promise.all([
           getPlans(accessToken as string),
           getSchools(accessToken as string, {
             page,
             page_size: pageSize,
-            status: statusFilter === 'all' ? undefined : normalizeStatus(statusFilter),
-            plan: planFilter === 'all' ? undefined : planFilter,
+            status:
+              statusFilter === "all"
+                ? undefined
+                : normalizeStatus(statusFilter),
+            plan: planFilter === "all" ? undefined : planFilter,
             search: query || undefined,
             ordering: toOrdering(sortBy, sortOrder),
           }),
@@ -95,7 +112,7 @@ export default function SuperadminSchoolsPage() {
             plans.map((plan) => ({
               id: plan.id,
               label: plan.name.charAt(0) + plan.name.slice(1).toLowerCase(),
-            }))
+            })),
           );
 
           setTotal(schoolsPage.count);
@@ -104,16 +121,19 @@ export default function SuperadminSchoolsPage() {
               id: item.id,
               name: item.name,
               slug: item.slug,
-              planName: item.plan_name ?? 'N/A',
+              planName: item.plan_name ?? "N/A",
               planId: item.plan,
               status: item.status,
               createdAt: item.created_at,
-            }))
+            })),
           );
         }
       } catch (error) {
         if (isMounted) {
-          const message = error instanceof Error ? error.message : 'Impossible de charger les ecoles.';
+          const message =
+            error instanceof Error
+              ? error.message
+              : "Impossible de charger les ecoles.";
           toast.error(message);
           setSchools([]);
           setTotal(0);
@@ -127,18 +147,28 @@ export default function SuperadminSchoolsPage() {
     return () => {
       isMounted = false;
     };
-  }, [session?.accessToken, page, pageSize, statusFilter, planFilter, query, sortBy, sortOrder, refreshKey]);
+  }, [
+    session?.accessToken,
+    page,
+    pageSize,
+    statusFilter,
+    planFilter,
+    query,
+    sortBy,
+    sortOrder,
+    refreshKey,
+  ]);
 
   const setFilterParam = (key: string, value: string | null) => {
     const params = new URLSearchParams(searchParams.toString());
 
-    if (!value || value === 'all') {
+    if (!value || value === "all") {
       params.delete(key);
     } else {
       params.set(key, value);
     }
 
-    params.set('page', '1');
+    params.set("page", "1");
     router.replace(`${pathname}?${params.toString()}`);
   };
 
@@ -146,7 +176,11 @@ export default function SuperadminSchoolsPage() {
     const accessToken = session?.accessToken;
     if (!accessToken) return;
 
-    await suspendSchool(accessToken as string, row.id, 'Suspension depuis console superadmin');
+    await suspendSchool(
+      accessToken as string,
+      row.id,
+      "Suspension depuis console superadmin",
+    );
     toast.success(`Ecole ${row.name} suspendue.`);
     setRefreshKey((value) => value + 1);
   };
@@ -161,20 +195,46 @@ export default function SuperadminSchoolsPage() {
   };
 
   const columns: DataTableColumn<SchoolRow>[] = [
-    { key: 'name', header: 'Nom', sortable: true, accessor: (row) => row.name },
-    { key: 'slug', header: 'Slug', sortable: true, accessor: (row) => row.slug },
-    { key: 'plan', header: 'Plan', sortable: false, accessor: (row) => row.planName },
-    { key: 'status', header: 'Statut', sortable: false, accessor: (row) => <StatusBadge status={row.status.toLowerCase()} /> },
-    { key: 'createdAt', header: 'Creee le', sortable: true, accessor: (row) => formatDate(row.createdAt) },
+    { key: "name", header: "Nom", sortable: true, accessor: (row) => row.name },
     {
-      key: 'actions',
-      header: 'Actions',
+      key: "slug",
+      header: "Slug",
+      sortable: true,
+      accessor: (row) => row.slug,
+    },
+    {
+      key: "plan",
+      header: "Plan",
+      sortable: false,
+      accessor: (row) => row.planName,
+    },
+    {
+      key: "status",
+      header: "Statut",
+      sortable: false,
+      accessor: (row) => <StatusBadge status={row.status.toLowerCase()} />,
+    },
+    {
+      key: "createdAt",
+      header: "Creee le",
+      sortable: true,
+      accessor: (row) => formatDate(row.createdAt),
+    },
+    {
+      key: "actions",
+      header: "Actions",
       accessor: (row) => (
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={() => router.push(`/${locale}/superadmin/schools/${row.id}`)}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() =>
+              router.push(`/${locale}/superadmin/schools/${row.id}`)
+            }
+          >
             Voir
           </Button>
-          {normalizeStatus(row.status) === 'SUSPENDED' ? (
+          {normalizeStatus(row.status) === "SUSPENDED" ? (
             <ConfirmDialog
               title="Reactiver l'ecole"
               description={`Reactiver ${row.name} ?`}
@@ -190,7 +250,11 @@ export default function SuperadminSchoolsPage() {
               variant="destructive"
               confirmLabel="Suspendre"
               loadingLabel="Suspension..."
-              trigger={<Button variant="outline" size="sm">Suspendre</Button>}
+              trigger={
+                <Button variant="outline" size="sm">
+                  Suspendre
+                </Button>
+              }
               onConfirm={() => handleSuspend(row)}
             />
           )}
@@ -204,11 +268,20 @@ export default function SuperadminSchoolsPage() {
       <PageHeader
         title="Ecoles"
         description="Liste et gestion des etablissements Eduguinee."
-        actions={<Button onClick={() => router.push(`/${locale}/superadmin/schools/new`)}>Nouvelle ecole</Button>}
+        actions={
+          <Button
+            onClick={() => router.push(`/${locale}/superadmin/schools/new`)}
+          >
+            Nouvelle ecole
+          </Button>
+        }
       />
 
       <div className="flex flex-col gap-2 rounded-lg border bg-card p-4 sm:flex-row sm:items-center">
-        <Select value={statusFilter} onValueChange={(value) => setFilterParam('status', value ?? 'all')}>
+        <Select
+          value={statusFilter}
+          onValueChange={(value) => setFilterParam("status", value ?? "all")}
+        >
           <SelectTrigger className="w-full sm:w-[190px]">
             <SelectValue placeholder="Statut" />
           </SelectTrigger>
@@ -221,7 +294,10 @@ export default function SuperadminSchoolsPage() {
           </SelectContent>
         </Select>
 
-        <Select value={planFilter} onValueChange={(value) => setFilterParam('plan', value ?? 'all')}>
+        <Select
+          value={planFilter}
+          onValueChange={(value) => setFilterParam("plan", value ?? "all")}
+        >
           <SelectTrigger className="w-full sm:w-[190px]">
             <SelectValue placeholder="Plan" />
           </SelectTrigger>

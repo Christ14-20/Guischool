@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
+import { useState } from "react";
 
 import {
   AlertDialog,
@@ -12,10 +12,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from '@/components/ui/alert-dialog';
-import { Button } from '@/components/ui/button';
+} from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
 
-type ConfirmDialogVariant = 'default' | 'destructive';
+type ConfirmDialogVariant = "default" | "destructive";
 
 type ConfirmDialogProps = {
   title: string;
@@ -34,11 +34,11 @@ export function ConfirmDialog({
   description,
   onConfirm,
   onCancel,
-  variant = 'default',
+  variant = "default",
   trigger,
-  confirmLabel = 'Confirmer',
-  cancelLabel = 'Annuler',
-  loadingLabel = 'Traitement...',
+  confirmLabel = "Confirmer",
+  cancelLabel = "Annuler",
+  loadingLabel = "Traitement...",
 }: ConfirmDialogProps) {
   const [open, setOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -61,7 +61,15 @@ export function ConfirmDialog({
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>
       <AlertDialogTrigger
-        render={trigger ?? <Button variant={variant === 'destructive' ? 'destructive' : 'outline'}>Ouvrir</Button>}
+        render={
+          trigger ?? (
+            <Button
+              variant={variant === "destructive" ? "destructive" : "outline"}
+            >
+              Ouvrir
+            </Button>
+          )
+        }
       />
 
       <AlertDialogContent>
@@ -75,7 +83,7 @@ export function ConfirmDialog({
             {cancelLabel}
           </AlertDialogCancel>
           <AlertDialogAction
-            variant={variant === 'destructive' ? 'destructive' : 'default'}
+            variant={variant === "destructive" ? "destructive" : "default"}
             onClick={handleConfirm}
             disabled={isLoading}
           >

@@ -1,16 +1,16 @@
-'use client';
+"use client";
 
-import { zodResolver } from '@hookform/resolvers/zod';
-import { AlertTriangle } from 'lucide-react';
-import { useParams, useRouter } from 'next/navigation';
-import { useEffect, useMemo, useState } from 'react';
-import { useSession } from 'next-auth/react';
-import { useForm } from 'react-hook-form';
-import { toast } from 'sonner';
-import { z } from 'zod';
+import { zodResolver } from "@hookform/resolvers/zod";
+import { AlertTriangle } from "lucide-react";
+import { useParams, useRouter } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
+import { useSession } from "next-auth/react";
+import { useForm } from "react-hook-form";
+import { toast } from "sonner";
+import { z } from "zod";
 
-import { PageHeader } from '@/components/layout/page-header';
-import { FileUploader } from '@/components/shared/FileUploader';
+import { PageHeader } from "@/components/layout/page-header";
+import { FileUploader } from "@/components/shared/FileUploader";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -19,9 +19,9 @@ import {
   AlertDialogDescription,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+} from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Form,
   FormControl,
@@ -29,41 +29,63 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
-import { type ClassItem, type LevelItem, type SchoolYearItem, getClasses, getLevels, getSchoolYears } from '@/lib/api/pedagogy';
-import { createStudent, getStudents, type StudentItem } from '@/lib/api/students';
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  type ClassItem,
+  type SchoolYearItem,
+  getClasses,
+  getSchoolYears,
+} from "@/lib/api/pedagogy";
+import {
+  createStudent,
+  getStudents,
+  type StudentItem,
+} from "@/lib/api/students";
 
 const phoneRegex = /^\+224[0-9]{9}$/;
 
 const schema = z.object({
-  last_name: z.string().min(1, 'Le nom est requis.'),
-  first_name: z.string().min(1, 'Le prénom est requis.'),
+  last_name: z.string().min(1, "Le nom est requis."),
+  first_name: z.string().min(1, "Le prénom est requis."),
   birth_date: z
     .string()
-    .min(1, 'La date de naissance est requise.')
+    .min(1, "La date de naissance est requise.")
     .refine((value) => {
       const date = new Date(value);
       return !Number.isNaN(date.getTime()) && date <= new Date();
-    }, 'La date de naissance ne peut pas être dans le futur.'),
+    }, "La date de naissance ne peut pas être dans le futur."),
   birth_place: z.string().optional(),
-  gender: z.enum(['M', 'F'], { error: 'Le sexe est requis.' } as any),
+  gender: z.enum(["M", "F"], { error: "Le sexe est requis." }),
   photo_url: z.string().optional(),
-  guardian_name: z.string().min(1, 'Le nom complet du tuteur est requis.'),
-  guardian_relationship: z.enum(['PERE', 'MERE', 'TUTEUR', 'AUTRE'], {
-    error: 'Le lien de parenté est requis.',
-  } as any),
-  guardian_phone: z.string().regex(phoneRegex, 'Format requis: +224XXXXXXXXX'),
-  guardian_email: z.string().email('Email invalide.').optional().or(z.literal('')),
+  guardian_name: z.string().min(1, "Le nom complet du tuteur est requis."),
+  guardian_relationship: z.enum(["PERE", "MERE", "TUTEUR", "AUTRE"], {
+    error: "Le lien de parenté est requis.",
+  }),
+  guardian_phone: z.string().regex(phoneRegex, "Format requis: +224XXXXXXXXX"),
+  guardian_email: z
+    .string()
+    .email("Email invalide.")
+    .optional()
+    .or(z.literal("")),
   school_year: z.string().min(1, "L'année scolaire est requise."),
-  classe: z.string().min(1, 'La classe est requise.'),
+  classe: z.string().min(1, "La classe est requise."),
   niveau_mixte: z.string().optional(),
-  registration_type: z.enum(['NOUVELLE', 'REINSCRIPTION', 'TRANSFERT_ENTRANT'], {
-    error: "Le type d'inscription est requis.",
-  } as any),
+  registration_type: z.enum(
+    ["NOUVELLE", "REINSCRIPTION", "TRANSFERT_ENTRANT"],
+    {
+      error: "Le type d'inscription est requis.",
+    },
+  ),
   observations: z.string().optional(),
 });
 
@@ -71,8 +93,8 @@ type FormValues = z.infer<typeof schema>;
 
 function normalize(value: string) {
   return value
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
     .trim()
     .toLowerCase();
 }
@@ -80,61 +102,64 @@ function normalize(value: string) {
 export default function NewStudentPage() {
   const router = useRouter();
   const params = useParams();
-  const locale = (params?.locale as string) ?? 'fr';
+  const locale = (params?.locale as string) ?? "fr";
   const { data: session } = useSession();
-  const token = session?.accessToken ?? '';
-  const tenantId = session?.user?.tenantId ?? '';
+  const token = session?.accessToken ?? "";
+  const tenantId = session?.user?.tenantId ?? "";
 
   const [years, setYears] = useState<SchoolYearItem[]>([]);
   const [classes, setClasses] = useState<ClassItem[]>([]);
-  const [levels, setLevels] = useState<LevelItem[]>([]);
   const [showClassFullAlert, setShowClassFullAlert] = useState(false);
   const [pendingValues, setPendingValues] = useState<FormValues | null>(null);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
-      last_name: '',
-      first_name: '',
-      birth_date: '',
-      birth_place: '',
-      gender: 'M',
-      photo_url: '',
-      guardian_name: '',
-      guardian_relationship: 'PERE',
-      guardian_phone: '+224',
-      guardian_email: '',
-      school_year: '',
-      classe: '',
-      registration_type: 'NOUVELLE',
-      observations: '',
+      last_name: "",
+      first_name: "",
+      birth_date: "",
+      birth_place: "",
+      gender: "M",
+      photo_url: "",
+      guardian_name: "",
+      guardian_relationship: "PERE",
+      guardian_phone: "+224",
+      guardian_email: "",
+      school_year: "",
+      classe: "",
+      registration_type: "NOUVELLE",
+      observations: "",
     },
   });
 
-  const selectedYear = form.watch('school_year');
-  const selectedClass = form.watch('classe');
-  const photoUrl = form.watch('photo_url');
+  // eslint-disable-next-line react-hooks/incompatible-library
+  const selectedYear = form.watch("school_year");
+  const selectedClass = form.watch("classe");
+  const photoUrl = form.watch("photo_url");
 
   useEffect(() => {
     if (!token) return;
     let mounted = true;
 
-    Promise.all([getSchoolYears(token), getClasses(token), getLevels(token)])
-      .then(([yearsRes, classesRes, levelsRes]) => {
+    Promise.all([getSchoolYears(token), getClasses(token)])
+      .then(([yearsRes, classesRes]) => {
         if (!mounted) return;
         setYears(yearsRes.results);
         setClasses(classesRes.results);
-        setLevels(levelsRes.results);
 
         const defaultYear = yearsRes.results.find((year) =>
-          ['OUVERTE', 'EN_COURS'].includes(year.status)
+          ["OUVERTE", "EN_COURS"].includes(year.status),
         );
         if (defaultYear) {
-          form.setValue('school_year', String(defaultYear.id));
+          form.setValue("school_year", String(defaultYear.id));
         }
       })
       .catch((error) => {
-        toast.error(error instanceof Error ? error.message : 'Impossible de charger les données.');
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : "Impossible de charger les données.",
+        );
       });
 
     return () => {
@@ -143,8 +168,8 @@ export default function NewStudentPage() {
   }, [token, form]);
 
   const availableYears = useMemo(
-    () => years.filter((year) => ['OUVERTE', 'EN_COURS'].includes(year.status)),
-    [years]
+    () => years.filter((year) => ["OUVERTE", "EN_COURS"].includes(year.status)),
+    [years],
   );
 
   const availableClasses = useMemo(
@@ -152,26 +177,33 @@ export default function NewStudentPage() {
       classes
         .filter((classe) => String(classe.school_year) === selectedYear)
         .sort((a, b) => a.name.localeCompare(b.name)),
-    [classes, selectedYear]
+    [classes, selectedYear],
   );
 
   const selectedClassInfo = useMemo(
     () => classes.find((c) => String(c.id) === selectedClass) ?? null,
-    [classes, selectedClass]
+    [classes, selectedClass],
   );
 
   const isClassFull =
-    !!selectedClassInfo && selectedClassInfo.current_count >= selectedClassInfo.capacity;
+    !!selectedClassInfo &&
+    selectedClassInfo.current_count >= selectedClassInfo.capacity;
 
   const checkDuplicate = async (values: FormValues) => {
     const query = `${values.last_name} ${values.first_name}`.trim();
-    const result = await getStudents(token, { search: query, page: 1, page_size: 50 });
+    const result = await getStudents(token, {
+      search: query,
+      page: 1,
+      page_size: 50,
+    });
 
     const duplicate = result.results.some((student: StudentItem) => {
       const sameName =
         normalize(student.last_name) === normalize(values.last_name) &&
         normalize(student.first_name) === normalize(values.first_name);
-      const sameBirthDate = student.birth_date ? student.birth_date === values.birth_date : false;
+      const sameBirthDate = student.birth_date
+        ? student.birth_date === values.birth_date
+        : false;
       return sameName && sameBirthDate;
     });
 
@@ -181,7 +213,9 @@ export default function NewStudentPage() {
   const doCreateStudent = async (values: FormValues) => {
     const duplicateExists = await checkDuplicate(values);
     if (duplicateExists) {
-      toast.error('Doublon détecté : un élève avec le même nom et la même date de naissance existe déjà.');
+      toast.error(
+        "Doublon détecté : un élève avec le même nom et la même date de naissance existe déjà.",
+      );
       return;
     }
 
@@ -199,23 +233,29 @@ export default function NewStudentPage() {
       tuteur_email: values.guardian_email || undefined,
       annee_inscription: Number(values.school_year),
       classe_actuelle: Number(values.classe),
-      niveau_mixte: values.niveau_mixte ? Number(values.niveau_mixte) : undefined,
+      niveau_mixte: values.niveau_mixte
+        ? Number(values.niveau_mixte)
+        : undefined,
       contact_provisoire: false,
     } as const;
 
     const created = await createStudent(token, payload);
-    toast.success('Élève inscrit avec succès.');
-    const createdId = String(created?.id ?? '');
-    router.push(createdId ? `/${locale}/app/students/${createdId}` : `/${locale}/app/students`);
+    toast.success("Élève inscrit avec succès.");
+    const createdId = String((created as Record<string, unknown>)?.id ?? "");
+    router.push(
+      createdId
+        ? `/${locale}/app/students/${createdId}`
+        : `/${locale}/app/students`,
+    );
   };
 
   const onSubmit = async (values: FormValues) => {
     if (!token) {
-      toast.error('Session invalide. Veuillez vous reconnecter.');
+      toast.error("Session invalide. Veuillez vous reconnecter.");
       return;
     }
     if (!tenantId) {
-      toast.error('Tenant introuvable dans la session. Reconnectez-vous.');
+      toast.error("Tenant introuvable dans la session. Reconnectez-vous.");
       return;
     }
 
@@ -227,7 +267,11 @@ export default function NewStudentPage() {
       }
       await doCreateStudent(values);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Erreur lors de l'inscription.");
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Erreur lors de l'inscription.",
+      );
     }
   };
 
@@ -237,7 +281,11 @@ export default function NewStudentPage() {
     try {
       await doCreateStudent(pendingValues);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Erreur lors de l'inscription.");
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Erreur lors de l'inscription.",
+      );
     } finally {
       setPendingValues(null);
     }
@@ -249,7 +297,11 @@ export default function NewStudentPage() {
         title="Inscription d'un élève"
         description="Ajoutez un nouvel élève avec ses informations personnelles, tuteur et scolarité."
         actions={
-          <Button type="button" variant="outline" onClick={() => router.push(`/${locale}/app/students`)}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => router.push(`/${locale}/app/students`)}
+          >
             Retour à la liste
           </Button>
         }
@@ -332,11 +384,15 @@ export default function NewStudentPage() {
                       >
                         <div className="flex items-center gap-2">
                           <RadioGroupItem value="M" id="gender-m" />
-                          <label htmlFor="gender-m" className="text-sm">Masculin</label>
+                          <label htmlFor="gender-m" className="text-sm">
+                            Masculin
+                          </label>
                         </div>
                         <div className="flex items-center gap-2">
                           <RadioGroupItem value="F" id="gender-f" />
-                          <label htmlFor="gender-f" className="text-sm">Féminin</label>
+                          <label htmlFor="gender-f" className="text-sm">
+                            Féminin
+                          </label>
                         </div>
                       </RadioGroup>
                     </FormControl>
@@ -351,11 +407,17 @@ export default function NewStudentPage() {
                   accept="image/png,image/jpeg"
                   maxSize={2 * 1024 * 1024}
                   onUploadComplete={({ fileUrl }) => {
-                    form.setValue('photo_url', fileUrl ?? '', { shouldValidate: true });
-                    toast.success('Photo téléversée.');
+                    form.setValue("photo_url", fileUrl ?? "", {
+                      shouldValidate: true,
+                    });
+                    toast.success("Photo téléversée.");
                   }}
                 />
-                {photoUrl ? <p className="mt-2 text-xs text-muted-foreground">Photo liée au dossier.</p> : null}
+                {photoUrl ? (
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    Photo liée au dossier.
+                  </p>
+                ) : null}
               </div>
             </CardContent>
           </Card>
@@ -385,7 +447,10 @@ export default function NewStudentPage() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Lien de parenté *</FormLabel>
-                    <Select value={field.value} onValueChange={(value) => field.onChange(value ?? 'PERE')}>
+                    <Select
+                      value={field.value}
+                      onValueChange={(value) => field.onChange(value ?? "PERE")}
+                    >
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue />
@@ -447,8 +512,8 @@ export default function NewStudentPage() {
                     <Select
                       value={field.value}
                       onValueChange={(value) => {
-                        field.onChange(value ?? '');
-                        form.setValue('classe', '');
+                        field.onChange(value ?? "");
+                        form.setValue("classe", "");
                       }}
                     >
                       <FormControl>
@@ -475,7 +540,10 @@ export default function NewStudentPage() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Classe *</FormLabel>
-                    <Select value={field.value} onValueChange={(value) => field.onChange(value ?? '')}>
+                    <Select
+                      value={field.value}
+                      onValueChange={(value) => field.onChange(value ?? "")}
+                    >
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Sélectionner une classe" />
@@ -484,14 +552,16 @@ export default function NewStudentPage() {
                       <SelectContent>
                         {availableClasses.map((classe) => (
                           <SelectItem key={classe.id} value={String(classe.id)}>
-                            {classe.name} ({classe.current_count}/{classe.capacity})
+                            {classe.name} ({classe.current_count}/
+                            {classe.capacity})
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                     {selectedClassInfo ? (
                       <p className="text-xs text-muted-foreground">
-                        Capacité: {selectedClassInfo.current_count}/{selectedClassInfo.capacity}
+                        Capacité: {selectedClassInfo.current_count}/
+                        {selectedClassInfo.capacity}
                       </p>
                     ) : null}
                     <FormMessage />
@@ -506,7 +576,10 @@ export default function NewStudentPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Niveau dans la classe mixte *</FormLabel>
-                      <Select value={field.value ?? ''} onValueChange={(value) => field.onChange(value ?? '')}>
+                      <Select
+                        value={field.value ?? ""}
+                        onValueChange={(value) => field.onChange(value ?? "")}
+                      >
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Sélectionner un niveau" />
@@ -531,8 +604,13 @@ export default function NewStudentPage() {
                 name="registration_type"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Type d'inscription *</FormLabel>
-                    <Select value={field.value} onValueChange={(value) => field.onChange(value ?? 'NOUVELLE')}>
+                    <FormLabel>Type d&apos;inscription *</FormLabel>
+                    <Select
+                      value={field.value}
+                      onValueChange={(value) =>
+                        field.onChange(value ?? "NOUVELLE")
+                      }
+                    >
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue />
@@ -540,8 +618,12 @@ export default function NewStudentPage() {
                       </FormControl>
                       <SelectContent>
                         <SelectItem value="NOUVELLE">Nouvelle</SelectItem>
-                        <SelectItem value="REINSCRIPTION">Réinscription</SelectItem>
-                        <SelectItem value="TRANSFERT_ENTRANT">Transfert entrant</SelectItem>
+                        <SelectItem value="REINSCRIPTION">
+                          Réinscription
+                        </SelectItem>
+                        <SelectItem value="TRANSFERT_ENTRANT">
+                          Transfert entrant
+                        </SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -566,17 +648,26 @@ export default function NewStudentPage() {
           </Card>
 
           <div className="flex justify-end gap-2">
-            <Button type="button" variant="outline" onClick={() => form.reset()}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => form.reset()}
+            >
               Réinitialiser
             </Button>
             <Button type="submit" disabled={form.formState.isSubmitting}>
-              {form.formState.isSubmitting ? 'Enregistrement...' : 'Enregistrer'}
+              {form.formState.isSubmitting
+                ? "Enregistrement..."
+                : "Enregistrer"}
             </Button>
           </div>
         </form>
       </Form>
 
-      <AlertDialog open={showClassFullAlert} onOpenChange={setShowClassFullAlert}>
+      <AlertDialog
+        open={showClassFullAlert}
+        onOpenChange={setShowClassFullAlert}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
@@ -584,12 +675,17 @@ export default function NewStudentPage() {
               Classe pleine
             </AlertDialogTitle>
             <AlertDialogDescription>
-              Cette classe a atteint sa capacité maximale. Voulez-vous confirmer l'inscription malgré tout ?
+              Cette classe a atteint sa capacité maximale. Voulez-vous confirmer
+              l&apos;inscription malgré tout ?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="flex justify-end gap-2">
-            <AlertDialogCancel onClick={() => setPendingValues(null)}>Annuler</AlertDialogCancel>
-            <AlertDialogAction onClick={onConfirmClassFull}>Confirmer l'inscription</AlertDialogAction>
+            <AlertDialogCancel onClick={() => setPendingValues(null)}>
+              Annuler
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={onConfirmClassFull}>
+              Confirmer l&apos;inscription
+            </AlertDialogAction>
           </div>
         </AlertDialogContent>
       </AlertDialog>

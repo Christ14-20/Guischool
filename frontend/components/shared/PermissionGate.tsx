@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import { usePermission } from '@/hooks/usePermission';
-import { type Permission } from '@/lib/constants';
+import { usePermission } from "@/hooks/usePermission";
+import { type Permission } from "@/lib/constants";
 
 interface PermissionGateProps {
   permission: Permission;

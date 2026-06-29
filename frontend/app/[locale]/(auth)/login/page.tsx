@@ -31,7 +31,10 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import Link from "next/link";
 
 const loginSchema = z.object({
-  email: z.string().email("Adresse email invalide").nonempty("L'email est requis"),
+  email: z
+    .string()
+    .email("Adresse email invalide")
+    .nonempty("L'email est requis"),
   password: z.string().min(1, "Le mot de passe est requis"),
 });
 
@@ -60,11 +63,11 @@ function getRedirectPath(role: string | undefined, locale: string): string {
 export default function LoginPage() {
   const router = useRouter();
   const params = useParams();
-  const locale = (params?.locale as string) ?? 'fr';
+  const locale = (params?.locale as string) ?? "fr";
   const t = useTranslations("Auth");
   const [errorStatus, setErrorStatus] = useState<number | null>(null);
   const [isSubmitLoading, setSubmitLoading] = useState(false);
-  const { data: session } = useSession();
+  useSession();
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -89,14 +92,17 @@ export default function LoginPage() {
         }
       } else if (res?.ok) {
         // Petite pause pour permettre à la session de se mettre à jour
-        await new Promise(resolve => setTimeout(resolve, 100));
-        
+        await new Promise((resolve) => setTimeout(resolve, 100));
+
         // Récupérer la session mise à jour pour accéder au rôle
-        const sessionResponse = await fetch('/api/auth/session');
+        const sessionResponse = await fetch("/api/auth/session");
         const updatedSession = await sessionResponse.json();
-        
+
         // Rediriger selon le rôle
-        const redirectPath = getRedirectPath(updatedSession?.user?.role, locale);
+        const redirectPath = getRedirectPath(
+          updatedSession?.user?.role,
+          locale,
+        );
         router.push(redirectPath);
       }
     } catch {
@@ -116,9 +122,7 @@ export default function LoginPage() {
           <CardTitle className="text-2xl font-bold tracking-tight">
             Eduguinée 3.0
           </CardTitle>
-          <CardDescription>
-            {t("loginDescription")}
-          </CardDescription>
+          <CardDescription>{t("loginDescription")}</CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...form}>

@@ -1,6 +1,6 @@
-import Link from 'next/link';
-import { ShieldOff } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import Link from "next/link";
+import { ShieldOff } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 export default async function ForbiddenPage({
   params,
@@ -18,10 +18,14 @@ export default async function ForbiddenPage({
         <h1 className="text-4xl font-bold tracking-tight">403</h1>
         <p className="text-lg font-medium">Accès refusé</p>
         <p className="text-sm text-muted-foreground">
-          Vous n&apos;avez pas les permissions nécessaires pour accéder à cette page.
+          Vous n&apos;avez pas les permissions nécessaires pour accéder à cette
+          page.
         </p>
       </div>
-      <Button nativeButton={false} render={<Link href={`/${locale}/app/dashboard`} />}>
+      <Button
+        nativeButton={false}
+        render={<Link href={`/${locale}/app/dashboard`} />}
+      >
         Retour au tableau de bord
       </Button>
     </div>

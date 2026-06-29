@@ -1,21 +1,28 @@
-'use client';
+"use client";
 
-import { AlertTriangle, Building2, CircleDollarSign, School, ShieldAlert } from 'lucide-react';
-import { Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { Building2, CircleDollarSign, School, ShieldAlert } from "lucide-react";
+import {
+  Line,
+  LineChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 
-import { PageHeader } from '@/components/layout/page-header';
-import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
-import { DataTable, type DataTableColumn } from '@/components/shared/DataTable';
-import { StatusBadge } from '@/components/shared/StatusBadge';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { PageHeader } from "@/components/layout/page-header";
+import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
+import { DataTable, type DataTableColumn } from "@/components/shared/DataTable";
+import { StatusBadge } from "@/components/shared/StatusBadge";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export type SuperadminKpi = {
   label: string;
   value: string;
-  icon: 'schools' | 'active' | 'suspended' | 'mrr';
+  icon: "schools" | "active" | "suspended" | "mrr";
 };
 
 export type SuperadminSchool = {
@@ -27,7 +34,7 @@ export type SuperadminSchool = {
 
 export type SuperadminAlert = {
   id: string;
-  level: 'CRITICAL' | 'WARNING' | 'INFO';
+  level: "CRITICAL" | "WARNING" | "INFO";
   message: string;
 };
 
@@ -36,25 +43,27 @@ export type SuperadminGrowthPoint = {
   schools: number;
 };
 
-function iconForKpi(icon: SuperadminKpi['icon']) {
+function iconForKpi(icon: SuperadminKpi["icon"]) {
   switch (icon) {
-    case 'schools':
+    case "schools":
       return Building2;
-    case 'active':
+    case "active":
       return School;
-    case 'suspended':
+    case "suspended":
       return ShieldAlert;
-    case 'mrr':
+    case "mrr":
       return CircleDollarSign;
     default:
       return Building2;
   }
 }
 
-function alertTone(level: SuperadminAlert['level']) {
-  if (level === 'CRITICAL') return 'bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-200';
-  if (level === 'WARNING') return 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200';
-  return 'bg-sky-100 text-sky-800 dark:bg-sky-900/40 dark:text-sky-200';
+function alertTone(level: SuperadminAlert["level"]) {
+  if (level === "CRITICAL")
+    return "bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-200";
+  if (level === "WARNING")
+    return "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200";
+  return "bg-sky-100 text-sky-800 dark:bg-sky-900/40 dark:text-sky-200";
 }
 
 type SuperadminDashboardViewProps = {
@@ -71,12 +80,27 @@ export function SuperadminDashboardView({
   alerts,
 }: SuperadminDashboardViewProps) {
   const columns: DataTableColumn<SuperadminSchool>[] = [
-    { key: 'name', header: 'Ecole', sortable: true, accessor: (row) => row.name },
-    { key: 'plan', header: 'Plan', sortable: true, accessor: (row) => row.plan },
-    { key: 'status', header: 'Statut', sortable: true, accessor: (row) => <StatusBadge status={row.status} /> },
     {
-      key: 'actions',
-      header: 'Actions',
+      key: "name",
+      header: "Ecole",
+      sortable: true,
+      accessor: (row) => row.name,
+    },
+    {
+      key: "plan",
+      header: "Plan",
+      sortable: true,
+      accessor: (row) => row.plan,
+    },
+    {
+      key: "status",
+      header: "Statut",
+      sortable: true,
+      accessor: (row) => <StatusBadge status={row.status} />,
+    },
+    {
+      key: "actions",
+      header: "Actions",
       accessor: (row) => (
         <ConfirmDialog
           title="Suspendre l'ecole"
@@ -84,7 +108,11 @@ export function SuperadminDashboardView({
           variant="destructive"
           confirmLabel="Suspendre"
           loadingLabel="Suspension..."
-          trigger={<Button variant="outline" size="sm">Suspendre</Button>}
+          trigger={
+            <Button variant="outline" size="sm">
+              Suspendre
+            </Button>
+          }
           onConfirm={async () => {
             await new Promise((resolve) => setTimeout(resolve, 400));
           }}
@@ -107,7 +135,9 @@ export function SuperadminDashboardView({
           return (
             <Card key={kpi.label}>
               <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="text-sm text-muted-foreground">{kpi.label}</CardTitle>
+                <CardTitle className="text-sm text-muted-foreground">
+                  {kpi.label}
+                </CardTitle>
                 <Icon className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
@@ -130,7 +160,12 @@ export function SuperadminDashboardView({
                   <XAxis dataKey="month" />
                   <YAxis allowDecimals={false} />
                   <Tooltip />
-                  <Line type="monotone" dataKey="schools" stroke="var(--color-primary)" strokeWidth={2} />
+                  <Line
+                    type="monotone"
+                    dataKey="schools"
+                    stroke="var(--color-primary)"
+                    strokeWidth={2}
+                  />
                 </LineChart>
               </ResponsiveContainer>
             </div>
@@ -152,7 +187,9 @@ export function SuperadminDashboardView({
                 <Alert key={item.id}>
                   <AlertTitle className="flex items-center justify-between gap-2">
                     <span className="truncate">Alerte</span>
-                    <Badge className={alertTone(item.level)}>{item.level}</Badge>
+                    <Badge className={alertTone(item.level)}>
+                      {item.level}
+                    </Badge>
                   </AlertTitle>
                   <AlertDescription>{item.message}</AlertDescription>
                 </Alert>

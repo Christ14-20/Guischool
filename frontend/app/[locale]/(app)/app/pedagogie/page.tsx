@@ -1,66 +1,75 @@
-'use client';
+"use client";
 
-import Link from 'next/link';
-import { useParams } from 'next/navigation';
-import { BookOpen, CalendarDays, ClipboardList, GraduationCap, Layout, ListTree, Puzzle } from 'lucide-react';
+import Link from "next/link";
+import { useParams } from "next/navigation";
+import {
+  BookOpen,
+  CalendarDays,
+  ClipboardList,
+  GraduationCap,
+  Layout,
+  ListTree,
+} from "lucide-react";
 
-import { PageHeader } from '@/components/layout/page-header';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { PageHeader } from "@/components/layout/page-header";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 const MODULES = [
   {
-    title: 'Années scolaires',
-    description: 'Gérez les années scolaires, activez ou clôturez une année.',
-    href: '/app/pedagogie/school-years',
+    title: "Années scolaires",
+    description: "Gérez les années scolaires, activez ou clôturez une année.",
+    href: "/app/pedagogie/school-years",
     icon: CalendarDays,
   },
   {
-    title: 'Niveaux',
-    description: 'Catalogue des niveaux du système éducatif guinéen.',
-    href: '/app/pedagogie/levels',
+    title: "Niveaux",
+    description: "Catalogue des niveaux du système éducatif guinéen.",
+    href: "/app/pedagogie/levels",
     icon: GraduationCap,
   },
   {
-    title: 'Filières',
-    description: 'Gérez les filières d\'études (Scientifique, Littéraire, Technique...).',
-    href: '/app/pedagogie/filieres',
+    title: "Filières",
+    description:
+      "Gérez les filières d'études (Scientifique, Littéraire, Technique...).",
+    href: "/app/pedagogie/filieres",
     icon: ListTree,
   },
   {
-    title: 'Classes',
-    description: 'Créez et gérez les classes par cycle et niveau.',
-    href: '/app/pedagogie/classes',
+    title: "Classes",
+    description: "Créez et gérez les classes par cycle et niveau.",
+    href: "/app/pedagogie/classes",
     icon: BookOpen,
   },
   {
-    title: 'Matières',
-    description: 'Définissez les matières et leur catégorie.',
-    href: '/app/pedagogie/subjects',
+    title: "Matières",
+    description: "Définissez les matières et leur catégorie.",
+    href: "/app/pedagogie/subjects",
     icon: BookOpen,
   },
   {
-    title: 'Emploi du temps',
-    description: 'Consultez et modifiez les créneaux hebdomadaires.',
-    href: '/app/pedagogie/timetable',
+    title: "Emploi du temps",
+    description: "Consultez et modifiez les créneaux hebdomadaires.",
+    href: "/app/pedagogie/timetable",
     icon: Layout,
   },
   {
-    title: 'Présences',
-    description: 'Enregistrez les présences et consultez les statistiques.',
-    href: '/app/pedagogie/attendance',
+    title: "Présences",
+    description: "Enregistrez les présences et consultez les statistiques.",
+    href: "/app/pedagogie/attendance",
     icon: ClipboardList,
   },
   {
-    title: 'Matières par classe',
-    description: 'Associez les matières aux classes avec coefficient et enseignant.',
-    href: '/app/pedagogie/class-subjects',
+    title: "Matières par classe",
+    description:
+      "Associez les matières aux classes avec coefficient et enseignant.",
+    href: "/app/pedagogie/class-subjects",
     icon: BookOpen,
   },
 ];
 
 export default function PedagogiePage() {
   const params = useParams();
-  const locale = (params?.locale as string) ?? 'fr';
+  const locale = (params?.locale as string) ?? "fr";
 
   return (
     <section className="space-y-6">
@@ -84,7 +93,9 @@ export default function PedagogiePage() {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-sm text-muted-foreground">{mod.description}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {mod.description}
+                  </p>
                 </CardContent>
               </Card>
             </Link>

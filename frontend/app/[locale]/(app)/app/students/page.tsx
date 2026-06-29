@@ -1,28 +1,39 @@
-'use client';
+"use client";
 
-import { Download, Plus, Users } from 'lucide-react';
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { useEffect, useMemo, useState } from 'react';
-import { useSession } from 'next-auth/react';
-import { toast } from 'sonner';
+import { Download, Plus, Users } from "lucide-react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
+import { useSession } from "next-auth/react";
+import { toast } from "sonner";
 
-import { PageHeader } from '@/components/layout/page-header';
-import { DataTable, type DataTableColumn } from '@/components/shared/DataTable';
-import { PermissionGate } from '@/components/shared/PermissionGate';
-import { StatusBadge } from '@/components/shared/StatusBadge';
-import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { getClasses, getSchoolYears, type ClassItem, type SchoolYearItem } from '@/lib/api/pedagogy';
-import { getStudents, type StudentItem } from '@/lib/api/students';
-import { PERMISSIONS } from '@/lib/constants';
+import { PageHeader } from "@/components/layout/page-header";
+import { DataTable, type DataTableColumn } from "@/components/shared/DataTable";
+import { PermissionGate } from "@/components/shared/PermissionGate";
+import { StatusBadge } from "@/components/shared/StatusBadge";
+import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  getClasses,
+  getSchoolYears,
+  type ClassItem,
+  type SchoolYearItem,
+} from "@/lib/api/pedagogy";
+import { getStudents, type StudentItem } from "@/lib/api/students";
+import { PERMISSIONS } from "@/lib/constants";
 
 const DEFAULT_PAGE_SIZE = 10;
 
 const STUDENT_STATUS_OPTIONS = [
-  { value: 'ACTIF', label: 'Actif' },
-  { value: 'SUSPENDU', label: 'Suspendu' },
-  { value: 'TRANSFERE', label: 'Transféré' },
-  { value: 'ARCHIVE', label: 'Archivé' },
+  { value: "ACTIF", label: "Actif" },
+  { value: "SUSPENDU", label: "Suspendu" },
+  { value: "TRANSFERE", label: "Transféré" },
+  { value: "ARCHIVE", label: "Archivé" },
 ] as const;
 
 function parsePositiveInt(value: string | null, fallback: number) {
@@ -34,7 +45,7 @@ function parsePositiveInt(value: string | null, fallback: number) {
 
 export default function StudentsPage() {
   const { data: session } = useSession();
-  const token = session?.accessToken ?? '';
+  const token = session?.accessToken ?? "";
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -45,14 +56,17 @@ export default function StudentsPage() {
   const [classes, setClasses] = useState<ClassItem[]>([]);
   const [years, setYears] = useState<SchoolYearItem[]>([]);
 
-  const page = parsePositiveInt(searchParams.get('page'), 1);
-  const pageSize = parsePositiveInt(searchParams.get('page_size'), DEFAULT_PAGE_SIZE);
-  const search = searchParams.get('search') ?? '';
-  const sortBy = searchParams.get('sort_by') ?? '';
-  const sortOrder = searchParams.get('sort_order') ?? 'asc';
-  const classFilter = searchParams.get('classe') ?? 'all';
-  const statusFilter = searchParams.get('statut') ?? 'all';
-  const yearFilter = searchParams.get('annee') ?? 'all';
+  const page = parsePositiveInt(searchParams.get("page"), 1);
+  const pageSize = parsePositiveInt(
+    searchParams.get("page_size"),
+    DEFAULT_PAGE_SIZE,
+  );
+  const search = searchParams.get("search") ?? "";
+  const sortBy = searchParams.get("sort_by") ?? "";
+  const sortOrder = searchParams.get("sort_order") ?? "asc";
+  const classFilter = searchParams.get("classe") ?? "all";
+  const statusFilter = searchParams.get("statut") ?? "all";
+  const yearFilter = searchParams.get("annee") ?? "all";
 
   useEffect(() => {
     if (!token) return;
@@ -65,7 +79,11 @@ export default function StudentsPage() {
         setYears(yearRes.results);
       })
       .catch((error) => {
-        toast.error(error instanceof Error ? error.message : 'Impossible de charger les filtres.');
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : "Impossible de charger les filtres.",
+        );
       });
 
     return () => {
@@ -74,20 +92,16 @@ export default function StudentsPage() {
   }, [token]);
 
   useEffect(() => {
-    if (!token) {
-      setLoading(false);
-      return;
-    }
+    if (!token) return;
 
     let mounted = true;
-    setLoading(true);
 
     getStudents(token, {
       page,
       page_size: pageSize,
-      classe: classFilter === 'all' ? undefined : classFilter,
-      statut: statusFilter === 'all' ? undefined : statusFilter,
-      annee: yearFilter === 'all' ? undefined : yearFilter,
+      classe: classFilter === "all" ? undefined : classFilter,
+      statut: statusFilter === "all" ? undefined : statusFilter,
+      annee: yearFilter === "all" ? undefined : yearFilter,
       search: search || undefined,
       sort_by: sortBy || undefined,
       sort_order: sortBy ? sortOrder : undefined,
@@ -98,7 +112,11 @@ export default function StudentsPage() {
         setTotal(response.count);
       })
       .catch((error) => {
-        toast.error(error instanceof Error ? error.message : 'Erreur lors du chargement des élèves.');
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : "Erreur lors du chargement des élèves.",
+        );
       })
       .finally(() => {
         if (mounted) setLoading(false);
@@ -107,63 +125,77 @@ export default function StudentsPage() {
     return () => {
       mounted = false;
     };
-  }, [token, page, pageSize, classFilter, statusFilter, yearFilter, search, sortBy, sortOrder]);
+  }, [
+    token,
+    page,
+    pageSize,
+    classFilter,
+    statusFilter,
+    yearFilter,
+    search,
+    sortBy,
+    sortOrder,
+  ]);
 
   const setFilterParam = (key: string, value: string) => {
     const params = new URLSearchParams(searchParams.toString());
-    if (value === 'all') {
+    if (value === "all") {
       params.delete(key);
     } else {
       params.set(key, value);
     }
-    params.set('page', '1');
+    params.set("page", "1");
     router.replace(`${pathname}?${params.toString()}`);
   };
 
   const columns = useMemo<DataTableColumn<StudentItem>[]>(
     () => [
       {
-        key: 'matricule',
-        header: 'Matricule',
+        key: "matricule",
+        header: "Matricule",
         sortable: true,
-        className: 'font-medium',
-        accessor: (row) => row.matricule || '—',
+        className: "font-medium",
+        accessor: (row) => row.matricule || "—",
       },
       {
-        key: 'nom_complet',
-        header: 'Nom complet',
+        key: "nom_complet",
+        header: "Nom complet",
         sortable: true,
-        accessor: (row) => row.full_name || '—',
+        accessor: (row) => row.full_name || "—",
       },
       {
-        key: 'classe',
-        header: 'Classe',
+        key: "classe",
+        header: "Classe",
         sortable: true,
-        accessor: (row) => row.classe_name || '—',
+        accessor: (row) => row.classe_name || "—",
       },
       {
-        key: 'statut',
-        header: 'Statut',
+        key: "statut",
+        header: "Statut",
         sortable: true,
-        accessor: (row) => <StatusBadge status={row.status} className="uppercase" />,
+        accessor: (row) => (
+          <StatusBadge status={row.status} className="uppercase" />
+        ),
       },
       {
-        key: 'tuteur',
-        header: 'Tuteur',
+        key: "tuteur",
+        header: "Tuteur",
         accessor: (row) =>
           row.guardian_phone ? (
             <div className="space-y-0.5">
-              <p>{row.guardian_name || '—'}</p>
-              <p className="text-xs text-muted-foreground">{row.guardian_phone}</p>
+              <p>{row.guardian_name || "—"}</p>
+              <p className="text-xs text-muted-foreground">
+                {row.guardian_phone}
+              </p>
             </div>
           ) : (
-            row.guardian_name || '—'
+            row.guardian_name || "—"
           ),
       },
       {
-        key: 'actions',
-        header: 'Actions',
-        className: 'text-right',
+        key: "actions",
+        header: "Actions",
+        className: "text-right",
         accessor: (row) => (
           <Button
             type="button"
@@ -179,16 +211,23 @@ export default function StudentsPage() {
         ),
       },
     ],
-    [pathname, router]
+    [pathname, router],
   );
 
   const handleExportCsv = () => {
     if (students.length === 0) {
-      toast.info('Aucune donnée à exporter.');
+      toast.info("Aucune donnée à exporter.");
       return;
     }
 
-    const headers = ['Matricule', 'Nom complet', 'Classe', 'Statut', 'Tuteur', 'Téléphone tuteur'];
+    const headers = [
+      "Matricule",
+      "Nom complet",
+      "Classe",
+      "Statut",
+      "Tuteur",
+      "Téléphone tuteur",
+    ];
     const lines = students.map((student) => [
       student.matricule,
       student.full_name,
@@ -201,14 +240,14 @@ export default function StudentsPage() {
     const csv = [headers, ...lines]
       .map((line) =>
         line
-          .map((cell) => `"${String(cell ?? '').replace(/"/g, '""')}"`)
-          .join(',')
+          .map((cell) => `"${String(cell ?? "").replace(/"/g, '""')}"`)
+          .join(","),
       )
-      .join('\n');
+      .join("\n");
 
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
+    const link = document.createElement("a");
     const date = new Date().toISOString().slice(0, 10);
     link.href = url;
     link.download = `eleves-${date}.csv`;
@@ -230,7 +269,10 @@ export default function StudentsPage() {
               Export CSV
             </Button>
             <PermissionGate permission={PERMISSIONS.STUDENT_CREATE}>
-              <Button type="button" onClick={() => router.push(`${pathname}/new`)}>
+              <Button
+                type="button"
+                onClick={() => router.push(`${pathname}/new`)}
+              >
                 <Plus className="mr-2 h-4 w-4" />
                 Inscrire un élève
               </Button>
@@ -240,7 +282,10 @@ export default function StudentsPage() {
       />
 
       <div className="flex flex-wrap items-center gap-3 rounded-xl border bg-card p-3">
-        <Select value={classFilter} onValueChange={(value) => setFilterParam('classe', value ?? 'all')}>
+        <Select
+          value={classFilter}
+          onValueChange={(value) => setFilterParam("classe", value ?? "all")}
+        >
           <SelectTrigger className="w-44">
             <SelectValue placeholder="Classe" />
           </SelectTrigger>
@@ -254,7 +299,10 @@ export default function StudentsPage() {
           </SelectContent>
         </Select>
 
-        <Select value={statusFilter} onValueChange={(value) => setFilterParam('statut', value ?? 'all')}>
+        <Select
+          value={statusFilter}
+          onValueChange={(value) => setFilterParam("statut", value ?? "all")}
+        >
           <SelectTrigger className="w-44">
             <SelectValue placeholder="Statut" />
           </SelectTrigger>
@@ -268,7 +316,10 @@ export default function StudentsPage() {
           </SelectContent>
         </Select>
 
-        <Select value={yearFilter} onValueChange={(value) => setFilterParam('annee', value ?? 'all')}>
+        <Select
+          value={yearFilter}
+          onValueChange={(value) => setFilterParam("annee", value ?? "all")}
+        >
           <SelectTrigger className="w-44">
             <SelectValue placeholder="Année scolaire" />
           </SelectTrigger>

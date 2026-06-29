@@ -1,13 +1,13 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { format } from 'date-fns';
-import { fr } from 'date-fns/locale';
-import { Activity, Search } from 'lucide-react';
+import { useEffect, useState } from "react";
+import { format } from "date-fns";
+import { fr } from "date-fns/locale";
+import { Activity, Search } from "lucide-react";
 
-import { DataTable, type DataTableColumn } from '@/components/shared/DataTable';
-import { Input } from '@/components/ui/input';
-import { getAuditLogs, type AuditLogItem } from '@/lib/api/settings';
+import { DataTable, type DataTableColumn } from "@/components/shared/DataTable";
+import { Input } from "@/components/ui/input";
+import { getAuditLogs, type AuditLogItem } from "@/lib/api/settings";
 
 interface AuditTableProps {
   token: string;
@@ -16,7 +16,7 @@ interface AuditTableProps {
 export function AuditTable({ token }: AuditTableProps) {
   const [logs, setLogs] = useState<AuditLogItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState("");
 
   useEffect(() => {
     if (!token) return;
@@ -36,35 +36,38 @@ export function AuditTable({ token }: AuditTableProps) {
     loadLogs();
   }, [token]);
 
-  const filteredLogs = logs.filter(log => 
-    log.user_name.toLowerCase().includes(search.toLowerCase()) ||
-    log.action.toLowerCase().includes(search.toLowerCase()) ||
-    log.entity_name.toLowerCase().includes(search.toLowerCase())
+  const filteredLogs = logs.filter(
+    (log) =>
+      log.user_name.toLowerCase().includes(search.toLowerCase()) ||
+      log.action.toLowerCase().includes(search.toLowerCase()) ||
+      log.entity_name.toLowerCase().includes(search.toLowerCase()),
   );
 
   const columns: DataTableColumn<AuditLogItem>[] = [
     {
-      key: 'timestamp',
-      header: 'Date & Heure',
+      key: "timestamp",
+      header: "Date & Heure",
       accessor: (log) => (
         <span className="text-xs text-muted-foreground">
-          {format(new Date(log.timestamp), 'Pp', { locale: fr })}
+          {format(new Date(log.timestamp), "Pp", { locale: fr })}
         </span>
       ),
     },
     {
-      key: 'user',
-      header: 'Utilisateur',
+      key: "user",
+      header: "Utilisateur",
       accessor: (log) => (
         <div className="flex flex-col">
           <span className="font-medium text-sm">{log.user_name}</span>
-          <span className="text-[10px] text-muted-foreground">{log.ip_address}</span>
+          <span className="text-[10px] text-muted-foreground">
+            {log.ip_address}
+          </span>
         </div>
       ),
     },
     {
-      key: 'action',
-      header: 'Action',
+      key: "action",
+      header: "Action",
       accessor: (log) => (
         <div className="flex items-center gap-2">
           <span className="text-xs font-semibold uppercase tracking-wider text-primary/80">
@@ -74,15 +77,18 @@ export function AuditTable({ token }: AuditTableProps) {
       ),
     },
     {
-      key: 'entity',
-      header: 'Entité',
+      key: "entity",
+      header: "Entité",
       accessor: (log) => <span className="text-sm">{log.entity_name}</span>,
     },
     {
-      key: 'description',
-      header: 'Description',
+      key: "description",
+      header: "Description",
       accessor: (log) => (
-        <span className="text-xs text-muted-foreground line-clamp-1 max-w-[200px]" title={log.description}>
+        <span
+          className="text-xs text-muted-foreground line-clamp-1 max-w-[200px]"
+          title={log.description}
+        >
           {log.description}
         </span>
       ),

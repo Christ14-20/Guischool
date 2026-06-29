@@ -1,25 +1,25 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { useSession } from 'next-auth/react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { toast } from 'sonner';
-import { LayoutGrid, List, Users } from 'lucide-react';
+import { useCallback, useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
+import { useForm, type Resolver } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { toast } from "sonner";
+import { LayoutGrid, List, Users } from "lucide-react";
 
-import { PageHeader } from '@/components/layout/page-header';
-import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { PageHeader } from "@/components/layout/page-header";
+import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
+} from "@/components/ui/dialog";
 import {
   Form,
   FormControl,
@@ -28,11 +28,17 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import {
   Table,
   TableBody,
@@ -40,7 +46,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
+} from "@/components/ui/table";
 import {
   type ClassItem,
   type LevelItem,
@@ -54,35 +60,44 @@ import {
   getSchoolYears,
   getFilieres,
   updateClass,
-} from '@/lib/api/pedagogy';
+} from "@/lib/api/pedagogy";
 
 const schema = z.object({
-  name: z.string().min(1, 'Le nom est requis.'),
-  school_year: z.string().min(1, 'L\'année scolaire est requise.'),
-  level: z.string().min(1, 'Le niveau est requis.'),
+  name: z.string().min(1, "Le nom est requis."),
+  school_year: z.string().min(1, "L'année scolaire est requise."),
+  level: z.string().min(1, "Le niveau est requis."),
   filiere: z.string().optional(),
-  capacity: z.coerce.number().min(1, 'La capacité doit être au moins 1.'),
+  capacity: z.coerce.number().min(1, "La capacité doit être au moins 1."),
   room: z.string().optional(),
   is_mixed: z.boolean().optional(),
   extra_levels: z.array(z.string()).optional(),
 });
 
 type FormValues = z.infer<typeof schema>;
-type ViewMode = 'grid' | 'list';
-type DialogMode = { type: 'create' } | { type: 'edit'; classe: ClassItem };
+type ViewMode = "grid" | "list";
+type DialogMode = { type: "create" } | { type: "edit"; classe: ClassItem };
 
 const CYCLE_LABELS: Record<string, string> = {
-  MATERNELLE: 'Maternelle',
-  PRIMAIRE: 'Primaire',
-  CQP: 'CQP (BEP/CAP)',
-  COLLEGE: 'Collège',
-  LYCEE_GEN: 'Lycée Général',
-  LYCEE_TECH: 'Lycée Technique',
-  ETFP_A: 'ETFP A',
-  ETFP_B: 'ETFP B',
+  MATERNELLE: "Maternelle",
+  PRIMAIRE: "Primaire",
+  CQP: "CQP (BEP/CAP)",
+  COLLEGE: "Collège",
+  LYCEE_GEN: "Lycée Général",
+  LYCEE_TECH: "Lycée Technique",
+  ETFP_A: "ETFP A",
+  ETFP_B: "ETFP B",
 };
 
-const CYCLES = ['MATERNELLE', 'PRIMAIRE', 'CQP', 'COLLEGE', 'LYCEE_GEN', 'LYCEE_TECH', 'ETFP_A', 'ETFP_B'] as const;
+const CYCLES = [
+  "MATERNELLE",
+  "PRIMAIRE",
+  "CQP",
+  "COLLEGE",
+  "LYCEE_GEN",
+  "LYCEE_TECH",
+  "ETFP_A",
+  "ETFP_B",
+] as const;
 
 export default function ClassesPage() {
   const { data: session } = useSession();
@@ -91,18 +106,16 @@ export default function ClassesPage() {
   const [levels, setLevels] = useState<LevelItem[]>([]);
   const [filieres, setFilieres] = useState<FiliereItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [cycleFilter, setCycleFilter] = useState<string>('all');
-  const [filiereFilter, setFiliereFilter] = useState<string>('all');
-  const [viewMode, setViewMode] = useState<ViewMode>('grid');
+  const [cycleFilter, setCycleFilter] = useState<string>("all");
+  const [filiereFilter, setFiliereFilter] = useState<string>("all");
+  const [viewMode, setViewMode] = useState<ViewMode>("grid");
   const [refreshKey, setRefreshKey] = useState(0);
   const [dialogMode, setDialogMode] = useState<DialogMode | null>(null);
 
-  const token = session?.accessToken ?? '';
+  const token = session?.accessToken ?? "";
 
-  useEffect(() => {
-    if (!token) { setLoading(false); return; }
-    let mounted = true;
-    setLoading(true);
+  const load = useCallback(() => {
+    if (!token) return;
     Promise.all([
       getClasses(token),
       getSchoolYears(token),
@@ -110,30 +123,29 @@ export default function ClassesPage() {
       getFilieres(token),
     ])
       .then(([classRes, yearRes, levelRes, filiereRes]) => {
-        if (!mounted) return;
         setClasses(classRes.results);
         setYears(yearRes.results);
         setLevels(levelRes.results);
         setFilieres(filiereRes.results);
       })
-      .catch((e) => toast.error(e instanceof Error ? e.message : 'Erreur de chargement.'))
-      .finally(() => { if (mounted) setLoading(false); });
-    return () => { mounted = false; };
-  }, [token, refreshKey]);
+      .catch((e) =>
+        toast.error(e instanceof Error ? e.message : "Erreur de chargement."),
+      )
+      .finally(() => setLoading(false));
+  }, [token]);
+
+  useEffect(() => {
+    load();
+  }, [load, refreshKey]);
 
   const refresh = () => setRefreshKey((k) => k + 1);
 
-  const levelsByCycle = levels.reduce<Record<string, LevelItem[]>>((acc, l) => {
-    acc[l.cycle] = [...(acc[l.cycle] ?? []), l];
-    return acc;
-  }, {});
-
   const filteredClasses = classes.filter((c) => {
-    if (cycleFilter !== 'all') {
+    if (cycleFilter !== "all") {
       const level = levels.find((l) => l.id === c.level);
       if (level?.cycle !== cycleFilter) return false;
     }
-    if (filiereFilter !== 'all') {
+    if (filiereFilter !== "all") {
       if (String(c.filiere) !== filiereFilter) return false;
     }
     return true;
@@ -145,7 +157,7 @@ export default function ClassesPage() {
       toast.success(`Classe "${classe.name}" archivée.`);
       refresh();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Erreur.');
+      toast.error(e instanceof Error ? e.message : "Erreur.");
     }
   };
 
@@ -153,19 +165,19 @@ export default function ClassesPage() {
     if (!token) return;
 
     const presets = [
-      { cycle: 'PRIMAIRE', name: 'CP1', order_index: 1 },
-      { cycle: 'PRIMAIRE', name: 'CP2', order_index: 2 },
-      { cycle: 'PRIMAIRE', name: 'CE1', order_index: 3 },
-      { cycle: 'PRIMAIRE', name: 'CE2', order_index: 4 },
-      { cycle: 'PRIMAIRE', name: 'CM1', order_index: 5 },
-      { cycle: 'PRIMAIRE', name: 'CM2', order_index: 6 },
-      { cycle: 'COLLEGE', name: '7e', order_index: 1 },
-      { cycle: 'COLLEGE', name: '8e', order_index: 2 },
-      { cycle: 'COLLEGE', name: '9e', order_index: 3 },
-      { cycle: 'COLLEGE', name: '10e', order_index: 4 },
-      { cycle: 'LYCEE', name: '11e', order_index: 1 },
-      { cycle: 'LYCEE', name: '12e', order_index: 2 },
-      { cycle: 'LYCEE', name: 'Terminale', order_index: 3 },
+      { cycle: "PRIMAIRE", name: "CP1", order_index: 1 },
+      { cycle: "PRIMAIRE", name: "CP2", order_index: 2 },
+      { cycle: "PRIMAIRE", name: "CE1", order_index: 3 },
+      { cycle: "PRIMAIRE", name: "CE2", order_index: 4 },
+      { cycle: "PRIMAIRE", name: "CM1", order_index: 5 },
+      { cycle: "PRIMAIRE", name: "CM2", order_index: 6 },
+      { cycle: "COLLEGE", name: "7e", order_index: 1 },
+      { cycle: "COLLEGE", name: "8e", order_index: 2 },
+      { cycle: "COLLEGE", name: "9e", order_index: 3 },
+      { cycle: "COLLEGE", name: "10e", order_index: 4 },
+      { cycle: "LYCEE", name: "11e", order_index: 1 },
+      { cycle: "LYCEE", name: "12e", order_index: 2 },
+      { cycle: "LYCEE", name: "Terminale", order_index: 3 },
     ] as const;
 
     try {
@@ -175,13 +187,17 @@ export default function ClassesPage() {
             cycle: item.cycle,
             name: item.name,
             order_index: item.order_index,
-          })
-        )
+          }),
+        ),
       );
-      toast.success('Niveaux par défaut initialisés.');
+      toast.success("Niveaux par défaut initialisés.");
       refresh();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Impossible d\'initialiser les niveaux.');
+      toast.error(
+        e instanceof Error
+          ? e.message
+          : "Impossible d'initialiser les niveaux.",
+      );
     }
   };
 
@@ -191,13 +207,18 @@ export default function ClassesPage() {
         title="Classes"
         description="Gérez les classes de l'établissement."
         actions={
-          <Button onClick={() => setDialogMode({ type: 'create' })}>Nouvelle classe</Button>
+          <Button onClick={() => setDialogMode({ type: "create" })}>
+            Nouvelle classe
+          </Button>
         }
       />
 
       {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-3 rounded-lg border bg-card p-3">
-        <Select value={cycleFilter} onValueChange={(v) => setCycleFilter(v ?? 'all')}>
+        <Select
+          value={cycleFilter}
+          onValueChange={(v) => setCycleFilter(v ?? "all")}
+        >
           <SelectTrigger className="w-40">
             <SelectValue placeholder="Cycle" />
           </SelectTrigger>
@@ -209,7 +230,10 @@ export default function ClassesPage() {
           </SelectContent>
         </Select>
 
-        <Select value={filiereFilter} onValueChange={(v) => setFiliereFilter(v ?? 'all')}>
+        <Select
+          value={filiereFilter}
+          onValueChange={(v) => setFiliereFilter(v ?? "all")}
+        >
           <SelectTrigger className="w-44">
             <SelectValue placeholder="Filière" />
           </SelectTrigger>
@@ -226,20 +250,20 @@ export default function ClassesPage() {
         <div className="ml-auto flex items-center rounded-lg border bg-background p-1">
           <Button
             type="button"
-            variant={viewMode === 'grid' ? 'default' : 'ghost'}
+            variant={viewMode === "grid" ? "default" : "ghost"}
             size="sm"
             className="h-8 px-2"
-            onClick={() => setViewMode('grid')}
+            onClick={() => setViewMode("grid")}
             aria-label="Vue grille"
           >
             <LayoutGrid className="h-4 w-4" />
           </Button>
           <Button
             type="button"
-            variant={viewMode === 'list' ? 'default' : 'ghost'}
+            variant={viewMode === "list" ? "default" : "ghost"}
             size="sm"
             className="h-8 px-2"
-            onClick={() => setViewMode('list')}
+            onClick={() => setViewMode("list")}
             aria-label="Vue liste"
           >
             <List className="h-4 w-4" />
@@ -249,9 +273,12 @@ export default function ClassesPage() {
 
       {!loading && levels.length === 0 && (
         <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
-          <p className="mb-2 font-medium">Aucun niveau n'est disponible.</p>
+          <p className="mb-2 font-medium">
+            Aucun niveau n&apos;est disponible.
+          </p>
           <p className="mb-3 text-amber-800">
-            Initialisez les niveaux de base pour pouvoir sélectionner un niveau lors de la création d'une classe.
+            Initialisez les niveaux de base pour pouvoir sélectionner un niveau
+            lors de la création d&apos;une classe.
           </p>
           <Button type="button" onClick={handleInitDefaultLevels}>
             Initialiser les niveaux par défaut
@@ -262,8 +289,10 @@ export default function ClassesPage() {
       {loading ? (
         <p className="py-8 text-center text-muted-foreground">Chargement...</p>
       ) : filteredClasses.length === 0 ? (
-        <p className="py-8 text-center text-muted-foreground">Aucune classe trouvée.</p>
-      ) : viewMode === 'grid' ? (
+        <p className="py-8 text-center text-muted-foreground">
+          Aucune classe trouvée.
+        </p>
+      ) : viewMode === "grid" ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {filteredClasses.map((c) => {
             const isOverloaded = c.current_count > c.capacity;
@@ -281,30 +310,35 @@ export default function ClassesPage() {
                         </Badge>
                       )}
                       {isOverloaded && (
-                        <Badge variant="destructive" className="text-xs">Surcharge</Badge>
+                        <Badge variant="destructive" className="text-xs">
+                          Surcharge
+                        </Badge>
                       )}
                     </div>
                   </div>
-{level && (
-                     <p className="text-xs text-muted-foreground">
-                       {c.is_mixed
-                         ? c.mixed_levels?.length
-                           ? `${level.name}, ${c.mixed_levels.map((ml) => ml.level_name).join(', ')}`
-                           : `${level.name} + niveaux`
-                         : `${level.name} — ${CYCLE_LABELS[level.cycle] ?? level.cycle}`
-                       }
-                     </p>
-                   )}
-                   {c.filiere_name && (
-                     <p className="text-xs text-muted-foreground">
-                       Filière : {c.filiere_name}
-                     </p>
-                   )}
-                 </CardHeader>
+                  {level && (
+                    <p className="text-xs text-muted-foreground">
+                      {c.is_mixed
+                        ? c.mixed_levels?.length
+                          ? `${level.name}, ${c.mixed_levels.map((ml) => ml.level_name).join(", ")}`
+                          : `${level.name} + niveaux`
+                        : `${level.name} — ${CYCLE_LABELS[level.cycle] ?? level.cycle}`}
+                    </p>
+                  )}
+                  {c.filiere_name && (
+                    <p className="text-xs text-muted-foreground">
+                      Filière : {c.filiere_name}
+                    </p>
+                  )}
+                </CardHeader>
                 <CardContent className="space-y-2 text-sm">
                   <div className="flex items-center justify-between">
                     <span className="text-muted-foreground">Effectif</span>
-                    <span className={isOverloaded ? 'font-semibold text-destructive' : ''}>
+                    <span
+                      className={
+                        isOverloaded ? "font-semibold text-destructive" : ""
+                      }
+                    >
                       {c.current_count} / {c.capacity}
                     </span>
                   </div>
@@ -315,14 +349,22 @@ export default function ClassesPage() {
                     </div>
                   )}
                   <div className="flex justify-end gap-2 pt-2">
-                    <Button variant="outline" size="sm" onClick={() => setDialogMode({ type: 'edit', classe: c })}>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setDialogMode({ type: "edit", classe: c })}
+                    >
                       Modifier
                     </Button>
                     <ConfirmDialog
                       title="Archiver la classe"
                       description={`Confirmer l'archivage de la classe "${c.name}" ?`}
                       variant="destructive"
-                      trigger={<Button variant="destructive" size="sm">Archiver</Button>}
+                      trigger={
+                        <Button variant="destructive" size="sm">
+                          Archiver
+                        </Button>
+                      }
                       confirmLabel="Archiver"
                       loadingLabel="Archivage..."
                       onConfirm={() => handleDelete(c)}
@@ -363,32 +405,47 @@ export default function ClassesPage() {
                     </TableCell>
                     <TableCell>
                       {c.is_mixed && c.mixed_levels?.length
-                        ? `${level?.name ?? '?'}, ${c.mixed_levels.map((ml) => ml.level_name).join(', ')}`
+                        ? `${level?.name ?? "?"}, ${c.mixed_levels.map((ml) => ml.level_name).join(", ")}`
                         : level
                           ? `${level.name} / ${CYCLE_LABELS[level.cycle] ?? level.cycle}`
-                          : '—'
-                      }
+                          : "—"}
                     </TableCell>
-                    <TableCell>{c.filiere_name || '—'}</TableCell>
+                    <TableCell>{c.filiere_name || "—"}</TableCell>
                     <TableCell>
-                      <span className={isOverloaded ? 'font-semibold text-destructive' : ''}>
+                      <span
+                        className={
+                          isOverloaded ? "font-semibold text-destructive" : ""
+                        }
+                      >
                         {c.current_count} / {c.capacity}
                         {isOverloaded && (
-                          <Badge variant="destructive" className="ml-2 text-xs">Surcharge</Badge>
+                          <Badge variant="destructive" className="ml-2 text-xs">
+                            Surcharge
+                          </Badge>
                         )}
                       </span>
                     </TableCell>
-                    <TableCell>{c.room || '—'}</TableCell>
+                    <TableCell>{c.room || "—"}</TableCell>
                     <TableCell>
                       <div className="flex justify-end gap-2">
-                        <Button variant="outline" size="sm" onClick={() => setDialogMode({ type: 'edit', classe: c })}>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() =>
+                            setDialogMode({ type: "edit", classe: c })
+                          }
+                        >
                           Modifier
                         </Button>
                         <ConfirmDialog
                           title="Archiver la classe"
                           description={`Confirmer l'archivage de la classe "${c.name}" ?`}
                           variant="destructive"
-                          trigger={<Button variant="destructive" size="sm">Archiver</Button>}
+                          trigger={
+                            <Button variant="destructive" size="sm">
+                              Archiver
+                            </Button>
+                          }
                           confirmLabel="Archiver"
                           loadingLabel="Archivage..."
                           onConfirm={() => handleDelete(c)}
@@ -411,7 +468,10 @@ export default function ClassesPage() {
           levels={levels}
           filieres={filieres}
           onClose={() => setDialogMode(null)}
-          onSuccess={() => { setDialogMode(null); refresh(); }}
+          onSuccess={() => {
+            setDialogMode(null);
+            refresh();
+          }}
         />
       )}
     </section>
@@ -437,18 +497,18 @@ function ClassFormDialog({
   onClose: () => void;
   onSuccess: () => void;
 }) {
-  const isEditing = mode.type === 'edit';
+  const isEditing = mode.type === "edit";
   const classe = isEditing ? mode.classe : null;
 
   const form = useForm<FormValues>({
-    resolver: zodResolver(schema) as any,
+    resolver: zodResolver(schema) as unknown as Resolver<FormValues>,
     defaultValues: {
-      name: classe?.name ?? '',
-      school_year: classe?.school_year ? String(classe.school_year) : '',
-      level: classe?.level ? String(classe.level) : '',
-      filiere: classe?.filiere ? String(classe.filiere) : '',
+      name: classe?.name ?? "",
+      school_year: classe?.school_year ? String(classe.school_year) : "",
+      level: classe?.level ? String(classe.level) : "",
+      filiere: classe?.filiere ? String(classe.filiere) : "",
       capacity: classe?.capacity ?? 40,
-      room: classe?.room ?? '',
+      room: classe?.room ?? "",
       is_mixed: false,
       extra_levels: [],
     },
@@ -461,37 +521,41 @@ function ClassFormDialog({
         school_year: Number(values.school_year),
         level: Number(values.level),
         capacity: values.capacity,
-        room: values.room ?? '',
+        room: values.room ?? "",
       };
       if (values.filiere) {
         body.filiere = Number(values.filiere);
       }
-      if (values.is_mixed && values.extra_levels && values.extra_levels.length > 0) {
+      if (
+        values.is_mixed &&
+        values.extra_levels &&
+        values.extra_levels.length > 0
+      ) {
         body.is_mixed = true;
         body.extra_levels = values.extra_levels.map(Number);
-        body.mix_type = 'ALTERNATE_DAY';
+        body.mix_type = "ALTERNATE_DAY";
         body.repartition = {};
       }
       if (isEditing && classe) {
         await updateClass(token, classe.id, body);
-        toast.success('Classe modifiée.');
+        toast.success("Classe modifiée.");
       } else {
         await createClass(token, body);
-        toast.success('Classe créée.');
+        toast.success("Classe créée.");
       }
       onSuccess();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Erreur.');
+      toast.error(e instanceof Error ? e.message : "Erreur.");
     }
   };
-
-  const CYCLES = ['MATERNELLE', 'PRIMAIRE', 'CQP', 'COLLEGE', 'LYCEE_GEN', 'LYCEE_TECH', 'ETFP_A', 'ETFP_B'] as const;
 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>{isEditing ? 'Modifier la classe' : 'Nouvelle classe'}</DialogTitle>
+          <DialogTitle>
+            {isEditing ? "Modifier la classe" : "Nouvelle classe"}
+          </DialogTitle>
         </DialogHeader>
 
         <Form {...form}>
@@ -526,7 +590,7 @@ function ClassFormDialog({
                       {years.map((y) => (
                         <SelectItem key={y.id} value={String(y.id)}>
                           {y.label}
-                          {y.is_current ? ' (courante)' : ''}
+                          {y.is_current ? " (courante)" : ""}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -550,129 +614,147 @@ function ClassFormDialog({
                     </FormControl>
                     <SelectContent>
                       {CYCLES.map((cycle) => {
-                        const cycleItems = levels.filter((l) => l.cycle === cycle);
+                        const cycleItems = levels.filter(
+                          (l) => l.cycle === cycle,
+                        );
                         if (cycleItems.length === 0) return null;
                         return (
                           <div key={cycle}>
                             <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
                               {CYCLE_LABELS[cycle]}
                             </div>
-{cycleItems.map((l) => (
-                               <SelectItem key={l.id} value={String(l.id)}>
-                                 {l.name}
-                               </SelectItem>
-                             ))}
-                           </div>
-                         );
-                       })}
-                     </SelectContent>
-                   </Select>
-                   <FormMessage />
-                 </FormItem>
-               )}
-             />
-
-             <FormField
-               control={form.control}
-               name="filiere"
-               render={({ field }) => (
-                 <FormItem>
-                   <FormLabel>Filière (optionnel)</FormLabel>
-                   <Select value={field.value ?? ''} onValueChange={(value) => field.onChange(value === '' ? undefined : value)}>
-                     <FormControl>
-                       <SelectTrigger>
-                         <SelectValue placeholder="Aucune filière" />
-                       </SelectTrigger>
-                     </FormControl>
-                     <SelectContent>
-                       <SelectItem value="">Aucune</SelectItem>
-                         {filieres.map((f) => (
-                           <SelectItem key={f.id} value={String(f.id)}>
-                             {f.name} ({f.code})
-                           </SelectItem>
-                         ))}
-                       </SelectContent>
-                   </Select>
-                   <FormDescription>
-                     Pour les classes de lycée uniquement.
-                   </FormDescription>
-                   <FormMessage />
-                 </FormItem>
-               )}
-              />
- 
-              <div className="flex items-center gap-3 rounded-lg border p-3">
-                <FormField
-                  control={form.control}
-                  name="is_mixed"
-                  render={({ field }) => (
-                    <FormItem className="flex items-center gap-2 space-y-0">
-                      <FormControl>
-                        <Switch
-                          checked={field.value ?? false}
-                          onCheckedChange={field.onChange}
-                          disabled={isEditing}
-                        />
-                      </FormControl>
-                      <FormLabel className="cursor-pointer">Classe mixte (multi-niveaux)</FormLabel>
-                    </FormItem>
-                  )}
-                />
-              </div>
- 
-              {form.watch('is_mixed') && (
-                <FormField
-                  control={form.control}
-                  name="extra_levels"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Niveaux supplémentaires</FormLabel>
-                      <div className="space-y-1">
-                        {levels
-                          .filter((l) => String(l.id) !== form.watch('level'))
-                          .map((l) => (
-                            <Label
-                              key={l.id}
-                              className="flex items-center gap-2 rounded-md border p-2 has-[:checked]:border-primary has-[:checked]:bg-primary/5"
-                            >
-                              <input
-                                type="checkbox"
-                                className="h-4 w-4 accent-primary"
-                                value={String(l.id)}
-                                checked={field.value?.includes(String(l.id)) ?? false}
-                                onChange={(e) => {
-                                  const current = field.value ?? [];
-                                  if (e.target.checked) {
-                                    field.onChange([...current, e.target.value]);
-                                  } else {
-                                    field.onChange(current.filter((v) => v !== e.target.value));
-                                  }
-                                }}
-                              />
-                              {l.name}
-                            </Label>
-                          ))}
-                      </div>
-                      {(field.value?.length ?? 0) + 1 > 2 && (
-                        <p className="text-xs text-amber-600 font-medium">
-                          ⚠️ Au-delà de 2 niveaux, une validation inspection est requise.
-                        </p>
-                      )}
-                      {field.value?.length === 0 && (
-                        <FormDescription>
-                          Sélectionnez au moins un niveau à combiner dans cette classe.
-                        </FormDescription>
-                      )}
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                            {cycleItems.map((l) => (
+                              <SelectItem key={l.id} value={String(l.id)}>
+                                {l.name}
+                              </SelectItem>
+                            ))}
+                          </div>
+                        );
+                      })}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
               )}
- 
-              <div className="grid grid-cols-2 gap-4">
-               <FormField
-                 control={form.control}
-                 name="capacity"
+            />
+
+            <FormField
+              control={form.control}
+              name="filiere"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Filière (optionnel)</FormLabel>
+                  <Select
+                    value={field.value ?? ""}
+                    onValueChange={(value) =>
+                      field.onChange(value === "" ? undefined : value)
+                    }
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Aucune filière" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="">Aucune</SelectItem>
+                      {filieres.map((f) => (
+                        <SelectItem key={f.id} value={String(f.id)}>
+                          {f.name} ({f.code})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormDescription>
+                    Pour les classes de lycée uniquement.
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <div className="flex items-center gap-3 rounded-lg border p-3">
+              <FormField
+                control={form.control}
+                name="is_mixed"
+                render={({ field }) => (
+                  <FormItem className="flex items-center gap-2 space-y-0">
+                    <FormControl>
+                      <Switch
+                        checked={field.value ?? false}
+                        onCheckedChange={field.onChange}
+                        disabled={isEditing}
+                      />
+                    </FormControl>
+                    <FormLabel className="cursor-pointer">
+                      Classe mixte (multi-niveaux)
+                    </FormLabel>
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            {form.watch("is_mixed") && (
+              <FormField
+                control={form.control}
+                name="extra_levels"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Niveaux supplémentaires</FormLabel>
+                    <div className="space-y-1">
+                      {levels
+                        .filter((l) => {
+                          // eslint-disable-next-line react-hooks/incompatible-library
+                          return String(l.id) !== form.watch("level");
+                        })
+                        .map((l) => (
+                          <Label
+                            key={l.id}
+                            className="flex items-center gap-2 rounded-md border p-2 has-[:checked]:border-primary has-[:checked]:bg-primary/5"
+                          >
+                            <input
+                              type="checkbox"
+                              className="h-4 w-4 accent-primary"
+                              value={String(l.id)}
+                              checked={
+                                field.value?.includes(String(l.id)) ?? false
+                              }
+                              onChange={(e) => {
+                                const current = field.value ?? [];
+                                if (e.target.checked) {
+                                  field.onChange([...current, e.target.value]);
+                                } else {
+                                  field.onChange(
+                                    current.filter((v) => v !== e.target.value),
+                                  );
+                                }
+                              }}
+                            />
+                            {l.name}
+                          </Label>
+                        ))}
+                    </div>
+                    {(field.value?.length ?? 0) + 1 > 2 && (
+                      <p className="text-xs text-amber-600 font-medium">
+                        ⚠️ Au-delà de 2 niveaux, une validation inspection est
+                        requise.
+                      </p>
+                    )}
+                    {field.value?.length === 0 && (
+                      <FormDescription>
+                        Sélectionnez au moins un niveau à combiner dans cette
+                        classe.
+                      </FormDescription>
+                    )}
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
+
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="capacity"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Capacité max</FormLabel>
@@ -703,7 +785,11 @@ function ClassFormDialog({
                 Annuler
               </Button>
               <Button type="submit" disabled={form.formState.isSubmitting}>
-                {form.formState.isSubmitting ? 'Enregistrement...' : isEditing ? 'Modifier' : 'Créer'}
+                {form.formState.isSubmitting
+                  ? "Enregistrement..."
+                  : isEditing
+                    ? "Modifier"
+                    : "Créer"}
               </Button>
             </DialogFooter>
           </form>

@@ -1,16 +1,16 @@
-'use client';
+"use client";
 
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useParams, useRouter } from 'next/navigation';
-import { useEffect, useMemo, useState } from 'react';
-import { useSession } from 'next-auth/react';
-import { useForm } from 'react-hook-form';
-import { toast } from 'sonner';
-import { z } from 'zod';
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useParams, useRouter } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
+import { useSession } from "next-auth/react";
+import { useForm } from "react-hook-form";
+import { toast } from "sonner";
+import { z } from "zod";
 
-import { PageHeader } from '@/components/layout/page-header';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { PageHeader } from "@/components/layout/page-header";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Form,
   FormControl,
@@ -19,26 +19,32 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
-import { createSchool, getPlans, getSchools } from '@/lib/api/superadmin';
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { createSchool, getPlans, getSchools } from "@/lib/api/superadmin";
 
 const schema = z.object({
-  name: z.string().min(3, 'Le nom doit contenir au moins 3 caracteres.'),
+  name: z.string().min(3, "Le nom doit contenir au moins 3 caracteres."),
   slug: z
     .string()
-    .min(3, 'Le slug doit contenir au moins 3 caracteres.')
-    .regex(/^[a-z0-9-]+$/, 'Le slug doit contenir uniquement a-z, 0-9 et -.'),
+    .min(3, "Le slug doit contenir au moins 3 caracteres.")
+    .regex(/^[a-z0-9-]+$/, "Le slug doit contenir uniquement a-z, 0-9 et -."),
   codeMinedu: z
     .string()
-    .min(3, 'Le code MINEDU est requis.')
-    .regex(/^[A-Z0-9-]{3,20}$/i, 'Format code MINEDU invalide.'),
-  type: z.string().min(1, 'Le type est requis.'),
-  school_type: z.string().min(1, 'Le type d\'etablissement est requis.'),
-  location: z.string().min(2, 'La localisation est requise.'),
-  plan: z.string().min(1, 'Le plan est requis.'),
+    .min(3, "Le code MINEDU est requis.")
+    .regex(/^[A-Z0-9-]{3,20}$/i, "Format code MINEDU invalide."),
+  type: z.string().min(1, "Le type est requis."),
+  school_type: z.string().min(1, "Le type d'etablissement est requis."),
+  location: z.string().min(2, "La localisation est requise."),
+  plan: z.string().min(1, "Le plan est requis."),
   description: z.string().optional(),
 });
 
@@ -46,22 +52,22 @@ type FormValues = z.infer<typeof schema>;
 
 function toSlug(value: string) {
   return value
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
     .trim()
-    .replace(/[^a-z0-9\s-]/g, '')
-    .replace(/\s+/g, '-')
-    .replace(/-+/g, '-');
+    .replace(/[^a-z0-9\s-]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-");
 }
 
-const TAKEN_SLUGS = new Set(['horizon', 'la-reussite', 'college-nongo']);
+const TAKEN_SLUGS = new Set(["horizon", "la-reussite", "college-nongo"]);
 
 export default function SuperadminNewSchoolPage() {
   const router = useRouter();
   const params = useParams();
   const { data: session } = useSession();
-  const locale = (params?.locale as string) ?? 'fr';
+  const locale = (params?.locale as string) ?? "fr";
   const [checkingSlug, setCheckingSlug] = useState(false);
   const [slugManuallyEdited, setSlugManuallyEdited] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -69,16 +75,16 @@ export default function SuperadminNewSchoolPage() {
 
   const defaultValues = useMemo<FormValues>(
     () => ({
-      name: '',
-      slug: '',
-      codeMinedu: '',
-      type: '',
-      school_type: 'PRIV',
-      location: '',
-      plan: '',
-      description: '',
+      name: "",
+      slug: "",
+      codeMinedu: "",
+      type: "",
+      school_type: "PRIV",
+      location: "",
+      plan: "",
+      description: "",
     }),
-    []
+    [],
   );
 
   const form = useForm<FormValues>({
@@ -99,11 +105,14 @@ export default function SuperadminNewSchoolPage() {
           items.map((item) => ({
             id: item.id,
             name: item.name.charAt(0) + item.name.slice(1).toLowerCase(),
-          }))
+          })),
         );
       })
       .catch((error) => {
-        const message = error instanceof Error ? error.message : 'Impossible de charger les plans.';
+        const message =
+          error instanceof Error
+            ? error.message
+            : "Impossible de charger les plans.";
         toast.error(message);
       });
 
@@ -118,10 +127,17 @@ export default function SuperadminNewSchoolPage() {
 
     setCheckingSlug(true);
     try {
-      const result = await getSchools(accessToken, { page: 1, page_size: 10, search: slug });
+      const result = await getSchools(accessToken, {
+        page: 1,
+        page_size: 10,
+        search: slug,
+      });
       const items = result.results;
       if (Array.isArray(items)) {
-        return !items.some((item: any) => String(item.slug).toLowerCase() === slug.toLowerCase());
+        return !items.some(
+          (item: Record<string, unknown>) =>
+            String(item.slug).toLowerCase() === slug.toLowerCase(),
+        );
       }
       return !TAKEN_SLUGS.has(slug.toLowerCase());
     } catch {
@@ -134,7 +150,7 @@ export default function SuperadminNewSchoolPage() {
   const onSubmit = async (values: FormValues) => {
     const accessToken = session?.accessToken;
     if (!accessToken) {
-      toast.error('Session invalide. Veuillez vous reconnecter.');
+      toast.error("Session invalide. Veuillez vous reconnecter.");
       return;
     }
 
@@ -143,11 +159,11 @@ export default function SuperadminNewSchoolPage() {
     try {
       const isAvailable = await checkSlugAvailability(values.slug);
       if (!isAvailable) {
-        form.setError('slug', { message: 'Ce slug est deja utilise.' });
+        form.setError("slug", { message: "Ce slug est deja utilise." });
         return;
       }
 
-      const payload = await createSchool(accessToken, {
+      const payload = (await createSchool(accessToken, {
         name: values.name,
         slug: values.slug,
         code_minedu: values.codeMinedu,
@@ -156,15 +172,18 @@ export default function SuperadminNewSchoolPage() {
         address: values.location,
         plan: Number(values.plan),
         settings: values.description ? { description: values.description } : {},
-      });
+      })) as Record<string, unknown>;
       const createdId = payload?.id;
 
-      toast.success('Ecole creee avec succes.');
+      toast.success("Ecole creee avec succes.");
       router.push(
-        createdId ? `/${locale}/superadmin/schools/${createdId}` : `/${locale}/superadmin/schools`
+        createdId
+          ? `/${locale}/superadmin/schools/${createdId}`
+          : `/${locale}/superadmin/schools`,
       );
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Erreur inattendue.';
+      const message =
+        error instanceof Error ? error.message : "Erreur inattendue.";
       toast.error(message);
     } finally {
       setSubmitting(false);
@@ -177,7 +196,10 @@ export default function SuperadminNewSchoolPage() {
         title="Nouvelle ecole"
         description="Creation d'un nouvel etablissement sur la plateforme Eduguinee."
         actions={
-          <Button variant="outline" onClick={() => router.push(`/${locale}/superadmin/schools`)}>
+          <Button
+            variant="outline"
+            onClick={() => router.push(`/${locale}/superadmin/schools`)}
+          >
             Retour a la liste
           </Button>
         }
@@ -185,11 +207,14 @@ export default function SuperadminNewSchoolPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Informations de l'ecole</CardTitle>
+          <CardTitle>Informations de l&apos;ecole</CardTitle>
         </CardHeader>
         <CardContent>
           <Form {...form}>
-            <form className="grid gap-4 md:grid-cols-2" onSubmit={form.handleSubmit(onSubmit)}>
+            <form
+              className="grid gap-4 md:grid-cols-2"
+              onSubmit={form.handleSubmit(onSubmit)}
+            >
               <FormField
                 control={form.control}
                 name="name"
@@ -202,7 +227,9 @@ export default function SuperadminNewSchoolPage() {
                         onChange={(event) => {
                           field.onChange(event);
                           if (!slugManuallyEdited) {
-                            form.setValue('slug', toSlug(event.target.value), { shouldValidate: true });
+                            form.setValue("slug", toSlug(event.target.value), {
+                              shouldValidate: true,
+                            });
                           }
                         }}
                       />
@@ -228,7 +255,9 @@ export default function SuperadminNewSchoolPage() {
                       />
                     </FormControl>
                     <FormDescription>
-                      {checkingSlug ? 'Verification en cours...' : 'URL publique de l\'ecole.'}
+                      {checkingSlug
+                        ? "Verification en cours..."
+                        : "URL publique de l'ecole."}
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -254,8 +283,11 @@ export default function SuperadminNewSchoolPage() {
                 name="type"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Type d'etablissement</FormLabel>
-                    <Select value={field.value} onValueChange={(value) => field.onChange(value ?? '')}>
+                    <FormLabel>Type d&apos;etablissement</FormLabel>
+                    <Select
+                      value={field.value}
+                      onValueChange={(value) => field.onChange(value ?? "")}
+                    >
                       <FormControl>
                         <SelectTrigger className="w-full">
                           <SelectValue placeholder="Selectionner" />
@@ -279,25 +311,35 @@ export default function SuperadminNewSchoolPage() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Type de gestion</FormLabel>
-                    <Select value={field.value} onValueChange={(value) => field.onChange(value ?? '')}>
+                    <Select
+                      value={field.value}
+                      onValueChange={(value) => field.onChange(value ?? "")}
+                    >
                       <FormControl>
                         <SelectTrigger className="w-full">
                           <SelectValue placeholder="Selectionner" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="PUB">Publique (sans paie)</SelectItem>
+                        <SelectItem value="PUB">
+                          Publique (sans paie)
+                        </SelectItem>
                         <SelectItem value="PRIV">Privée</SelectItem>
                         <SelectItem value="FRAR">FRAR</SelectItem>
-                        <SelectItem value="ETP">École Technique Publique</SelectItem>
-                        <SelectItem value="ETPR">École Technique Privée</SelectItem>
+                        <SelectItem value="ETP">
+                          École Technique Publique
+                        </SelectItem>
+                        <SelectItem value="ETPR">
+                          École Technique Privée
+                        </SelectItem>
                         <SelectItem value="INT">Internationale</SelectItem>
                         <SelectItem value="COM">Communautaire</SelectItem>
                         <SelectItem value="INC">Indépendante</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormDescription>
-                      Les écoles publiques n'ont pas accès au module paie (CNSS standard).
+                      Les écoles publiques n&apos;ont pas accès au module paie
+                      (CNSS standard).
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -324,7 +366,10 @@ export default function SuperadminNewSchoolPage() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Plan</FormLabel>
-                    <Select value={field.value} onValueChange={(value) => field.onChange(value ?? '')}>
+                    <Select
+                      value={field.value}
+                      onValueChange={(value) => field.onChange(value ?? "")}
+                    >
                       <FormControl>
                         <SelectTrigger className="w-full">
                           <SelectValue placeholder="Selectionner" />
@@ -358,11 +403,15 @@ export default function SuperadminNewSchoolPage() {
               />
 
               <div className="md:col-span-2 flex items-center justify-end gap-2">
-                <Button type="button" variant="outline" onClick={() => form.reset(defaultValues)}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => form.reset(defaultValues)}
+                >
                   Reinitialiser
                 </Button>
                 <Button type="submit" disabled={submitting || checkingSlug}>
-                  {submitting ? 'Creation...' : 'Creer l\'ecole'}
+                  {submitting ? "Creation..." : "Creer l'ecole"}
                 </Button>
               </div>
             </form>

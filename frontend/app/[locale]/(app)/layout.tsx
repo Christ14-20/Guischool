@@ -1,7 +1,7 @@
-import { AppSidebar } from '@/components/layout/app-sidebar';
-import { CampusProvider } from '@/components/layout/campus-provider';
-import { SchoolYearProvider } from '@/components/layout/school-year-provider';
-import { TopBar } from '@/components/layout/top-bar';
+import { AppSidebar } from "@/components/layout/app-sidebar";
+import { CampusProvider } from "@/components/layout/campus-provider";
+import { SchoolYearProvider } from "@/components/layout/school-year-provider";
+import { TopBar } from "@/components/layout/top-bar";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (

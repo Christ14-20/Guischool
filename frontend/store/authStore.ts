@@ -1,6 +1,5 @@
-import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
-import { Role } from '@/lib/constants';
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
 
 interface AuthState {
   schoolId: string | null;
@@ -16,7 +15,7 @@ export const useAuthStore = create<AuthState>()(
       setSchoolId: (id) => set({ schoolId: id }),
     }),
     {
-      name: 'auth-storage',
-    }
-  )
+      name: "auth-storage",
+    },
+  ),
 );

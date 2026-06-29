@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
-import { useSession } from 'next-auth/react';
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import {
   ArrowLeft,
   CheckCircle2,
@@ -11,28 +11,28 @@ import {
   Send,
   UserCircle2,
   XCircle,
-} from 'lucide-react';
-import { toast } from 'sonner';
-import { formatDistanceToNow } from 'date-fns';
-import { fr } from 'date-fns/locale';
+} from "lucide-react";
+import { toast } from "sonner";
+import { formatDistanceToNow } from "date-fns";
+import { fr } from "date-fns/locale";
 
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Badge } from '@/components/ui/badge';
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Separator } from '@/components/ui/separator';
+} from "@/components/ui/select";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Separator } from "@/components/ui/separator";
 
-import { StatusBadge } from '@/components/shared/StatusBadge';
-import { TicketPriorityBadge } from '@/components/support/TicketPriorityBadge';
+import { StatusBadge } from "@/components/shared/StatusBadge";
+import { TicketPriorityBadge } from "@/components/support/TicketPriorityBadge";
 
 import {
   getTicket,
@@ -41,45 +41,48 @@ import {
   updateTicket,
   type TicketItem,
   type TicketMessage,
-} from '@/lib/api/support';
-import { formatDate } from '@/lib/utils';
-import { useRole } from '@/hooks/useRole';
-import { ROLES } from '@/lib/constants';
+} from "@/lib/api/support";
+import { formatDate } from "@/lib/utils";
+import { useRole } from "@/hooks/useRole";
+import { ROLES } from "@/lib/constants";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const CATEGORY_LABELS: Record<string, string> = {
-  TECHNIQUE: 'Technique',
-  FACTURATION: 'Facturation',
-  FONCTIONNEL: 'Fonctionnel',
-  FEATURE: 'Demande de fonctionnalité',
-  BLOCAGE: 'Blocage',
-  PAIEMENT: 'Paiement',
+  TECHNIQUE: "Technique",
+  FACTURATION: "Facturation",
+  FONCTIONNEL: "Fonctionnel",
+  FEATURE: "Demande de fonctionnalité",
+  BLOCAGE: "Blocage",
+  PAIEMENT: "Paiement",
 };
 
 const STATUS_OPTIONS = [
-  { value: 'OUVERT', label: '🟢 Ouvert' },
-  { value: 'EN_COURS', label: '🔵 En cours' },
-  { value: 'EN_ATTENTE', label: '🟡 En attente' },
-  { value: 'RESOLU', label: '✅ Résolu' },
-  { value: 'FERME', label: '⛔ Fermé' },
+  { value: "OUVERT", label: "🟢 Ouvert" },
+  { value: "EN_COURS", label: "🔵 En cours" },
+  { value: "EN_ATTENTE", label: "🟡 En attente" },
+  { value: "RESOLU", label: "✅ Résolu" },
+  { value: "FERME", label: "⛔ Fermé" },
 ];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function getInitials(name?: string | null) {
-  if (!name?.trim()) return '?';
+  if (!name?.trim()) return "?";
   return name
-    .split(' ')
+    .split(" ")
     .filter(Boolean)
     .slice(0, 2)
     .map((c) => c[0]?.toUpperCase())
-    .join('');
+    .join("");
 }
 
 function timeAgo(dateStr: string) {
   try {
-    return formatDistanceToNow(new Date(dateStr), { addSuffix: true, locale: fr });
+    return formatDistanceToNow(new Date(dateStr), {
+      addSuffix: true,
+      locale: fr,
+    });
   } catch {
     return dateStr;
   }
@@ -89,24 +92,32 @@ function timeAgo(dateStr: string) {
 
 function MessageBubble({ msg, isOwn }: { msg: TicketMessage; isOwn: boolean }) {
   return (
-    <div className={`flex gap-3 ${isOwn ? 'flex-row-reverse' : 'flex-row'}`}>
+    <div className={`flex gap-3 ${isOwn ? "flex-row-reverse" : "flex-row"}`}>
       <Avatar className="h-8 w-8 shrink-0">
-        <AvatarFallback className={`text-xs ${isOwn ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
+        <AvatarFallback
+          className={`text-xs ${isOwn ? "bg-primary text-primary-foreground" : "bg-muted"}`}
+        >
           {getInitials(msg.author_name)}
         </AvatarFallback>
       </Avatar>
-      <div className={`max-w-[75%] space-y-1 ${isOwn ? 'items-end' : 'items-start'} flex flex-col`}>
+      <div
+        className={`max-w-[75%] space-y-1 ${isOwn ? "items-end" : "items-start"} flex flex-col`}
+      >
         <div className="flex items-baseline gap-2">
           {!isOwn && (
-            <span className="text-xs font-semibold text-foreground">{msg.author_name ?? 'Anonyme'}</span>
+            <span className="text-xs font-semibold text-foreground">
+              {msg.author_name ?? "Anonyme"}
+            </span>
           )}
-          <span className="text-[10px] text-muted-foreground">{timeAgo(msg.created_at)}</span>
+          <span className="text-[10px] text-muted-foreground">
+            {timeAgo(msg.created_at)}
+          </span>
         </div>
         <div
           className={`rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
             isOwn
-              ? 'rounded-tr-sm bg-primary text-primary-foreground'
-              : 'rounded-tl-sm bg-muted text-foreground'
+              ? "rounded-tr-sm bg-primary text-primary-foreground"
+              : "rounded-tl-sm bg-muted text-foreground"
           }`}
         >
           {msg.content}
@@ -120,17 +131,17 @@ function MessageBubble({ msg, isOwn }: { msg: TicketMessage; isOwn: boolean }) {
 
 export default function TicketDetailPage() {
   const { data: session } = useSession();
-  const token = session?.accessToken ?? '';
+  const token = session?.accessToken ?? "";
   const params = useParams();
   const router = useRouter();
-  const locale = (params?.locale as string) ?? 'fr';
+  const locale = (params?.locale as string) ?? "fr";
   const ticketId = params?.id as string;
 
   const [ticket, setTicket] = useState<TicketItem | null>(null);
   const [messages, setMessages] = useState<TicketMessage[]>([]);
   const [loadingTicket, setLoadingTicket] = useState(true);
   const [loadingMessages, setLoadingMessages] = useState(true);
-  const [replyText, setReplyText] = useState('');
+  const [replyText, setReplyText] = useState("");
   const [sending, setSending] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(false);
 
@@ -138,19 +149,6 @@ export default function TicketDetailPage() {
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
 
   const isAdmin = useRole([ROLES.ADMIN_SCHOOL, ROLES.SUPER_ADMIN]);
-
-  // ─── Load ticket info ──────────────────────────────────────────────────────
-  const loadTicket = useCallback(async () => {
-    if (!token || !ticketId) return;
-    try {
-      const t = await getTicket(token, ticketId);
-      setTicket(t);
-    } catch (error) {
-      toast.error('Impossible de charger le ticket.');
-    } finally {
-      setLoadingTicket(false);
-    }
-  }, [token, ticketId]);
 
   // ─── Load messages (also used for polling) ────────────────────────────────
   const loadMessages = useCallback(async () => {
@@ -166,9 +164,28 @@ export default function TicketDetailPage() {
   }, [token, ticketId]);
 
   useEffect(() => {
-    loadTicket();
-    loadMessages();
-  }, [loadTicket, loadMessages]);
+    if (!token || !ticketId) return;
+    getTicket(token, ticketId)
+      .then((t) => {
+        setTicket(t);
+      })
+      .catch(() => {
+        toast.error("Impossible de charger le ticket.");
+      })
+      .finally(() => {
+        setLoadingTicket(false);
+      });
+    getTicketMessages(token, ticketId)
+      .then((res) => {
+        setMessages(res.results);
+      })
+      .catch(() => {
+        // Silent fail
+      })
+      .finally(() => {
+        setLoadingMessages(false);
+      });
+  }, [token, ticketId]);
 
   // Polling toutes les 30s
   useEffect(() => {
@@ -192,16 +209,16 @@ export default function TicketDetailPage() {
     try {
       const msg = await addTicketMessage(token, ticketId, replyText.trim());
       setMessages((prev) => [...prev, msg]);
-      setReplyText('');
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Erreur lors de l\'envoi du message.');
+      setReplyText("");
+    } catch {
+      toast.error("Erreur lors de l'envoi du message.");
     } finally {
       setSending(false);
     }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+    if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
       e.preventDefault();
       handleSendReply();
     }
@@ -212,11 +229,13 @@ export default function TicketDetailPage() {
     if (!token || !ticket) return;
     setUpdatingStatus(true);
     try {
-      const updated = await updateTicket(token, ticket.id, { status: newStatus });
+      const updated = await updateTicket(token, ticket.id, {
+        status: newStatus,
+      });
       setTicket(updated);
-      toast.success('Statut mis à jour.');
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Erreur lors de la mise à jour.');
+      toast.success("Statut mis à jour.");
+    } catch {
+      toast.error("Erreur lors de la mise à jour.");
     } finally {
       setUpdatingStatus(false);
     }
@@ -246,11 +265,10 @@ export default function TicketDetailPage() {
     );
   }
 
-  const isClosed = ticket.status === 'FERME' || ticket.status === 'RESOLU';
+  const isClosed = ticket.status === "FERME" || ticket.status === "RESOLU";
 
   return (
     <div className="flex h-[calc(100vh-8rem)] flex-col gap-4 pb-4">
-
       {/* ─── Back button ─────────────────────────────────────────────────── */}
       <div className="flex items-center gap-3">
         <Button
@@ -283,7 +301,7 @@ export default function TicketDetailPage() {
             <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
               <span className="flex items-center gap-1">
                 <UserCircle2 className="h-3.5 w-3.5" />
-                {ticket.created_by_name ?? 'Inconnu'}
+                {ticket.created_by_name ?? "Inconnu"}
               </span>
               <span className="flex items-center gap-1">
                 <Clock className="h-3.5 w-3.5" />
@@ -306,7 +324,10 @@ export default function TicketDetailPage() {
                 onValueChange={(v) => v && handleStatusChange(v)}
                 disabled={updatingStatus}
               >
-                <SelectTrigger id="select-ticket-status-admin" className="w-[170px]">
+                <SelectTrigger
+                  id="select-ticket-status-admin"
+                  className="w-[170px]"
+                >
                   {updatingStatus ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
@@ -331,7 +352,9 @@ export default function TicketDetailPage() {
           <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             Description initiale
           </p>
-          <p className="whitespace-pre-wrap text-sm leading-relaxed">{ticket.description}</p>
+          <p className="whitespace-pre-wrap text-sm leading-relaxed">
+            {ticket.description}
+          </p>
         </div>
       </div>
 
@@ -342,7 +365,7 @@ export default function TicketDetailPage() {
             Discussion
             {messages.length > 0 && (
               <span className="ml-2 text-xs font-normal text-muted-foreground">
-                ({messages.length} message{messages.length !== 1 ? 's' : ''})
+                ({messages.length} message{messages.length !== 1 ? "s" : ""})
               </span>
             )}
           </p>
@@ -364,8 +387,10 @@ export default function TicketDetailPage() {
             ) : messages.length === 0 ? (
               <div className="flex flex-col items-center gap-2 py-12 text-center text-muted-foreground">
                 <Send className="h-8 w-8 opacity-30" />
-                <p className="text-sm">Aucun message pour l'instant.</p>
-                <p className="text-xs">Soyez le premier à répondre à ce ticket.</p>
+                <p className="text-sm">Aucun message pour l&apos;instant.</p>
+                <p className="text-xs">
+                  Soyez le premier à répondre à ce ticket.
+                </p>
               </div>
             ) : (
               messages.map((msg) => (
@@ -384,7 +409,8 @@ export default function TicketDetailPage() {
           {isClosed ? (
             <div className="flex items-center justify-center gap-2 rounded-lg bg-muted p-3 text-sm text-muted-foreground">
               <XCircle className="h-4 w-4" />
-              Ce ticket est fermé. Ouvrez un nouveau ticket si vous avez d'autres questions.
+              Ce ticket est fermé. Ouvrez un nouveau ticket si vous avez
+              d&apos;autres questions.
             </div>
           ) : (
             <div className="flex gap-3">

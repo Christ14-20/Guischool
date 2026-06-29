@@ -1,15 +1,15 @@
-'use client';
+"use client";
 
-import { useEffect, useMemo, useState } from 'react';
-import { useSession } from 'next-auth/react';
-import { toast } from 'sonner';
-import { z } from 'zod';
+import { useEffect, useMemo, useState } from "react";
+import { useSession } from "next-auth/react";
+import { toast } from "sonner";
+import { z } from "zod";
 
-import { PageHeader } from '@/components/layout/page-header';
-import { StatusBadge } from '@/components/shared/StatusBadge';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Checkbox } from '@/components/ui/checkbox';
+import { PageHeader } from "@/components/layout/page-header";
+import { StatusBadge } from "@/components/shared/StatusBadge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -17,13 +17,13 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { getPlans, type PlanItem, updatePlan } from '@/lib/api/superadmin';
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { getPlans, type PlanItem, updatePlan } from "@/lib/api/superadmin";
 
 type Plan = {
   id: number;
-  name: 'STARTER' | 'PRO' | 'ENTERPRISE';
+  name: "STARTER" | "PRO" | "ENTERPRISE";
   maxStudents: number;
   maxStaff: number;
   storageGb: number;
@@ -32,20 +32,27 @@ type Plan = {
   yearlyPrice: number;
 };
 
-const AVAILABLE_MODULES = ['pedagogy', 'students', 'grades', 'finance', 'support', 'monitoring'];
+const AVAILABLE_MODULES = [
+  "pedagogy",
+  "students",
+  "grades",
+  "finance",
+  "support",
+  "monitoring",
+];
 
 const planSchema = z.object({
-  name: z.enum(['STARTER', 'PRO', 'ENTERPRISE']),
-  maxStudents: z.coerce.number().int().min(1, 'Min 1 eleve.'),
-  maxStaff: z.coerce.number().int().min(1, 'Min 1 staff.'),
-  storageGb: z.coerce.number().int().min(1, 'Min 1 Go.'),
-  modules: z.array(z.string()).min(1, 'Selectionnez au moins un module.'),
-  monthlyPrice: z.coerce.number().min(0, 'Prix mensuel invalide.'),
-  yearlyPrice: z.coerce.number().min(0, 'Prix annuel invalide.'),
+  name: z.enum(["STARTER", "PRO", "ENTERPRISE"]),
+  maxStudents: z.coerce.number().int().min(1, "Min 1 eleve."),
+  maxStaff: z.coerce.number().int().min(1, "Min 1 staff."),
+  storageGb: z.coerce.number().int().min(1, "Min 1 Go."),
+  modules: z.array(z.string()).min(1, "Selectionnez au moins un module."),
+  monthlyPrice: z.coerce.number().min(0, "Prix mensuel invalide."),
+  yearlyPrice: z.coerce.number().min(0, "Prix annuel invalide."),
 });
 
 type FormState = {
-  name: 'STARTER' | 'PRO' | 'ENTERPRISE';
+  name: "STARTER" | "PRO" | "ENTERPRISE";
   maxStudents: string;
   maxStaff: string;
   storageGb: string;
@@ -55,10 +62,10 @@ type FormState = {
 };
 
 function formatMoney(value: number) {
-  return `${value.toLocaleString('fr-FR')} GNF`;
+  return `${value.toLocaleString("fr-FR")} GNF`;
 }
 
-function formatPlanName(name: Plan['name']) {
+function formatPlanName(name: Plan["name"]) {
   return name.charAt(0) + name.slice(1).toLowerCase();
 }
 
@@ -69,7 +76,9 @@ function apiPlanToUi(plan: PlanItem): Plan {
     maxStudents: Number(plan.max_students),
     maxStaff: Number(plan.max_staff),
     storageGb: Number(plan.storage_max_gb),
-    modules: Array.isArray(plan.modules_activated) ? plan.modules_activated : [],
+    modules: Array.isArray(plan.modules_activated)
+      ? plan.modules_activated
+      : [],
     monthlyPrice: Number(plan.price_monthly),
     yearlyPrice: Number(plan.price_annual),
   };
@@ -99,15 +108,12 @@ export default function SuperadminPlansPage() {
 
   const selectedPlan = useMemo(
     () => plans.find((plan) => plan.id === selectedPlanId) ?? null,
-    [plans, selectedPlanId]
+    [plans, selectedPlanId],
   );
 
   useEffect(() => {
     const accessToken = session?.accessToken;
-    if (!accessToken) {
-      setLoading(false);
-      return;
-    }
+    if (!accessToken) return;
 
     let isMounted = true;
 
@@ -117,7 +123,10 @@ export default function SuperadminPlansPage() {
         setPlans(items.map(apiPlanToUi));
       })
       .catch((error) => {
-        const message = error instanceof Error ? error.message : 'Impossible de charger les plans.';
+        const message =
+          error instanceof Error
+            ? error.message
+            : "Impossible de charger les plans.";
         toast.error(message);
       })
       .finally(() => {
@@ -155,8 +164,10 @@ export default function SuperadminPlansPage() {
 
     const validation = planSchema.safeParse(formState);
     if (!validation.success) {
-      setFormError(validation.error.issues[0]?.message ?? 'Formulaire invalide.');
-      toast.error('Veuillez corriger le formulaire.');
+      setFormError(
+        validation.error.issues[0]?.message ?? "Formulaire invalide.",
+      );
+      toast.error("Veuillez corriger le formulaire.");
       return;
     }
 
@@ -176,11 +187,16 @@ export default function SuperadminPlansPage() {
         price_annual: payload.yearlyPrice,
       });
 
-      setPlans((prev) => prev.map((plan) => (plan.id === selectedPlan.id ? apiPlanToUi(updated) : plan)));
-      toast.success('Plan mis a jour avec succes.');
+      setPlans((prev) =>
+        prev.map((plan) =>
+          plan.id === selectedPlan.id ? apiPlanToUi(updated as PlanItem) : plan,
+        ),
+      );
+      toast.success("Plan mis a jour avec succes.");
       setDialogOpen(false);
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Erreur inattendue.';
+      const message =
+        error instanceof Error ? error.message : "Erreur inattendue.";
       toast.error(message);
     } finally {
       setSubmitting(false);
@@ -194,7 +210,9 @@ export default function SuperadminPlansPage() {
         description="Gestion des limites, modules et tarifs Starter, Pro et Enterprise."
       />
 
-      {loading ? <p className="text-sm text-muted-foreground">Chargement des plans...</p> : null}
+      {loading ? (
+        <p className="text-sm text-muted-foreground">Chargement des plans...</p>
+      ) : null}
 
       <div className="grid gap-4 md:grid-cols-3">
         {plans.map((plan) => (
@@ -209,11 +227,15 @@ export default function SuperadminPlansPage() {
               <div className="grid grid-cols-2 gap-2 text-sm">
                 <div className="rounded-md border p-2">
                   <p className="text-xs text-muted-foreground">Max eleves</p>
-                  <p className="font-medium">{plan.maxStudents.toLocaleString('fr-FR')}</p>
+                  <p className="font-medium">
+                    {plan.maxStudents.toLocaleString("fr-FR")}
+                  </p>
                 </div>
                 <div className="rounded-md border p-2">
                   <p className="text-xs text-muted-foreground">Max staff</p>
-                  <p className="font-medium">{plan.maxStaff.toLocaleString('fr-FR')}</p>
+                  <p className="font-medium">
+                    {plan.maxStaff.toLocaleString("fr-FR")}
+                  </p>
                 </div>
                 <div className="col-span-2 rounded-md border p-2">
                   <p className="text-xs text-muted-foreground">Stockage</p>
@@ -222,10 +244,15 @@ export default function SuperadminPlansPage() {
               </div>
 
               <div>
-                <p className="mb-1 text-xs text-muted-foreground">Modules actives</p>
+                <p className="mb-1 text-xs text-muted-foreground">
+                  Modules actives
+                </p>
                 <div className="flex flex-wrap gap-1.5">
                   {plan.modules.map((moduleName) => (
-                    <span key={moduleName} className="rounded-full border px-2 py-0.5 text-xs capitalize">
+                    <span
+                      key={moduleName}
+                      className="rounded-full border px-2 py-0.5 text-xs capitalize"
+                    >
                       {moduleName}
                     </span>
                   ))}
@@ -234,11 +261,19 @@ export default function SuperadminPlansPage() {
 
               <div className="space-y-0.5 rounded-md border p-2">
                 <p className="text-xs text-muted-foreground">Tarifs</p>
-                <p className="text-sm font-medium">Mensuel: {formatMoney(plan.monthlyPrice)}</p>
-                <p className="text-sm font-medium">Annuel: {formatMoney(plan.yearlyPrice)}</p>
+                <p className="text-sm font-medium">
+                  Mensuel: {formatMoney(plan.monthlyPrice)}
+                </p>
+                <p className="text-sm font-medium">
+                  Annuel: {formatMoney(plan.yearlyPrice)}
+                </p>
               </div>
 
-              <Button className="w-full" variant="outline" onClick={() => openEditDialog(plan)}>
+              <Button
+                className="w-full"
+                variant="outline"
+                onClick={() => openEditDialog(plan)}
+              >
                 Modifier
               </Button>
             </CardContent>
@@ -250,7 +285,9 @@ export default function SuperadminPlansPage() {
         <DialogContent className="sm:max-w-xl">
           <DialogHeader>
             <DialogTitle>Modifier le plan</DialogTitle>
-            <DialogDescription>Mettre a jour limites, modules et tarification du plan.</DialogDescription>
+            <DialogDescription>
+              Mettre a jour limites, modules et tarification du plan.
+            </DialogDescription>
           </DialogHeader>
 
           {formState ? (
@@ -262,27 +299,78 @@ export default function SuperadminPlansPage() {
 
               <div className="space-y-1">
                 <label className="text-sm font-medium">Max eleves</label>
-                <Input type="number" min={1} value={formState.maxStudents} onChange={(event) => setFormState({ ...formState, maxStudents: event.target.value })} />
+                <Input
+                  type="number"
+                  min={1}
+                  value={formState.maxStudents}
+                  onChange={(event) =>
+                    setFormState({
+                      ...formState,
+                      maxStudents: event.target.value,
+                    })
+                  }
+                />
               </div>
 
               <div className="space-y-1">
                 <label className="text-sm font-medium">Max staff</label>
-                <Input type="number" min={1} value={formState.maxStaff} onChange={(event) => setFormState({ ...formState, maxStaff: event.target.value })} />
+                <Input
+                  type="number"
+                  min={1}
+                  value={formState.maxStaff}
+                  onChange={(event) =>
+                    setFormState({ ...formState, maxStaff: event.target.value })
+                  }
+                />
               </div>
 
               <div className="space-y-1">
                 <label className="text-sm font-medium">Stockage (Go)</label>
-                <Input type="number" min={1} value={formState.storageGb} onChange={(event) => setFormState({ ...formState, storageGb: event.target.value })} />
+                <Input
+                  type="number"
+                  min={1}
+                  value={formState.storageGb}
+                  onChange={(event) =>
+                    setFormState({
+                      ...formState,
+                      storageGb: event.target.value,
+                    })
+                  }
+                />
               </div>
 
               <div className="space-y-1">
-                <label className="text-sm font-medium">Tarif mensuel (GNF)</label>
-                <Input type="number" min={0} value={formState.monthlyPrice} onChange={(event) => setFormState({ ...formState, monthlyPrice: event.target.value })} />
+                <label className="text-sm font-medium">
+                  Tarif mensuel (GNF)
+                </label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={formState.monthlyPrice}
+                  onChange={(event) =>
+                    setFormState({
+                      ...formState,
+                      monthlyPrice: event.target.value,
+                    })
+                  }
+                />
               </div>
 
               <div className="space-y-1">
-                <label className="text-sm font-medium">Tarif annuel (GNF)</label>
-                <Input type="number" min={0} value={formState.yearlyPrice} onChange={(event) => setFormState({ ...formState, yearlyPrice: event.target.value })} />
+                <label className="text-sm font-medium">
+                  Tarif annuel (GNF)
+                </label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={formState.yearlyPrice}
+                  onChange={(event) =>
+                    setFormState({
+                      ...formState,
+                      yearlyPrice: event.target.value,
+                    })
+                  }
+                />
               </div>
 
               <div className="space-y-2 sm:col-span-2">
@@ -291,8 +379,16 @@ export default function SuperadminPlansPage() {
                   {AVAILABLE_MODULES.map((moduleName) => {
                     const checked = formState.modules.includes(moduleName);
                     return (
-                      <label key={moduleName} className="flex items-center gap-2 rounded-md border p-2 text-sm capitalize">
-                        <Checkbox checked={checked} onCheckedChange={(value) => toggleModule(moduleName, Boolean(value))} />
+                      <label
+                        key={moduleName}
+                        className="flex items-center gap-2 rounded-md border p-2 text-sm capitalize"
+                      >
+                        <Checkbox
+                          checked={checked}
+                          onCheckedChange={(value) =>
+                            toggleModule(moduleName, Boolean(value))
+                          }
+                        />
                         {moduleName}
                       </label>
                     );
@@ -300,16 +396,24 @@ export default function SuperadminPlansPage() {
                 </div>
               </div>
 
-              {formError ? <p className="text-sm text-destructive sm:col-span-2">{formError}</p> : null}
+              {formError ? (
+                <p className="text-sm text-destructive sm:col-span-2">
+                  {formError}
+                </p>
+              ) : null}
             </div>
           ) : null}
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={submitting}>
+            <Button
+              variant="outline"
+              onClick={() => setDialogOpen(false)}
+              disabled={submitting}
+            >
               Annuler
             </Button>
             <Button onClick={savePlan} disabled={submitting || !formState}>
-              {submitting ? 'Enregistrement...' : 'Enregistrer'}
+              {submitting ? "Enregistrement..." : "Enregistrer"}
             </Button>
           </DialogFooter>
         </DialogContent>

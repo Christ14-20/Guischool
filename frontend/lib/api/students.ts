@@ -1,30 +1,31 @@
 type RequestOptions = {
   token: string;
-  method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+  method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   query?: Record<string, string | number | boolean | undefined | null>;
   body?: unknown;
 };
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
+const API_BASE =
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
 
 async function request<T>(path: string, options: RequestOptions): Promise<T> {
   const url = new URL(`${API_BASE}${path}`);
 
   if (options.query) {
     Object.entries(options.query).forEach(([key, value]) => {
-      if (value === undefined || value === null || value === '') return;
+      if (value === undefined || value === null || value === "") return;
       url.searchParams.set(key, String(value));
     });
   }
 
   const response = await fetch(url.toString(), {
-    method: options.method ?? 'GET',
+    method: options.method ?? "GET",
     headers: {
       Authorization: `Bearer ${options.token}`,
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
     },
     body: options.body ? JSON.stringify(options.body) : undefined,
-    cache: 'no-store',
+    cache: "no-store",
   });
 
   let payload: unknown = null;
@@ -36,7 +37,7 @@ async function request<T>(path: string, options: RequestOptions): Promise<T> {
 
   if (!response.ok) {
     const data = payload as Record<string, unknown> | null;
-    const message = data?.message ?? data?.detail ?? 'Erreur serveur.';
+    const message = data?.message ?? data?.detail ?? "Erreur serveur.";
     throw new Error(String(message));
   }
 
@@ -48,7 +49,8 @@ export type PaginatedResult<T> = {
   results: T[];
 };
 
-export type StudentStatus = 'ACTIF' | 'SUSPENDU' | 'TRANSFERE' | 'ARCHIVE' | string;
+export type StudentStatus =
+  "ACTIF" | "SUSPENDU" | "TRANSFERE" | "ARCHIVE" | string;
 
 export type StudentItem = {
   id: string;
@@ -58,7 +60,7 @@ export type StudentItem = {
   full_name: string;
   birth_date?: string;
   birth_place?: string;
-  gender?: 'M' | 'F' | string;
+  gender?: "M" | "F" | string;
   photo_url?: string;
   classe: number | null;
   classe_name: string;
@@ -70,66 +72,90 @@ export type StudentItem = {
 };
 
 export type StudentHistory = {
-  inscriptions: any[];
-  decisions_fin_annee: any[];
-  notes_validees: any[];
+  inscriptions: Record<string, unknown>[];
+  decisions_fin_annee: Record<string, unknown>[];
+  notes_validees: Record<string, unknown>[];
 };
 
 type RawStudent = Record<string, unknown>;
 
 function toStringValue(value: unknown) {
-  return typeof value === 'string' ? value : '';
+  return typeof value === "string" ? value : "";
 }
 
 function normalizeStudent(raw: RawStudent): StudentItem {
   const firstName =
-    toStringValue(raw.first_name) || toStringValue(raw.firstName) || toStringValue(raw.prenom);
+    toStringValue(raw.first_name) ||
+    toStringValue(raw.firstName) ||
+    toStringValue(raw.prenom);
   const lastName =
-    toStringValue(raw.last_name) || toStringValue(raw.lastName) || toStringValue(raw.nom);
+    toStringValue(raw.last_name) ||
+    toStringValue(raw.lastName) ||
+    toStringValue(raw.nom);
   const classeName =
     toStringValue(raw.classe_name) ||
     toStringValue(raw.class_name) ||
     toStringValue(raw.classroom_name) ||
     toStringValue(raw.classe_label);
   const guardianName =
-    toStringValue(raw.guardian_name) || toStringValue(raw.tuteur_nom) || toStringValue(raw.tutor_name);
+    toStringValue(raw.guardian_name) ||
+    toStringValue(raw.tuteur_nom) ||
+    toStringValue(raw.tutor_name);
   const guardianPhone =
     toStringValue(raw.guardian_phone) ||
     toStringValue(raw.tuteur_phone) ||
     toStringValue(raw.tuteur_telephone) ||
     toStringValue(raw.tutor_phone);
-  const status = toStringValue(raw.status).toUpperCase() || 'ACTIF';
+  const status = toStringValue(raw.status).toUpperCase() || "ACTIF";
 
   return {
-    id: String(raw.id ?? ''),
+    id: String(raw.id ?? ""),
     matricule:
-      toStringValue(raw.matricule) || toStringValue(raw.registration_number) || toStringValue(raw.code),
+      toStringValue(raw.matricule) ||
+      toStringValue(raw.registration_number) ||
+      toStringValue(raw.code),
     first_name: firstName,
     last_name: lastName,
-    full_name: [lastName, firstName].filter(Boolean).join(' ').trim() || toStringValue(raw.full_name),
+    full_name:
+      [lastName, firstName].filter(Boolean).join(" ").trim() ||
+      toStringValue(raw.full_name),
     birth_date:
-      toStringValue(raw.birth_date) || toStringValue(raw.date_of_birth) || toStringValue(raw.date_naissance),
+      toStringValue(raw.birth_date) ||
+      toStringValue(raw.date_of_birth) ||
+      toStringValue(raw.date_naissance),
     birth_place:
-      toStringValue(raw.birth_place) || toStringValue(raw.lieu_naissance) || toStringValue(raw.place_of_birth),
+      toStringValue(raw.birth_place) ||
+      toStringValue(raw.lieu_naissance) ||
+      toStringValue(raw.place_of_birth),
     gender: toStringValue(raw.gender) || toStringValue(raw.sexe),
-    photo_url: toStringValue(raw.photo_url) || toStringValue(raw.photo) || toStringValue(raw.avatar_url),
-    classe: typeof raw.classe === 'number' ? raw.classe : null,
+    photo_url:
+      toStringValue(raw.photo_url) ||
+      toStringValue(raw.photo) ||
+      toStringValue(raw.avatar_url),
+    classe: typeof raw.classe === "number" ? raw.classe : null,
     classe_name: classeName,
     status,
     guardian_name: guardianName,
     guardian_relationship:
-      toStringValue(raw.guardian_relationship) || toStringValue(raw.tuteur_lien) || toStringValue(raw.tutor_relationship),
+      toStringValue(raw.guardian_relationship) ||
+      toStringValue(raw.tuteur_lien) ||
+      toStringValue(raw.tutor_relationship),
     guardian_phone: guardianPhone,
     guardian_email:
-      toStringValue(raw.guardian_email) || toStringValue(raw.tuteur_email) || toStringValue(raw.tutor_email),
+      toStringValue(raw.guardian_email) ||
+      toStringValue(raw.tuteur_email) ||
+      toStringValue(raw.tutor_email),
   };
 }
 
 export async function getStudents(
   token: string,
-  query?: Record<string, string | number | undefined>
+  query?: Record<string, string | number | undefined>,
 ): Promise<PaginatedResult<StudentItem>> {
-  const data = await request<any>('/students/', { token, query });
+  const data = await request<Record<string, unknown>>("/students/", {
+    token,
+    query,
+  });
   const rows = Array.isArray(data?.results) ? data.results : [];
   return {
     count: Number(data?.count ?? 0),
@@ -137,9 +163,16 @@ export async function getStudents(
   };
 }
 
-export async function getStudent(token: string, id: string): Promise<StudentItem> {
-  const data = await request<any>(`/students/${id}/`, { token });
-  return normalizeStudent((data?.data ?? data) as RawStudent);
+export async function getStudent(
+  token: string,
+  id: string,
+): Promise<StudentItem> {
+  const data = await request<Record<string, unknown>>(`/students/${id}/`, {
+    token,
+  });
+  return normalizeStudent(
+    ((data as Record<string, unknown>).data ?? data) as RawStudent,
+  );
 }
 
 export type CreateStudentPayload = {
@@ -148,10 +181,10 @@ export type CreateStudentPayload = {
   prenom: string;
   date_naissance: string;
   lieu_naissance?: string;
-  sexe: 'M' | 'F';
+  sexe: "M" | "F";
   photo?: string;
   tuteur_nom: string;
-  tuteur_lien: 'PERE' | 'MERE' | 'TUTEUR' | 'AUTRE';
+  tuteur_lien: "PERE" | "MERE" | "TUTEUR" | "AUTRE";
   tuteur_telephone: string;
   tuteur_email?: string;
   annee_inscription: number;
@@ -161,32 +194,50 @@ export type CreateStudentPayload = {
 };
 
 export async function createStudent(token: string, body: CreateStudentPayload) {
-  const data = await request<any>('/students/', { token, method: 'POST', body });
-  return data?.data ?? data;
+  const data = await request<Record<string, unknown>>("/students/", {
+    token,
+    method: "POST",
+    body,
+  });
+  return (data as Record<string, unknown>).data ?? data;
 }
 
 export async function updateStudent(
   token: string,
   id: string,
-  body: Partial<CreateStudentPayload>
+  body: Partial<CreateStudentPayload>,
 ) {
-  const data = await request<any>(`/students/${id}/`, { token, method: 'PATCH', body });
-  return data?.data ?? data;
+  const data = await request<Record<string, unknown>>(`/students/${id}/`, {
+    token,
+    method: "PATCH",
+    body,
+  });
+  return (data as Record<string, unknown>).data ?? data;
 }
 
 export async function archiveStudent(token: string, id: string) {
-  return request(`/students/${id}/archiver/`, { token, method: 'POST' });
+  return request(`/students/${id}/archiver/`, { token, method: "POST" });
 }
 
 export async function reinscribeStudent(
   token: string,
   id: string,
-  body: { school_year: number; classe: number }
+  body: { school_year: number; classe: number },
 ) {
-  return request(`/students/${id}/reinscription/`, { token, method: 'POST', body });
+  return request(`/students/${id}/reinscription/`, {
+    token,
+    method: "POST",
+    body,
+  });
 }
 
-export async function getStudentHistory(token: string, id: string): Promise<StudentHistory> {
-  const data = await request<any>(`/students/${id}/historique/`, { token });
-  return data?.data ?? data;
+export async function getStudentHistory(
+  token: string,
+  id: string,
+): Promise<StudentHistory> {
+  const data = await request<Record<string, unknown>>(
+    `/students/${id}/historique/`,
+    { token },
+  );
+  return ((data as Record<string, unknown>).data ?? data) as StudentHistory;
 }

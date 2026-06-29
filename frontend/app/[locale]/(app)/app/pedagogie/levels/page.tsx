@@ -1,23 +1,23 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { useSession } from 'next-auth/react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { toast } from 'sonner';
-import { Baby, BookOpen, GraduationCap, School } from 'lucide-react';
+import { useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
+import { useForm, type Resolver } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { toast } from "sonner";
+import { Baby, BookOpen, GraduationCap, School } from "lucide-react";
 
-import { PageHeader } from '@/components/layout/page-header';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import { PageHeader } from "@/components/layout/page-header";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
+} from "@/components/ui/dialog";
 import {
   Form,
   FormControl,
@@ -25,15 +25,15 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -41,37 +41,42 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
-import { getLevels, createLevel, updateLevel, deleteLevel, LevelItem } from '@/lib/api/pedagogy';
+} from "@/components/ui/table";
+import {
+  getLevels,
+  createLevel,
+  updateLevel,
+  LevelItem,
+} from "@/lib/api/pedagogy";
 
 const schema = z.object({
-  cycle: z.string().min(1, 'Le cycle est requis.'),
-  name: z.string().min(1, 'Le nom est requis.'),
+  cycle: z.string().min(1, "Le cycle est requis."),
+  name: z.string().min(1, "Le nom est requis."),
   code_officiel_minedu: z.string().optional(),
   age_min: z.coerce.number().optional(),
   age_max: z.coerce.number().optional(),
   diplome_final: z.string().optional(),
   duree_annees: z.coerce.number().default(1),
-  evaluation_type: z.enum(['NUMERIC', 'DESCRIPTIVE']).default('NUMERIC'),
+  evaluation_type: z.enum(["NUMERIC", "DESCRIPTIVE"]).default("NUMERIC"),
   order_index: z.coerce.number().default(0),
 });
 
 type FormValues = z.infer<typeof schema>;
 
 const CYCLE_CHOICES = [
-  { value: 'MATERNELLE', label: 'Maternelle', icon: Baby },
-  { value: 'PRIMAIRE', label: 'Primaire', icon: BookOpen },
-  { value: 'CQP', label: 'CQP (BEP/CAP)', icon: GraduationCap },
-  { value: 'COLLEGE', label: 'Collège', icon: School },
-  { value: 'LYCEE_GEN', label: 'Lycée Général', icon: GraduationCap },
-  { value: 'LYCEE_TECH', label: 'Lycée Technique', icon: GraduationCap },
-  { value: 'ETFP_A', label: 'ETFP A', icon: BookOpen },
-  { value: 'ETFP_B', label: 'ETFP B', icon: BookOpen },
+  { value: "MATERNELLE", label: "Maternelle", icon: Baby },
+  { value: "PRIMAIRE", label: "Primaire", icon: BookOpen },
+  { value: "CQP", label: "CQP (BEP/CAP)", icon: GraduationCap },
+  { value: "COLLEGE", label: "Collège", icon: School },
+  { value: "LYCEE_GEN", label: "Lycée Général", icon: GraduationCap },
+  { value: "LYCEE_TECH", label: "Lycée Technique", icon: GraduationCap },
+  { value: "ETFP_A", label: "ETFP A", icon: BookOpen },
+  { value: "ETFP_B", label: "ETFP B", icon: BookOpen },
 ] as const;
 
 const EVAL_TYPE_LABELS = {
-  NUMERIC: 'Numérique',
-  DESCRIPTIVE: 'Descriptive',
+  NUMERIC: "Numérique",
+  DESCRIPTIVE: "Descriptive",
 };
 
 export default function LevelsPage() {
@@ -82,20 +87,25 @@ export default function LevelsPage() {
   const [editingLevel, setEditingLevel] = useState<LevelItem | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
 
-  const token = session?.accessToken ?? '';
+  const token = session?.accessToken ?? "";
 
   useEffect(() => {
-    if (!token) { setLoading(false); return; }
+    if (!token) return;
     let mounted = true;
-    setLoading(true);
     getLevels(token)
       .then((res) => {
         if (!mounted) return;
         setLevels(res.results);
       })
-      .catch((e) => toast.error(e instanceof Error ? e.message : 'Erreur de chargement.'))
-      .finally(() => { if (mounted) setLoading(false); });
-    return () => { mounted = false; };
+      .catch((e) =>
+        toast.error(e instanceof Error ? e.message : "Erreur de chargement."),
+      )
+      .finally(() => {
+        if (mounted) setLoading(false);
+      });
+    return () => {
+      mounted = false;
+    };
   }, [token, refreshKey]);
 
   const refresh = () => setRefreshKey((k) => k + 1);
@@ -115,28 +125,17 @@ export default function LevelsPage() {
     setDialogOpen(true);
   };
 
-  const handleDelete = async (level: LevelItem) => {
-    if (!confirm(`Supprimer le niveau "${level.name}" ?`)) return;
-    try {
-      await deleteLevel(token, level.id);
-      toast.success('Niveau supprimé.');
-      refresh();
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Erreur.');
-    }
-  };
-
   const form = useForm<FormValues>({
-    resolver: zodResolver(schema) as any,
+    resolver: zodResolver(schema) as unknown as Resolver<FormValues>,
     defaultValues: {
-      cycle: '',
-      name: '',
-      code_officiel_minedu: '',
+      cycle: "",
+      name: "",
+      code_officiel_minedu: "",
       age_min: undefined,
       age_max: undefined,
-      diplome_final: '',
+      diplome_final: "",
       duree_annees: 1,
-      evaluation_type: 'NUMERIC',
+      evaluation_type: "NUMERIC",
       order_index: 0,
     },
   });
@@ -146,12 +145,12 @@ export default function LevelsPage() {
       form.reset({
         cycle: editingLevel.cycle,
         name: editingLevel.name,
-        code_officiel_minedu: editingLevel.code_officiel_minedu ?? '',
+        code_officiel_minedu: editingLevel.code_officiel_minedu ?? "",
         age_min: editingLevel.age_min,
         age_max: editingLevel.age_max,
-        diplome_final: editingLevel.diplome_final ?? '',
+        diplome_final: editingLevel.diplome_final ?? "",
         duree_annees: editingLevel.duree_annees ?? 1,
-        evaluation_type: editingLevel.evaluation_type ?? 'NUMERIC',
+        evaluation_type: editingLevel.evaluation_type ?? "NUMERIC",
         order_index: editingLevel.order_index,
       });
     }
@@ -172,15 +171,15 @@ export default function LevelsPage() {
       };
       if (editingLevel) {
         await updateLevel(token, editingLevel.id, body);
-        toast.success('Niveau modifié.');
+        toast.success("Niveau modifié.");
       } else {
         await createLevel(token, body);
-        toast.success('Niveau créé.');
+        toast.success("Niveau créé.");
       }
       setDialogOpen(false);
       refresh();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Erreur.');
+      toast.error(e instanceof Error ? e.message : "Erreur.");
     }
   };
 
@@ -189,9 +188,7 @@ export default function LevelsPage() {
       <PageHeader
         title="Niveaux éducatifs"
         description="Catalogue complet des niveaux du système éducatif guinéen."
-        actions={
-          <Button onClick={openCreateDialog}>Nouveau niveau</Button>
-        }
+        actions={<Button onClick={openCreateDialog}>Nouveau niveau</Button>}
       />
 
       {loading ? (
@@ -223,19 +220,33 @@ export default function LevelsPage() {
                     <TableBody>
                       {cycleLevels.map((l) => (
                         <TableRow key={l.id}>
-                          <TableCell className="font-medium">{l.name}</TableCell>
-                          <TableCell>{l.code_officiel_minedu || '—'}</TableCell>
-                          <TableCell>
-                            {l.age_min && l.age_max ? `${l.age_min}-${l.age_max} ans` : '—'}
+                          <TableCell className="font-medium">
+                            {l.name}
                           </TableCell>
-                          <TableCell>{l.diplome_final || '—'}</TableCell>
+                          <TableCell>{l.code_officiel_minedu || "—"}</TableCell>
                           <TableCell>
-                            <Badge variant={l.evaluation_type === 'DESCRIPTIVE' ? 'secondary' : 'default'}>
-                              {EVAL_TYPE_LABELS[l.evaluation_type ?? 'NUMERIC']}
+                            {l.age_min && l.age_max
+                              ? `${l.age_min}-${l.age_max} ans`
+                              : "—"}
+                          </TableCell>
+                          <TableCell>{l.diplome_final || "—"}</TableCell>
+                          <TableCell>
+                            <Badge
+                              variant={
+                                l.evaluation_type === "DESCRIPTIVE"
+                                  ? "secondary"
+                                  : "default"
+                              }
+                            >
+                              {EVAL_TYPE_LABELS[l.evaluation_type ?? "NUMERIC"]}
                             </Badge>
                           </TableCell>
                           <TableCell className="text-right">
-                            <Button variant="outline" size="sm" onClick={() => openEditDialog(l)}>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => openEditDialog(l)}
+                            >
                               Modifier
                             </Button>
                           </TableCell>
@@ -259,7 +270,9 @@ export default function LevelsPage() {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>{editingLevel ? 'Modifier le niveau' : 'Nouveau niveau'}</DialogTitle>
+            <DialogTitle>
+              {editingLevel ? "Modifier le niveau" : "Nouveau niveau"}
+            </DialogTitle>
           </DialogHeader>
 
           <Form {...form}>
@@ -328,7 +341,7 @@ export default function LevelsPage() {
                         <Input
                           type="number"
                           placeholder="6"
-                          value={field.value ?? ''}
+                          value={field.value ?? ""}
                           onChange={field.onChange}
                           onBlur={field.onBlur}
                           name={field.name}
@@ -349,7 +362,7 @@ export default function LevelsPage() {
                         <Input
                           type="number"
                           placeholder="12"
-                          value={field.value ?? ''}
+                          value={field.value ?? ""}
                           onChange={field.onChange}
                           onBlur={field.onBlur}
                           name={field.name}
@@ -381,7 +394,7 @@ export default function LevelsPage() {
                 name="evaluation_type"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Type d'évaluation</FormLabel>
+                    <FormLabel>Type d&apos;évaluation</FormLabel>
                     <Select value={field.value} onValueChange={field.onChange}>
                       <FormControl>
                         <SelectTrigger>
@@ -390,7 +403,9 @@ export default function LevelsPage() {
                       </FormControl>
                       <SelectContent>
                         <SelectItem value="NUMERIC">Numérique</SelectItem>
-                        <SelectItem value="DESCRIPTIVE">Descriptive (Maternelle)</SelectItem>
+                        <SelectItem value="DESCRIPTIVE">
+                          Descriptive (Maternelle)
+                        </SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -403,7 +418,7 @@ export default function LevelsPage() {
                 name="order_index"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Ordre d'affichage</FormLabel>
+                    <FormLabel>Ordre d&apos;affichage</FormLabel>
                     <FormControl>
                       <Input type="number" placeholder="0" {...field} />
                     </FormControl>
@@ -413,15 +428,19 @@ export default function LevelsPage() {
               />
 
               <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setDialogOpen(false)}
+                >
                   Annuler
                 </Button>
                 <Button type="submit" disabled={form.formState.isSubmitting}>
                   {form.formState.isSubmitting
-                    ? 'Enregistrement...'
+                    ? "Enregistrement..."
                     : editingLevel
-                    ? 'Modifier'
-                    : 'Créer'}
+                      ? "Modifier"
+                      : "Créer"}
                 </Button>
               </DialogFooter>
             </form>

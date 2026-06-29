@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import Link from "next/link";
 import {
   ArrowRight,
   BookOpen,
@@ -7,83 +7,96 @@ import {
   CreditCard,
   GraduationCap,
   Users,
-} from 'lucide-react';
+} from "lucide-react";
 
-import { PageHeader } from '@/components/layout/page-header';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { PageHeader } from "@/components/layout/page-header";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 const KPI_ITEMS = [
   {
-    title: 'Eleves actifs',
-    value: '1 284',
-    delta: '+4.2% ce mois',
+    title: "Eleves actifs",
+    value: "1 284",
+    delta: "+4.2% ce mois",
     icon: Users,
   },
   {
-    title: 'Enseignants',
-    value: '68',
-    delta: '2 recrutements',
+    title: "Enseignants",
+    value: "68",
+    delta: "2 recrutements",
     icon: GraduationCap,
   },
   {
-    title: 'Recouvrement',
-    value: '78%',
-    delta: 'Objectif 85%',
+    title: "Recouvrement",
+    value: "78%",
+    delta: "Objectif 85%",
     icon: CircleDollarSign,
   },
   {
-    title: 'Presences du jour',
-    value: '92%',
-    delta: 'Excellent suivi',
+    title: "Presences du jour",
+    value: "92%",
+    delta: "Excellent suivi",
     icon: CalendarCheck2,
   },
 ];
 
 const WEEK_PROGRESS = [
-  { label: 'Saisie des presences', value: 92 },
-  { label: 'Saisie des notes', value: 67 },
-  { label: 'Paiements confirms', value: 78 },
+  { label: "Saisie des presences", value: 92 },
+  { label: "Saisie des notes", value: 67 },
+  { label: "Paiements confirms", value: 78 },
 ];
 
 const QUICK_ACTIONS = [
-  { label: 'Ajouter un eleve', href: '/app/students' },
-  { label: 'Creer une classe', href: '/app/pedagogie/classes' },
-  { label: 'Configurer emploi du temps', href: '/app/pedagogie/timetable' },
-  { label: 'Enregistrer un paiement', href: '/app/finance' },
+  { label: "Ajouter un eleve", href: "/app/students" },
+  { label: "Creer une classe", href: "/app/pedagogie/classes" },
+  { label: "Configurer emploi du temps", href: "/app/pedagogie/timetable" },
+  { label: "Enregistrer un paiement", href: "/app/finance" },
 ];
 
 const RECENT_ACTIVITY = [
   {
-    actor: 'Secretariat',
-    action: 'Nouvel eleve inscrit en 7e A',
-    module: 'Eleves',
-    status: 'Termine',
-    time: 'Il y a 12 min',
+    actor: "Secretariat",
+    action: "Nouvel eleve inscrit en 7e A",
+    module: "Eleves",
+    status: "Termine",
+    time: "Il y a 12 min",
   },
   {
-    actor: 'Direction',
-    action: 'Validation de l emploi du temps S2',
-    module: 'Pedagogie',
-    status: 'Termine',
-    time: 'Il y a 38 min',
+    actor: "Direction",
+    action: "Validation de l emploi du temps S2",
+    module: "Pedagogie",
+    status: "Termine",
+    time: "Il y a 38 min",
   },
   {
-    actor: 'Comptabilite',
-    action: 'Relance paiement classe Terminale',
-    module: 'Finance',
-    status: 'En cours',
-    time: 'Il y a 1 h',
+    actor: "Comptabilite",
+    action: "Relance paiement classe Terminale",
+    module: "Finance",
+    status: "En cours",
+    time: "Il y a 1 h",
   },
   {
-    actor: 'Enseignant',
-    action: 'Saisie des notes de mathematiques',
-    module: 'Pedagogie',
-    status: 'En cours',
-    time: 'Il y a 2 h',
+    actor: "Enseignant",
+    action: "Saisie des notes de mathematiques",
+    module: "Pedagogie",
+    status: "En cours",
+    time: "Il y a 2 h",
   },
 ];
 
@@ -101,11 +114,18 @@ export default async function AppDashboardPage({
         description="Suivi des indicateurs cle, operations quotidiennes et activites recentes de l etablissement."
         actions={
           <>
-            <Button variant="outline" nativeButton={false} render={<Link href={`/${locale}/app/pedagogie`} />}>
+            <Button
+              variant="outline"
+              nativeButton={false}
+              render={<Link href={`/${locale}/app/pedagogie`} />}
+            >
               <BookOpen className="mr-2 h-4 w-4" />
               Ouvrir pedagogie
             </Button>
-            <Button nativeButton={false} render={<Link href={`/${locale}/app/finance`} />}>
+            <Button
+              nativeButton={false}
+              render={<Link href={`/${locale}/app/finance`} />}
+            >
               <CreditCard className="mr-2 h-4 w-4" />
               Aller en finance
             </Button>
@@ -121,7 +141,9 @@ export default async function AppDashboardPage({
               <CardHeader className="pb-1">
                 <CardDescription>{kpi.title}</CardDescription>
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-2xl font-semibold tracking-tight">{kpi.value}</CardTitle>
+                  <CardTitle className="text-2xl font-semibold tracking-tight">
+                    {kpi.value}
+                  </CardTitle>
                   <div className="rounded-xl bg-primary/10 p-2 text-primary">
                     <Icon className="h-4 w-4" />
                   </div>
@@ -139,14 +161,18 @@ export default async function AppDashboardPage({
         <Card className="border-border/70 bg-card/90">
           <CardHeader>
             <CardTitle>Performance de la semaine</CardTitle>
-            <CardDescription>Progression des operations critiques</CardDescription>
+            <CardDescription>
+              Progression des operations critiques
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {WEEK_PROGRESS.map((item) => (
               <div key={item.label} className="space-y-1.5">
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">{item.label}</span>
-                  <span className="font-semibold tabular-nums">{item.value}%</span>
+                  <span className="font-semibold tabular-nums">
+                    {item.value}%
+                  </span>
                 </div>
                 <Progress value={item.value} className="h-2" />
               </div>
@@ -157,7 +183,9 @@ export default async function AppDashboardPage({
         <Card className="border-border/70 bg-card/90">
           <CardHeader>
             <CardTitle>Actions rapides</CardTitle>
-            <CardDescription>Raccourcis utiles pour l administration</CardDescription>
+            <CardDescription>
+              Raccourcis utiles pour l administration
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-2">
             {QUICK_ACTIONS.map((action) => (
@@ -179,7 +207,9 @@ export default async function AppDashboardPage({
       <Card className="border-border/70 bg-card/90">
         <CardHeader>
           <CardTitle>Activite recente</CardTitle>
-          <CardDescription>Dernieres operations enregistrees dans la plateforme</CardDescription>
+          <CardDescription>
+            Dernieres operations enregistrees dans la plateforme
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
@@ -199,9 +229,17 @@ export default async function AppDashboardPage({
                   <TableCell>{item.action}</TableCell>
                   <TableCell>{item.module}</TableCell>
                   <TableCell>
-                    <Badge variant={item.status === 'Termine' ? 'default' : 'secondary'}>{item.status}</Badge>
+                    <Badge
+                      variant={
+                        item.status === "Termine" ? "default" : "secondary"
+                      }
+                    >
+                      {item.status}
+                    </Badge>
                   </TableCell>
-                  <TableCell className="text-right text-muted-foreground">{item.time}</TableCell>
+                  <TableCell className="text-right text-muted-foreground">
+                    {item.time}
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>

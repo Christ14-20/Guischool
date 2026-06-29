@@ -1,50 +1,51 @@
 // Constantes métiers de base
 
 export const ROLES = {
-  SUPER_ADMIN: 'SUPER_ADMIN',
-  ADMIN_SCHOOL: 'ADMIN_SCHOOL',
-  SECRETAIRE: 'SECRETAIRE',
-  ENSEIGNANT: 'ENSEIGNANT',
-  PARENT: 'PARENT',
+  SUPER_ADMIN: "SUPER_ADMIN",
+  ADMIN_SCHOOL: "ADMIN_SCHOOL",
+  SECRETAIRE: "SECRETAIRE",
+  ENSEIGNANT: "ENSEIGNANT",
+  PARENT: "PARENT",
 } as const;
 
 export type Role = (typeof ROLES)[keyof typeof ROLES];
 
 export const STATUS = {
-  ACTIVE: 'ACTIVE',
-  SUSPENDED: 'SUSPENDED',
-  TRIAL: 'TRIAL',
-  CANCELLED: 'CANCELLED',
+  ACTIVE: "ACTIVE",
+  SUSPENDED: "SUSPENDED",
+  TRIAL: "TRIAL",
+  CANCELLED: "CANCELLED",
 } as const;
 
-export const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
+export const API_URL =
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
 
 // Permissions disponibles dans l'application
 export const PERMISSIONS = {
   // Élèves
-  STUDENT_VIEW: 'student:view',
-  STUDENT_CREATE: 'student:create',
-  STUDENT_EDIT: 'student:edit',
-  STUDENT_DELETE: 'student:delete',
+  STUDENT_VIEW: "student:view",
+  STUDENT_CREATE: "student:create",
+  STUDENT_EDIT: "student:edit",
+  STUDENT_DELETE: "student:delete",
   // Notes
-  GRADE_VIEW: 'grade:view',
-  GRADE_CREATE: 'grade:create',
-  GRADE_BULK: 'grade:bulk',
+  GRADE_VIEW: "grade:view",
+  GRADE_CREATE: "grade:create",
+  GRADE_BULK: "grade:bulk",
   // Finance
-  FINANCE_VIEW: 'finance:view',
-  FINANCE_CREATE: 'finance:create',
-  FINANCE_EDIT: 'finance:edit',
+  FINANCE_VIEW: "finance:view",
+  FINANCE_CREATE: "finance:create",
+  FINANCE_EDIT: "finance:edit",
   // Paramètres
-  SETTINGS_VIEW: 'settings:view',
-  SETTINGS_EDIT: 'settings:edit',
+  SETTINGS_VIEW: "settings:view",
+  SETTINGS_EDIT: "settings:edit",
   // Fin d'année
-  YEAR_END_MANAGE: 'year-end:manage',
+  YEAR_END_MANAGE: "year-end:manage",
   // Support
-  SUPPORT_VIEW: 'support:view',
-  SUPPORT_CREATE: 'support:create',
-  SUPPORT_MANAGE: 'support:manage',
+  SUPPORT_VIEW: "support:view",
+  SUPPORT_CREATE: "support:create",
+  SUPPORT_MANAGE: "support:manage",
   // Superadmin
-  SUPERADMIN_ACCESS: 'superadmin:access',
+  SUPERADMIN_ACCESS: "superadmin:access",
 } as const;
 
 export type Permission = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];

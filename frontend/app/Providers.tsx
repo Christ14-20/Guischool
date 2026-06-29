@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { SessionProvider } from 'next-auth/react';
-import { useState } from 'react';
-import { Toaster } from '@/components/ui/sonner';
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { SessionProvider } from "next-auth/react";
+import { useState } from "react";
+import { Toaster } from "@/components/ui/sonner";
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -14,7 +14,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
             staleTime: 30 * 1000, // 30 seconds
           },
         },
-      })
+      }),
   );
 
   return (

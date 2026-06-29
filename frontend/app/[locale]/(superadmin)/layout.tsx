@@ -1,8 +1,12 @@
-import { SuperadminSidebar } from '@/components/layout/superadmin-sidebar';
-import { SchoolYearProvider } from '@/components/layout/school-year-provider';
-import { TopBar } from '@/components/layout/top-bar';
+import { SuperadminSidebar } from "@/components/layout/superadmin-sidebar";
+import { SchoolYearProvider } from "@/components/layout/school-year-provider";
+import { TopBar } from "@/components/layout/top-bar";
 
-export default function SuperadminLayout({ children }: { children: React.ReactNode }) {
+export default function SuperadminLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <div className="flex min-h-screen bg-transparent">
       <SuperadminSidebar />

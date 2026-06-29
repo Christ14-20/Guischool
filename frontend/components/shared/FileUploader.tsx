@@ -1,16 +1,17 @@
-'use client';
+"use client";
 
-import { FileImage, Loader2, UploadCloud, X } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import Image from "next/image";
+import { FileImage, Loader2, UploadCloud, X } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import {
   requestPresignedUpload,
   type PresignedUploadResponse,
   uploadFileToSignedUrl,
-} from '@/lib/api/uploads';
-import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
-import { cn } from '@/lib/utils';
+} from "@/lib/api/uploads";
+import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
+import { cn } from "@/lib/utils";
 
 type FileUploaderProps = {
   accept?: string;
@@ -30,7 +31,7 @@ function fileAccepted(file: File, accept: string) {
   if (!accept.trim()) return true;
 
   const rules = accept
-    .split(',')
+    .split(",")
     .map((item) => item.trim().toLowerCase())
     .filter(Boolean);
 
@@ -38,14 +39,14 @@ function fileAccepted(file: File, accept: string) {
   const name = file.name.toLowerCase();
 
   return rules.some((rule) => {
-    if (rule.startsWith('.')) return name.endsWith(rule);
-    if (rule.endsWith('/*')) return mime.startsWith(rule.replace('*', ''));
+    if (rule.startsWith(".")) return name.endsWith(rule);
+    if (rule.endsWith("/*")) return mime.startsWith(rule.replace("*", ""));
     return mime === rule;
   });
 }
 
 export function FileUploader({
-  accept = 'image/png,image/jpeg,image/webp',
+  accept = "image/png,image/jpeg,image/webp",
   maxSize = 2 * 1024 * 1024,
   onUploadComplete,
   className,
@@ -61,7 +62,7 @@ export function FileUploader({
 
   const previewUrl = useMemo(() => {
     if (!selectedFile) return null;
-    if (!selectedFile.type.startsWith('image/')) return null;
+    if (!selectedFile.type.startsWith("image/")) return null;
     return URL.createObjectURL(selectedFile);
   }, [selectedFile]);
 
@@ -78,7 +79,7 @@ export function FileUploader({
     setSelectedFile(null);
     setProgress(0);
     setUploadedUrl(undefined);
-    if (inputRef.current) inputRef.current.value = '';
+    if (inputRef.current) inputRef.current.value = "";
   };
 
   const validateFile = (file: File) => {
@@ -110,7 +111,7 @@ export function FileUploader({
         ? await getSignedUrl(file)
         : await requestPresignedUpload({
             fileName: file.name,
-            contentType: file.type || 'application/octet-stream',
+            contentType: file.type || "application/octet-stream",
             size: file.size,
           });
 
@@ -126,14 +127,17 @@ export function FileUploader({
       setUploadedUrl(signed.fileUrl);
       onUploadComplete?.({ file, fileUrl: signed.fileUrl });
     } catch (uploadError) {
-      const message = uploadError instanceof Error ? uploadError.message : 'Erreur inconnue';
+      const message =
+        uploadError instanceof Error ? uploadError.message : "Erreur inconnue";
       setError(`Echec upload: ${message}`);
     } finally {
       setIsUploading(false);
     }
   };
 
-  const onFileInputChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const onFileInputChange = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
     const file = event.target.files?.[0];
     if (!file) return;
     await handleUpload(file);
@@ -148,7 +152,7 @@ export function FileUploader({
   };
 
   return (
-    <div className={cn('space-y-3', className)}>
+    <div className={cn("space-y-3", className)}>
       <input
         ref={inputRef}
         type="file"
@@ -165,9 +169,9 @@ export function FileUploader({
         onDragLeave={() => setIsDragging(false)}
         onDrop={onDrop}
         className={cn(
-          'rounded-xl border border-dashed p-6 text-center transition-colors',
-          isDragging ? 'border-primary bg-primary/5' : 'border-border',
-          isUploading && 'pointer-events-none opacity-80'
+          "rounded-xl border border-dashed p-6 text-center transition-colors",
+          isDragging ? "border-primary bg-primary/5" : "border-border",
+          isUploading && "pointer-events-none opacity-80",
         )}
       >
         <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-secondary text-secondary-foreground">
@@ -179,7 +183,12 @@ export function FileUploader({
           ou selectionnez un fichier ({accept}) - max {bytesToReadable(maxSize)}
         </p>
 
-        <Button type="button" variant="outline" className="mt-4" onClick={() => inputRef.current?.click()}>
+        <Button
+          type="button"
+          variant="outline"
+          className="mt-4"
+          onClick={() => inputRef.current?.click()}
+        >
           Choisir un fichier
         </Button>
       </div>
@@ -190,34 +199,54 @@ export function FileUploader({
             <div className="flex min-w-0 items-center gap-2">
               <FileImage className="h-4 w-4 shrink-0 text-muted-foreground" />
               <div className="min-w-0">
-                <p className="truncate text-sm font-medium">{selectedFile.name}</p>
-                <p className="text-xs text-muted-foreground">{bytesToReadable(selectedFile.size)}</p>
+                <p className="truncate text-sm font-medium">
+                  {selectedFile.name}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {bytesToReadable(selectedFile.size)}
+                </p>
               </div>
             </div>
 
-            <Button type="button" variant="ghost" size="icon" onClick={reset} aria-label="Supprimer le fichier">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={reset}
+              aria-label="Supprimer le fichier"
+            >
               <X className="h-4 w-4" />
             </Button>
           </div>
 
           {previewUrl ? (
-            <img
-              src={previewUrl}
+            <Image
+              src={previewUrl ?? ""}
               alt="Apercu"
+              width={400}
+              height={160}
               className="mt-3 h-40 w-full rounded-lg border object-cover"
             />
           ) : null}
 
           <div className="mt-3 space-y-2">
             <div className="flex items-center justify-between text-xs text-muted-foreground">
-              <span>{isUploading ? 'Upload en cours...' : uploadedUrl ? 'Upload termine' : 'Pret'}</span>
+              <span>
+                {isUploading
+                  ? "Upload en cours..."
+                  : uploadedUrl
+                    ? "Upload termine"
+                    : "Pret"}
+              </span>
               <span>{progress}%</span>
             </div>
             <Progress value={progress} />
           </div>
 
           {uploadedUrl ? (
-            <p className="mt-2 truncate text-xs text-muted-foreground">URL: {uploadedUrl}</p>
+            <p className="mt-2 truncate text-xs text-muted-foreground">
+              URL: {uploadedUrl}
+            </p>
           ) : null}
         </div>
       ) : null}

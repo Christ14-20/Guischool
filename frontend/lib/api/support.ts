@@ -5,31 +5,32 @@
 
 type RequestOptions = {
   token: string;
-  method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+  method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   query?: Record<string, string | number | boolean | undefined | null>;
   body?: unknown;
 };
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
+const API_BASE =
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
 
 async function request<T>(path: string, options: RequestOptions): Promise<T> {
   const url = new URL(`${API_BASE}${path}`);
 
   if (options.query) {
     Object.entries(options.query).forEach(([key, value]) => {
-      if (value === undefined || value === null || value === '') return;
+      if (value === undefined || value === null || value === "") return;
       url.searchParams.set(key, String(value));
     });
   }
 
   const response = await fetch(url.toString(), {
-    method: options.method ?? 'GET',
+    method: options.method ?? "GET",
     headers: {
       Authorization: `Bearer ${options.token}`,
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
     },
     body: options.body ? JSON.stringify(options.body) : undefined,
-    cache: 'no-store',
+    cache: "no-store",
   });
 
   let payload: unknown = null;
@@ -41,7 +42,7 @@ async function request<T>(path: string, options: RequestOptions): Promise<T> {
 
   if (!response.ok) {
     const data = payload as Record<string, unknown> | null;
-    const message = data?.message ?? data?.detail ?? 'Erreur serveur.';
+    const message = data?.message ?? data?.detail ?? "Erreur serveur.";
     throw new Error(String(message));
   }
 
@@ -56,23 +57,19 @@ export type PaginatedResult<T> = {
 // ─── Ticket Types ─────────────────────────────────────────────────────────────
 
 export type TicketCategory =
-  | 'TECHNIQUE'
-  | 'FACTURATION'
-  | 'FONCTIONNEL'
-  | 'FEATURE'
-  | 'BLOCAGE'
-  | 'PAIEMENT'
+  | "TECHNIQUE"
+  | "FACTURATION"
+  | "FONCTIONNEL"
+  | "FEATURE"
+  | "BLOCAGE"
+  | "PAIEMENT"
   | string;
 
-export type TicketPriority = 'BLOQUANT' | 'MAJEUR' | 'MINEUR' | 'QUESTION' | string;
+export type TicketPriority =
+  "BLOQUANT" | "MAJEUR" | "MINEUR" | "QUESTION" | string;
 
 export type TicketStatus =
-  | 'OUVERT'
-  | 'EN_COURS'
-  | 'EN_ATTENTE'
-  | 'RESOLU'
-  | 'FERME'
-  | string;
+  "OUVERT" | "EN_COURS" | "EN_ATTENTE" | "RESOLU" | "FERME" | string;
 
 export type TicketMessage = {
   id: string | number;
@@ -107,53 +104,78 @@ export type TicketItem = {
 
 export async function getTickets(
   token: string,
-  query?: Record<string, string | number | undefined>
+  query?: Record<string, string | number | undefined>,
 ): Promise<PaginatedResult<TicketItem>> {
-  const data = await request<any>('/support/tickets/', { token, query });
+  const data = await request<Record<string, unknown>>("/support/tickets/", {
+    token,
+    query,
+  });
   return {
     count: Number(data?.count ?? 0),
-    results: Array.isArray(data?.results) ? data.results : Array.isArray(data) ? data : [],
+    results: Array.isArray(data?.results)
+      ? data.results
+      : Array.isArray(data)
+        ? data
+        : [],
   };
 }
 
-export async function getTicket(token: string, id: string): Promise<TicketItem> {
+export async function getTicket(
+  token: string,
+  id: string,
+): Promise<TicketItem> {
   return request<TicketItem>(`/support/tickets/${id}/`, { token });
 }
 
 export async function createTicket(
   token: string,
-  body: Record<string, unknown>
+  body: Record<string, unknown>,
 ): Promise<TicketItem> {
-  return request<TicketItem>('/support/tickets/', { token, method: 'POST', body });
+  return request<TicketItem>("/support/tickets/", {
+    token,
+    method: "POST",
+    body,
+  });
 }
 
 export async function updateTicket(
   token: string,
   id: string | number,
-  body: Record<string, unknown>
+  body: Record<string, unknown>,
 ): Promise<TicketItem> {
-  return request<TicketItem>(`/support/tickets/${id}/`, { token, method: 'PATCH', body });
+  return request<TicketItem>(`/support/tickets/${id}/`, {
+    token,
+    method: "PATCH",
+    body,
+  });
 }
 
 export async function getTicketMessages(
   token: string,
-  ticketId: string
+  ticketId: string,
 ): Promise<PaginatedResult<TicketMessage>> {
-  const data = await request<any>(`/support/tickets/${ticketId}/messages/`, { token });
+  const data = await request<Record<string, unknown>>(
+    `/support/tickets/${ticketId}/messages/`,
+    { token },
+  );
   return {
     count: Number(data?.count ?? 0),
-    results: Array.isArray(data?.results) ? data.results : Array.isArray(data) ? data : [],
+    results: Array.isArray(data?.results)
+      ? data.results
+      : Array.isArray(data)
+        ? data
+        : [],
   };
 }
 
 export async function addTicketMessage(
   token: string,
   ticketId: string,
-  content: string
+  content: string,
 ): Promise<TicketMessage> {
   return request<TicketMessage>(`/support/tickets/${ticketId}/messages/`, {
     token,
-    method: 'POST',
+    method: "POST",
     body: { content },
   });
 }

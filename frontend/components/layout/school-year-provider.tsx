@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import { createContext, useContext, useEffect, useMemo, useState } from 'react';
-import { useSession } from 'next-auth/react';
+import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { useSession } from "next-auth/react";
 
-import { getSchoolYears } from '@/lib/api/pedagogy';
+import { getSchoolYears } from "@/lib/api/pedagogy";
 
 type SchoolYearContextType = {
   schoolYear: string;
@@ -20,19 +20,23 @@ const DEFAULT_AVAILABLE_YEARS = [
 
 const SchoolYearContext = createContext<SchoolYearContextType | null>(null);
 
-export function SchoolYearProvider({ children }: { children: React.ReactNode }) {
+export function SchoolYearProvider({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const { data: session } = useSession();
-  const token = session?.accessToken ?? '';
+  const token = session?.accessToken ?? "";
 
-  const [schoolYear, setSchoolYear] = useState('');
-  const [availableYears, setAvailableYears] = useState<string[]>(DEFAULT_AVAILABLE_YEARS);
-
-  useEffect(() => {
-    const saved = window.localStorage.getItem('active-school-year');
-    if (saved && !schoolYear) {
-      setSchoolYear(saved);
+  const [schoolYear, setSchoolYear] = useState(() => {
+    if (typeof window !== "undefined") {
+      return window.localStorage.getItem("active-school-year") || "";
     }
-  }, [schoolYear]);
+    return "";
+  });
+  const [availableYears, setAvailableYears] = useState<string[]>(
+    DEFAULT_AVAILABLE_YEARS,
+  );
 
   useEffect(() => {
     if (!token) {
@@ -45,9 +49,7 @@ export function SchoolYearProvider({ children }: { children: React.ReactNode }) 
       .then((res) => {
         if (!mounted) return;
 
-        const labels = res.results
-          .map((item) => item.label)
-          .filter(Boolean);
+        const labels = res.results.map((item) => item.label).filter(Boolean);
 
         if (labels.length === 0) {
           setAvailableYears(DEFAULT_AVAILABLE_YEARS);
@@ -55,7 +57,7 @@ export function SchoolYearProvider({ children }: { children: React.ReactNode }) 
         }
 
         const currentLabel = res.results.find((item) => item.is_current)?.label;
-        const saved = window.localStorage.getItem('active-school-year');
+        const saved = window.localStorage.getItem("active-school-year");
 
         setAvailableYears(labels);
         setSchoolYear((prev) => {
@@ -80,7 +82,7 @@ export function SchoolYearProvider({ children }: { children: React.ReactNode }) 
 
   useEffect(() => {
     if (!schoolYear) return;
-    window.localStorage.setItem('active-school-year', schoolYear);
+    window.localStorage.setItem("active-school-year", schoolYear);
   }, [schoolYear]);
 
   const value = useMemo(
@@ -89,16 +91,20 @@ export function SchoolYearProvider({ children }: { children: React.ReactNode }) 
       setSchoolYear,
       availableYears,
     }),
-    [schoolYear, availableYears]
+    [schoolYear, availableYears],
   );
 
-  return <SchoolYearContext.Provider value={value}>{children}</SchoolYearContext.Provider>;
+  return (
+    <SchoolYearContext.Provider value={value}>
+      {children}
+    </SchoolYearContext.Provider>
+  );
 }
 
 export function useSchoolYear() {
   const context = useContext(SchoolYearContext);
   if (!context) {
-    throw new Error('useSchoolYear must be used inside SchoolYearProvider.');
+    throw new Error("useSchoolYear must be used inside SchoolYearProvider.");
   }
   return context;
 }

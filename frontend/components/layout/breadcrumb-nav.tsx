@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import Link from 'next/link';
-import { Fragment } from 'react';
-import { useParams, usePathname } from 'next/navigation';
+import Link from "next/link";
+import { Fragment } from "react";
+import { useParams, usePathname } from "next/navigation";
 
 import {
   Breadcrumb,
@@ -11,36 +11,36 @@ import {
   BreadcrumbList,
   BreadcrumbPage,
   BreadcrumbSeparator,
-} from '@/components/ui/breadcrumb';
+} from "@/components/ui/breadcrumb";
 
 const SEGMENT_LABELS: Record<string, string> = {
-  app: 'App',
-  superadmin: 'Super Admin',
-  dashboard: 'Dashboard',
-  pedagogie: 'Pedagogie',
-  students: 'Eleves',
-  grades: 'Notes',
-  finance: 'Finance',
-  support: 'Support',
-  settings: 'Parametres',
-  schools: 'Ecoles',
-  plans: 'Plans',
-  users: 'Utilisateurs',
-  logs: 'Logs',
-  alerts: 'Alertes',
+  app: "App",
+  superadmin: "Super Admin",
+  dashboard: "Dashboard",
+  pedagogie: "Pedagogie",
+  students: "Eleves",
+  grades: "Notes",
+  finance: "Finance",
+  support: "Support",
+  settings: "Parametres",
+  schools: "Ecoles",
+  plans: "Plans",
+  users: "Utilisateurs",
+  logs: "Logs",
+  alerts: "Alertes",
 };
 
 function prettyLabel(segment: string) {
-  return SEGMENT_LABELS[segment] ?? segment.replace(/-/g, ' ');
+  return SEGMENT_LABELS[segment] ?? segment.replace(/-/g, " ");
 }
 
 export function BreadcrumbNav() {
   const pathname = usePathname();
   const params = useParams();
-  const locale = (params?.locale as string) ?? 'fr';
+  const locale = (params?.locale as string) ?? "fr";
 
-  const pathWithoutLocale = pathname.replace(/^\/(fr|en)/, '');
-  const segments = pathWithoutLocale.split('/').filter(Boolean);
+  const pathWithoutLocale = pathname.replace(/^\/(fr|en)/, "");
+  const segments = pathWithoutLocale.split("/").filter(Boolean);
 
   if (segments.length === 0) return null;
 
@@ -48,7 +48,7 @@ export function BreadcrumbNav() {
     <Breadcrumb>
       <BreadcrumbList>
         {segments.map((segment, index) => {
-          const href = `/${locale}/${segments.slice(0, index + 1).join('/')}`;
+          const href = `/${locale}/${segments.slice(0, index + 1).join("/")}`;
           const isLast = index === segments.length - 1;
 
           return (
@@ -57,7 +57,9 @@ export function BreadcrumbNav() {
                 {isLast ? (
                   <BreadcrumbPage>{prettyLabel(segment)}</BreadcrumbPage>
                 ) : (
-                  <BreadcrumbLink render={<Link href={href} />}>{prettyLabel(segment)}</BreadcrumbLink>
+                  <BreadcrumbLink render={<Link href={href} />}>
+                    {prettyLabel(segment)}
+                  </BreadcrumbLink>
                 )}
               </BreadcrumbItem>
               {!isLast && <BreadcrumbSeparator />}

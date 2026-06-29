@@ -1,24 +1,25 @@
-'use client';
+"use client";
 
-import React from 'react';
-import { PDFViewer, PDFDownloadLink } from '@react-pdf/renderer';
-import { Button } from '@/components/ui/button';
-import { Download } from 'lucide-react';
-import ReceiptPDF from './ReceiptPDF';
-import { PaymentItem } from '@/lib/api/finance';
+import React from "react";
+import { PDFViewer, PDFDownloadLink } from "@react-pdf/renderer";
+import { Button } from "@/components/ui/button";
+import { Download } from "lucide-react";
+import ReceiptPDF from "./ReceiptPDF";
+import { PaymentItem } from "@/lib/api/finance";
 
 interface ReceiptPDFViewerProps {
   payment: PaymentItem;
-  onClose?: () => void;
 }
 
-export default function ReceiptPDFViewer({ payment, onClose }: ReceiptPDFViewerProps) {
+export default function ReceiptPDFViewer({ payment }: ReceiptPDFViewerProps) {
   const fileName = `Recu_${payment.receipt_number || payment.id}.pdf`;
 
   return (
     <div className="flex flex-col space-y-4 w-full h-full">
       <div className="flex justify-between items-center bg-muted/50 p-2 rounded-md">
-        <span className="text-sm text-muted-foreground ml-2">Prévisualisation du reçu</span>
+        <span className="text-sm text-muted-foreground ml-2">
+          Prévisualisation du reçu
+        </span>
         <PDFDownloadLink
           document={<ReceiptPDF payment={payment} />}
           fileName={fileName}
@@ -26,7 +27,7 @@ export default function ReceiptPDFViewer({ payment, onClose }: ReceiptPDFViewerP
           {({ loading }) => (
             <Button size="sm" variant="default" disabled={loading}>
               <Download className="h-4 w-4 mr-2" />
-              {loading ? 'Génération...' : 'Télécharger'}
+              {loading ? "Génération..." : "Télécharger"}
             </Button>
           )}
         </PDFDownloadLink>

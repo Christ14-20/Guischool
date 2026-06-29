@@ -3,19 +3,24 @@
  * API authentifiée pour la configuration et les paramètres (Module 9).
  */
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
+const API_BASE =
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
 
-async function request<T>(token: string, path: string, options: RequestInit = {}): Promise<T> {
+async function request<T>(
+  token: string,
+  path: string,
+  options: RequestInit = {},
+): Promise<T> {
   const response = await fetch(`${API_BASE}${path}`, {
     ...options,
     headers: {
       Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
       ...options.headers,
     },
   });
 
-  let payload: any = null;
+  let payload: unknown = null;
   try {
     payload = await response.json();
   } catch {
@@ -23,8 +28,9 @@ async function request<T>(token: string, path: string, options: RequestInit = {}
   }
 
   if (!response.ok) {
-    const message = payload?.message ?? payload?.detail ?? 'Une erreur est survenue.';
-    throw new Error(message);
+    const p = payload as Record<string, unknown> | null;
+    const message = p?.message ?? p?.detail ?? "Une erreur est survenue.";
+    throw new Error(String(message));
   }
 
   return payload as T;
@@ -51,7 +57,7 @@ export type SchoolUser = {
   last_name: string;
   email: string;
   role: string;
-  status: 'ACTIVE' | 'INACTIVE' | 'INVITED';
+  status: "ACTIVE" | "INACTIVE" | "INVITED";
   last_login?: string;
 };
 
@@ -77,21 +83,29 @@ export type PaginatedResult<T> = {
  */
 export async function getAuditLogs(
   token: string,
-  query?: Record<string, string | number | undefined>
 ): Promise<PaginatedResult<AuditLogItem>> {
-  const data = await request<any>(token, '/monitoring/auditlogs/', {
-    // Note: Dans un environnement réel, on filtrerait probablement par school_id côté backend
-  });
+  const data = await request<Record<string, unknown>>(
+    token,
+    "/monitoring/auditlogs/",
+    {},
+  );
   return {
     count: Number(data?.count ?? 0),
-    results: Array.isArray(data?.results) ? data.results : Array.isArray(data) ? data : [],
+    results: Array.isArray(data?.results)
+      ? data.results
+      : Array.isArray(data)
+        ? data
+        : [],
   };
 }
 
 /**
  * Récupère les paramètres de l'école courante.
  */
-export async function getSchoolSettings(token: string, schoolId: string): Promise<SchoolSettings> {
+export async function getSchoolSettings(
+  token: string,
+  schoolId: string,
+): Promise<SchoolSettings> {
   return request<SchoolSettings>(token, `/schools/${schoolId}/`);
 }
 
@@ -101,10 +115,10 @@ export async function getSchoolSettings(token: string, schoolId: string): Promis
 export async function updateSchoolSettings(
   token: string,
   schoolId: string,
-  body: Partial<SchoolSettings>
+  body: Partial<SchoolSettings>,
 ): Promise<SchoolSettings> {
   return request<SchoolSettings>(token, `/schools/${schoolId}/`, {
-    method: 'PATCH',
+    method: "PATCH",
     body: JSON.stringify(body),
   });
 }
@@ -113,8 +127,12 @@ export async function updateSchoolSettings(
  * Liste les utilisateurs de l'école.
  */
 export async function getSchoolUsers(token: string): Promise<SchoolUser[]> {
-  const data = await request<any>(token, '/schools/users/');
-  return Array.isArray(data?.results) ? data.results : Array.isArray(data) ? data : [];
+  const data = await request<Record<string, unknown>>(token, "/schools/users/");
+  return Array.isArray(data?.results)
+    ? data.results
+    : Array.isArray(data)
+      ? data
+      : [];
 }
 
 /**
@@ -122,10 +140,15 @@ export async function getSchoolUsers(token: string): Promise<SchoolUser[]> {
  */
 export async function inviteSchoolUser(
   token: string,
-  body: { email: string; role: string; first_name?: string; last_name?: string }
+  body: {
+    email: string;
+    role: string;
+    first_name?: string;
+    last_name?: string;
+  },
 ): Promise<SchoolUser> {
-  return request<SchoolUser>(token, '/schools/users/invite/', {
-    method: 'POST',
+  return request<SchoolUser>(token, "/schools/users/invite/", {
+    method: "POST",
     body: JSON.stringify(body),
   });
 }
@@ -135,10 +158,10 @@ export async function inviteSchoolUser(
  */
 export async function changePassword(
   token: string,
-  body: { current_password: string; new_password: string }
+  body: { current_password: string; new_password: string },
 ): Promise<{ message: string }> {
-  return request<{ message: string }>(token, '/auth/change-password/', {
-    method: 'POST',
+  return request<{ message: string }>(token, "/auth/change-password/", {
+    method: "POST",
     body: JSON.stringify(body),
   });
 }

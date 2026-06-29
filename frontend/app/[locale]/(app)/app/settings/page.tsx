@@ -1,32 +1,38 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { useSession } from 'next-auth/react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { toast } from 'sonner';
-import { 
-  Building2, 
-  GraduationCap, 
-  KeyRound, 
-  Loader2, 
-  Mail, 
-  Plus, 
-  Save, 
-  ShieldCheck, 
+import { useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { toast } from "sonner";
+import {
+  Building2,
+  GraduationCap,
+  KeyRound,
+  Loader2,
+  Mail,
+  Plus,
+  Save,
+  ShieldCheck,
   Users,
-  History
-} from 'lucide-react';
+  History,
+} from "lucide-react";
 
-import { AuditTable } from '@/components/settings/AuditTable';
+import { AuditTable } from "@/components/settings/AuditTable";
 
-import { PageHeader } from '@/components/layout/page-header';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { PageHeader } from "@/components/layout/page-header";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Form,
   FormControl,
@@ -35,38 +41,37 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from '@/components/ui/form';
+} from "@/components/ui/form";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import { Separator } from '@/components/ui/separator';
-import { Badge } from '@/components/ui/badge';
-import { DataTable, type DataTableColumn } from '@/components/shared/DataTable';
-import { FileUploader } from '@/components/shared/FileUploader';
-import { StatusBadge } from '@/components/shared/StatusBadge';
+} from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
+import { DataTable, type DataTableColumn } from "@/components/shared/DataTable";
+import { FileUploader } from "@/components/shared/FileUploader";
+import { StatusBadge } from "@/components/shared/StatusBadge";
 
-import { 
-  getSchoolSettings, 
-  updateSchoolSettings, 
-  getSchoolUsers, 
-  inviteSchoolUser, 
+import {
+  getSchoolSettings,
+  updateSchoolSettings,
+  getSchoolUsers,
+  inviteSchoolUser,
   changePassword,
-  type SchoolSettings,
-  type SchoolUser
-} from '@/lib/api/settings';
+  type SchoolUser,
+} from "@/lib/api/settings";
 
 // ─── Schemas ──────────────────────────────────────────────────────────────────
 
 const schoolSchema = z.object({
-  name: z.string().min(2, 'Le nom doit comporter au moins 2 caractères.'),
-  address: z.string().min(5, 'L\'adresse est requise.'),
-  phone: z.string().min(8, 'Numéro de téléphone invalide.'),
-  email: z.string().email('Email invalide.'),
-  website: z.string().url('URL invalide.').optional().or(z.literal('')),
+  name: z.string().min(2, "Le nom doit comporter au moins 2 caractères."),
+  address: z.string().min(5, "L'adresse est requise."),
+  phone: z.string().min(8, "Numéro de téléphone invalide."),
+  email: z.string().email("Email invalide."),
+  website: z.string().url("URL invalide.").optional().or(z.literal("")),
   logo: z.string().optional(),
 });
 
@@ -76,27 +81,31 @@ const pedagogySchema = z.object({
 });
 
 const inviteSchema = z.object({
-  first_name: z.string().min(1, 'Prénom requis.'),
-  last_name: z.string().min(1, 'Nom requis.'),
-  email: z.string().email('Email invalide.'),
-  role: z.string().min(1, 'Le rôle est requis.'),
+  first_name: z.string().min(1, "Prénom requis."),
+  last_name: z.string().min(1, "Nom requis."),
+  email: z.string().email("Email invalide."),
+  role: z.string().min(1, "Le rôle est requis."),
 });
 
-const passwordSchema = z.object({
-  current_password: z.string().min(1, 'Mot de passe actuel requis.'),
-  new_password: z.string().min(8, 'Le nouveau mot de passe doit comporter au moins 8 caractères.'),
-  confirm_password: z.string().min(8, 'Confirmation requise.'),
-}).refine((data) => data.new_password === data.confirm_password, {
-  message: "Les mots de passe ne correspondent pas.",
-  path: ["confirm_password"],
-});
+const passwordSchema = z
+  .object({
+    current_password: z.string().min(1, "Mot de passe actuel requis."),
+    new_password: z
+      .string()
+      .min(8, "Le nouveau mot de passe doit comporter au moins 8 caractères."),
+    confirm_password: z.string().min(8, "Confirmation requise."),
+  })
+  .refine((data) => data.new_password === data.confirm_password, {
+    message: "Les mots de passe ne correspondent pas.",
+    path: ["confirm_password"],
+  });
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function SettingsPage() {
   const { data: session } = useSession();
-  const token = session?.accessToken ?? '';
-  const schoolId = session?.user?.tenantId ?? '';
+  const token = session?.accessToken ?? "";
+  const schoolId = session?.user?.tenantId ?? "";
 
   const [loading, setLoading] = useState(true);
   const [users, setUsers] = useState<SchoolUser[]>([]);
@@ -105,22 +114,39 @@ export default function SettingsPage() {
   // Forms
   const schoolForm = useForm<z.infer<typeof schoolSchema>>({
     resolver: zodResolver(schoolSchema),
-    defaultValues: { name: '', address: '', phone: '', email: '', website: '', logo: '' },
+    defaultValues: {
+      name: "",
+      address: "",
+      phone: "",
+      email: "",
+      website: "",
+      logo: "",
+    },
   });
 
   const pedagogyForm = useForm<z.infer<typeof pedagogySchema>>({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     resolver: zodResolver(pedagogySchema) as any,
     defaultValues: { passing_threshold: 10, max_repeats: 2 },
   });
 
   const inviteForm = useForm<z.infer<typeof inviteSchema>>({
     resolver: zodResolver(inviteSchema),
-    defaultValues: { first_name: '', last_name: '', email: '', role: 'TEACHER' },
+    defaultValues: {
+      first_name: "",
+      last_name: "",
+      email: "",
+      role: "TEACHER",
+    },
   });
 
   const passwordForm = useForm<z.infer<typeof passwordSchema>>({
     resolver: zodResolver(passwordSchema),
-    defaultValues: { current_password: '', new_password: '', confirm_password: '' },
+    defaultValues: {
+      current_password: "",
+      new_password: "",
+      confirm_password: "",
+    },
   });
 
   // Load initial data
@@ -133,17 +159,17 @@ export default function SettingsPage() {
         const settings = await getSchoolSettings(token, schoolId);
         schoolForm.reset({
           name: settings.name,
-          address: settings.address ?? '',
-          phone: settings.phone ?? '',
-          email: settings.email ?? '',
-          website: settings.website ?? '',
-          logo: settings.logo ?? '',
+          address: settings.address ?? "",
+          phone: settings.phone ?? "",
+          email: settings.email ?? "",
+          website: settings.website ?? "",
+          logo: settings.logo ?? "",
         });
         pedagogyForm.reset({
           passing_threshold: settings.passing_threshold,
           max_repeats: settings.max_repeats,
         });
-      } catch (error) {
+      } catch {
         toast.error("Erreur lors du chargement des paramètres.");
       } finally {
         setLoading(false);
@@ -210,10 +236,22 @@ export default function SettingsPage() {
   };
 
   const userColumns: DataTableColumn<SchoolUser>[] = [
-    { key: 'name', header: 'Nom', accessor: (u) => `${u.first_name} ${u.last_name}` },
-    { key: 'email', header: 'Email', accessor: (u) => u.email },
-    { key: 'role', header: 'Rôle', accessor: (u) => <Badge variant="outline">{u.role}</Badge> },
-    { key: 'status', header: 'Statut', accessor: (u) => <StatusBadge status={u.status} /> },
+    {
+      key: "name",
+      header: "Nom",
+      accessor: (u) => `${u.first_name} ${u.last_name}`,
+    },
+    { key: "email", header: "Email", accessor: (u) => u.email },
+    {
+      key: "role",
+      header: "Rôle",
+      accessor: (u) => <Badge variant="outline">{u.role}</Badge>,
+    },
+    {
+      key: "status",
+      header: "Statut",
+      accessor: (u) => <StatusBadge status={u.status} />,
+    },
   ];
 
   if (loading) {
@@ -226,8 +264,8 @@ export default function SettingsPage() {
 
   return (
     <div className="space-y-6 pb-20">
-      <PageHeader 
-        title="Paramètres" 
+      <PageHeader
+        title="Paramètres"
         description="Gérez les informations de votre établissement et les accès de votre équipe."
       />
 
@@ -239,7 +277,11 @@ export default function SettingsPage() {
           <TabsTrigger value="pedagogy" className="flex items-center gap-2">
             <GraduationCap className="h-4 w-4" /> Pédagogie
           </TabsTrigger>
-          <TabsTrigger value="team" className="flex items-center gap-2" onClick={loadUsers}>
+          <TabsTrigger
+            value="team"
+            className="flex items-center gap-2"
+            onClick={loadUsers}
+          >
             <Users className="h-4 w-4" /> Équipe
           </TabsTrigger>
           <TabsTrigger value="audit" className="flex items-center gap-2">
@@ -254,17 +296,26 @@ export default function SettingsPage() {
         <TabsContent value="school">
           <Card>
             <CardHeader>
-              <CardTitle>Informations de l'établissement</CardTitle>
-              <CardDescription>Ces informations apparaîtront sur les bulletins et factures.</CardDescription>
+              <CardTitle>Informations de l&apos;établissement</CardTitle>
+              <CardDescription>
+                Ces informations apparaîtront sur les bulletins et factures.
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <Form {...schoolForm}>
-                <form onSubmit={schoolForm.handleSubmit(onUpdateSchool)} className="space-y-6">
+                <form
+                  onSubmit={schoolForm.handleSubmit(onUpdateSchool)}
+                  className="space-y-6"
+                >
                   <div className="flex flex-col gap-8 lg:flex-row">
                     <div className="w-full lg:w-1/3">
-                      <FormLabel className="mb-2 block">Logo de l'école</FormLabel>
+                      <FormLabel className="mb-2 block">
+                        Logo de l&apos;école
+                      </FormLabel>
                       <FileUploader
-                        onUploadComplete={({ fileUrl }) => schoolForm.setValue('logo', fileUrl ?? '')}
+                        onUploadComplete={({ fileUrl }) =>
+                          schoolForm.setValue("logo", fileUrl ?? "")
+                        }
                       />
                       <p className="mt-2 text-xs text-muted-foreground text-center">
                         Format recommandé: Carré, PNG ou JPG.
@@ -277,8 +328,10 @@ export default function SettingsPage() {
                         name="name"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Nom de l'école *</FormLabel>
-                            <FormControl><Input {...field} /></FormControl>
+                            <FormLabel>Nom de l&apos;école *</FormLabel>
+                            <FormControl>
+                              <Input {...field} />
+                            </FormControl>
                             <FormMessage />
                           </FormItem>
                         )}
@@ -291,7 +344,9 @@ export default function SettingsPage() {
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel>Email de contact *</FormLabel>
-                              <FormControl><Input type="email" {...field} /></FormControl>
+                              <FormControl>
+                                <Input type="email" {...field} />
+                              </FormControl>
                               <FormMessage />
                             </FormItem>
                           )}
@@ -302,7 +357,9 @@ export default function SettingsPage() {
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel>Téléphone *</FormLabel>
-                              <FormControl><Input {...field} /></FormControl>
+                              <FormControl>
+                                <Input {...field} />
+                              </FormControl>
                               <FormMessage />
                             </FormItem>
                           )}
@@ -315,7 +372,9 @@ export default function SettingsPage() {
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel>Adresse physique *</FormLabel>
-                            <FormControl><Textarea {...field} /></FormControl>
+                            <FormControl>
+                              <Textarea {...field} />
+                            </FormControl>
                             <FormMessage />
                           </FormItem>
                         )}
@@ -327,7 +386,9 @@ export default function SettingsPage() {
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel>Site Web</FormLabel>
-                            <FormControl><Input placeholder="https://..." {...field} /></FormControl>
+                            <FormControl>
+                              <Input placeholder="https://..." {...field} />
+                            </FormControl>
                             <FormMessage />
                           </FormItem>
                         )}
@@ -336,8 +397,15 @@ export default function SettingsPage() {
                   </div>
 
                   <div className="flex justify-end">
-                    <Button type="submit" disabled={schoolForm.formState.isSubmitting}>
-                      {schoolForm.formState.isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                    <Button
+                      type="submit"
+                      disabled={schoolForm.formState.isSubmitting}
+                    >
+                      {schoolForm.formState.isSubmitting ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <Save className="mr-2 h-4 w-4" />
+                      )}
                       Enregistrer les modifications
                     </Button>
                   </div>
@@ -352,11 +420,16 @@ export default function SettingsPage() {
           <Card>
             <CardHeader>
               <CardTitle>Règles et seuils pédagogiques</CardTitle>
-              <CardDescription>Définissez les critères de réussite pour votre établissement.</CardDescription>
+              <CardDescription>
+                Définissez les critères de réussite pour votre établissement.
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <Form {...pedagogyForm}>
-                <form onSubmit={pedagogyForm.handleSubmit(onUpdatePedagogy)} className="space-y-6">
+                <form
+                  onSubmit={pedagogyForm.handleSubmit(onUpdatePedagogy)}
+                  className="space-y-6"
+                >
                   <div className="grid gap-6 md:grid-cols-2">
                     <FormField
                       control={pedagogyForm.control}
@@ -364,8 +437,13 @@ export default function SettingsPage() {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Moyenne de passage (/20)</FormLabel>
-                          <FormControl><Input type="number" step="0.5" {...field} /></FormControl>
-                          <FormDescription>Note minimale requise pour être admis au niveau supérieur.</FormDescription>
+                          <FormControl>
+                            <Input type="number" step="0.5" {...field} />
+                          </FormControl>
+                          <FormDescription>
+                            Note minimale requise pour être admis au niveau
+                            supérieur.
+                          </FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -377,8 +455,13 @@ export default function SettingsPage() {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Nombre max de redoublements</FormLabel>
-                          <FormControl><Input type="number" {...field} /></FormControl>
-                          <FormDescription>Nombre d'années maximum qu'un élève peut passer dans le même niveau.</FormDescription>
+                          <FormControl>
+                            <Input type="number" {...field} />
+                          </FormControl>
+                          <FormDescription>
+                            Nombre d&apos;années maximum qu&apos;un élève peut
+                            passer dans le même niveau.
+                          </FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -386,8 +469,15 @@ export default function SettingsPage() {
                   </div>
 
                   <div className="flex justify-end">
-                    <Button type="submit" disabled={pedagogyForm.formState.isSubmitting}>
-                      {pedagogyForm.formState.isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                    <Button
+                      type="submit"
+                      disabled={pedagogyForm.formState.isSubmitting}
+                    >
+                      {pedagogyForm.formState.isSubmitting ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <Save className="mr-2 h-4 w-4" />
+                      )}
                       Mettre à jour les seuils
                     </Button>
                   </div>
@@ -403,7 +493,10 @@ export default function SettingsPage() {
             <Card>
               <CardHeader>
                 <CardTitle>Liste des utilisateurs</CardTitle>
-                <CardDescription>Gérez les accès de votre personnel administratif et enseignant.</CardDescription>
+                <CardDescription>
+                  Gérez les accès de votre personnel administratif et
+                  enseignant.
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <DataTable
@@ -422,18 +515,25 @@ export default function SettingsPage() {
                 <CardTitle className="flex items-center gap-2">
                   <Plus className="h-4 w-4" /> Inviter un membre
                 </CardTitle>
-                <CardDescription>Un email sera envoyé pour activer le compte.</CardDescription>
+                <CardDescription>
+                  Un email sera envoyé pour activer le compte.
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <Form {...inviteForm}>
-                  <form onSubmit={inviteForm.handleSubmit(onInviteUser)} className="space-y-4">
+                  <form
+                    onSubmit={inviteForm.handleSubmit(onInviteUser)}
+                    className="space-y-4"
+                  >
                     <FormField
                       control={inviteForm.control}
                       name="first_name"
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Prénom</FormLabel>
-                          <FormControl><Input {...field} /></FormControl>
+                          <FormControl>
+                            <Input {...field} />
+                          </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -444,7 +544,9 @@ export default function SettingsPage() {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Nom</FormLabel>
-                          <FormControl><Input {...field} /></FormControl>
+                          <FormControl>
+                            <Input {...field} />
+                          </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -455,7 +557,13 @@ export default function SettingsPage() {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Email professionnel</FormLabel>
-                          <FormControl><Input type="email" placeholder="nom@ecole.com" {...field} /></FormControl>
+                          <FormControl>
+                            <Input
+                              type="email"
+                              placeholder="nom@ecole.com"
+                              {...field}
+                            />
+                          </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -466,26 +574,45 @@ export default function SettingsPage() {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Rôle</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
+                          <Select
+                            onValueChange={field.onChange}
+                            value={field.value}
+                          >
                             <FormControl>
                               <SelectTrigger>
                                 <SelectValue placeholder="Choisir un rôle" />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              <SelectItem value="ADMIN_SCHOOL">Administrateur École</SelectItem>
-                              <SelectItem value="SECRETARY">Secrétaire</SelectItem>
-                              <SelectItem value="ACCOUNTANT">Comptable</SelectItem>
-                              <SelectItem value="TEACHER">Enseignant</SelectItem>
+                              <SelectItem value="ADMIN_SCHOOL">
+                                Administrateur École
+                              </SelectItem>
+                              <SelectItem value="SECRETARY">
+                                Secrétaire
+                              </SelectItem>
+                              <SelectItem value="ACCOUNTANT">
+                                Comptable
+                              </SelectItem>
+                              <SelectItem value="TEACHER">
+                                Enseignant
+                              </SelectItem>
                             </SelectContent>
                           </Select>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
-                    <Button type="submit" className="w-full" disabled={inviteForm.formState.isSubmitting}>
-                      {inviteForm.formState.isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Mail className="mr-2 h-4 w-4" />}
-                      Envoyer l'invitation
+                    <Button
+                      type="submit"
+                      className="w-full"
+                      disabled={inviteForm.formState.isSubmitting}
+                    >
+                      {inviteForm.formState.isSubmitting ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <Mail className="mr-2 h-4 w-4" />
+                      )}
+                      Envoyer l&apos;invitation
                     </Button>
                   </form>
                 </Form>
@@ -498,9 +625,10 @@ export default function SettingsPage() {
         <TabsContent value="audit">
           <Card>
             <CardHeader>
-              <CardTitle>Journal d'audit</CardTitle>
+              <CardTitle>Journal d&apos;audit</CardTitle>
               <CardDescription>
-                Historique complet des actions effectuées par le personnel sur la plateforme.
+                Historique complet des actions effectuées par le personnel sur
+                la plateforme.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -514,18 +642,25 @@ export default function SettingsPage() {
           <Card className="max-w-2xl">
             <CardHeader>
               <CardTitle>Sécurité du compte</CardTitle>
-              <CardDescription>Modifiez votre mot de passe pour sécuriser votre accès.</CardDescription>
+              <CardDescription>
+                Modifiez votre mot de passe pour sécuriser votre accès.
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <Form {...passwordForm}>
-                <form onSubmit={passwordForm.handleSubmit(onChangePassword)} className="space-y-4">
+                <form
+                  onSubmit={passwordForm.handleSubmit(onChangePassword)}
+                  className="space-y-4"
+                >
                   <FormField
                     control={passwordForm.control}
                     name="current_password"
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Mot de passe actuel</FormLabel>
-                        <FormControl><Input type="password" {...field} /></FormControl>
+                        <FormControl>
+                          <Input type="password" {...field} />
+                        </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -537,7 +672,9 @@ export default function SettingsPage() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Nouveau mot de passe</FormLabel>
-                        <FormControl><Input type="password" {...field} /></FormControl>
+                        <FormControl>
+                          <Input type="password" {...field} />
+                        </FormControl>
                         <FormDescription>8 caractères minimum.</FormDescription>
                         <FormMessage />
                       </FormItem>
@@ -549,14 +686,23 @@ export default function SettingsPage() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Confirmer le nouveau mot de passe</FormLabel>
-                        <FormControl><Input type="password" {...field} /></FormControl>
+                        <FormControl>
+                          <Input type="password" {...field} />
+                        </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
                   <div className="flex justify-end">
-                    <Button type="submit" disabled={passwordForm.formState.isSubmitting}>
-                      {passwordForm.formState.isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <KeyRound className="mr-2 h-4 w-4" />}
+                    <Button
+                      type="submit"
+                      disabled={passwordForm.formState.isSubmitting}
+                    >
+                      {passwordForm.formState.isSubmitting ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <KeyRound className="mr-2 h-4 w-4" />
+                      )}
                       Mettre à jour le mot de passe
                     </Button>
                   </div>

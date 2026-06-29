@@ -1,41 +1,37 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { useSession } from 'next-auth/react';
-import { toast } from 'sonner';
-import { AlertCircle, CheckCircle2, ShieldAlert } from 'lucide-react';
+import { useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
+import { toast } from "sonner";
+import { AlertCircle, CheckCircle2, ShieldAlert } from "lucide-react";
 
-import { PageHeader } from '@/components/layout/page-header';
-import { DataTable, type DataTableColumn } from '@/components/shared/DataTable';
-import { StatusBadge } from '@/components/shared/StatusBadge';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { 
-  getSystemAlerts, 
-  resolveSystemAlert, 
-  type SystemAlertItem 
-} from '@/lib/api/superadmin';
+import { PageHeader } from "@/components/layout/page-header";
+import { DataTable, type DataTableColumn } from "@/components/shared/DataTable";
+import { StatusBadge } from "@/components/shared/StatusBadge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  getSystemAlerts,
+  resolveSystemAlert,
+  type SystemAlertItem,
+} from "@/lib/api/superadmin";
 
 export default function SuperadminAlertsPage() {
   const { data: session } = useSession();
-  const token = session?.accessToken ?? '';
+  const token = session?.accessToken ?? "";
 
   const [alerts, setAlerts] = useState<SystemAlertItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
-    if (!token) {
-      setLoading(false);
-      return;
-    }
+    if (!token) return;
 
     async function loadAlerts() {
-      setLoading(true);
       try {
         const data = await getSystemAlerts(token);
         setAlerts(data.results);
-      } catch (error) {
+      } catch {
         toast.error("Impossible de charger les alertes système.");
       } finally {
         setLoading(false);
@@ -49,35 +45,37 @@ export default function SuperadminAlertsPage() {
     try {
       await resolveSystemAlert(token, id);
       toast.success("Alerte marquée comme résolue.");
-      setRefreshKey(k => k + 1);
-    } catch (error) {
+      setRefreshKey((k) => k + 1);
+    } catch {
       toast.error("Échec de la résolution.");
     }
   };
 
   const columns: DataTableColumn<SystemAlertItem>[] = [
     {
-      key: 'level',
-      header: 'Niveau',
+      key: "level",
+      header: "Niveau",
       accessor: (alert) => <StatusBadge status={alert.level} />,
     },
     {
-      key: 'message',
-      header: 'Message',
+      key: "message",
+      header: "Message",
       accessor: (alert) => (
         <div className="flex items-start gap-2 py-1">
-          {alert.level === 'CRITICAL' && <ShieldAlert className="h-4 w-4 text-destructive shrink-0 mt-0.5" />}
+          {alert.level === "CRITICAL" && (
+            <ShieldAlert className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
+          )}
           <span className="text-sm font-medium">{alert.message}</span>
         </div>
       ),
     },
     {
-      key: 'actions',
-      header: 'Actions',
+      key: "actions",
+      header: "Actions",
       accessor: (alert) => (
-        <Button 
-          variant="outline" 
-          size="sm" 
+        <Button
+          variant="outline"
+          size="sm"
           onClick={() => handleResolve(alert.id)}
           className="h-8 gap-1.5"
         >
@@ -90,8 +88,8 @@ export default function SuperadminAlertsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader 
-        title="Alertes Système" 
+      <PageHeader
+        title="Alertes Système"
         description="Surveillez l'état de santé de la plateforme et réagissez aux incidents."
       />
 
@@ -103,8 +101,12 @@ export default function SuperadminAlertsPage() {
                 <ShieldAlert className="h-5 w-5 text-destructive" />
               </div>
               <div>
-                <p className="text-sm font-medium text-destructive">Critiques</p>
-                <p className="text-2xl font-bold">{alerts.filter(a => a.level === 'CRITICAL').length}</p>
+                <p className="text-sm font-medium text-destructive">
+                  Critiques
+                </p>
+                <p className="text-2xl font-bold">
+                  {alerts.filter((a) => a.level === "CRITICAL").length}
+                </p>
               </div>
             </div>
           </CardContent>
@@ -117,8 +119,12 @@ export default function SuperadminAlertsPage() {
                 <AlertCircle className="h-5 w-5 text-amber-500" />
               </div>
               <div>
-                <p className="text-sm font-medium text-amber-600">Avertissements</p>
-                <p className="text-2xl font-bold">{alerts.filter(a => a.level === 'WARNING').length}</p>
+                <p className="text-sm font-medium text-amber-600">
+                  Avertissements
+                </p>
+                <p className="text-2xl font-bold">
+                  {alerts.filter((a) => a.level === "WARNING").length}
+                </p>
               </div>
             </div>
           </CardContent>
@@ -132,7 +138,9 @@ export default function SuperadminAlertsPage() {
               </div>
               <div>
                 <p className="text-sm font-medium text-sky-600">Informations</p>
-                <p className="text-2xl font-bold">{alerts.filter(a => a.level === 'INFO').length}</p>
+                <p className="text-2xl font-bold">
+                  {alerts.filter((a) => a.level === "INFO").length}
+                </p>
               </div>
             </div>
           </CardContent>

@@ -1,27 +1,27 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { useSession } from 'next-auth/react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { toast } from 'sonner';
-import { AlertCircle } from 'lucide-react';
+import { useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { toast } from "sonner";
+import { AlertCircle } from "lucide-react";
 
-import { PageHeader } from '@/components/layout/page-header';
-import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
-import { StatusBadge } from '@/components/shared/StatusBadge';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
+import { PageHeader } from "@/components/layout/page-header";
+import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
+import { StatusBadge } from "@/components/shared/StatusBadge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
+} from "@/components/ui/dialog";
 import {
   Form,
   FormControl,
@@ -29,9 +29,15 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -39,45 +45,42 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
+} from "@/components/ui/table";
 import {
   type SchoolYearItem,
   createSchoolYear,
-  deleteSchoolYear,
   getSchoolYears,
   updateSchoolYear,
-} from '@/lib/api/pedagogy';
+} from "@/lib/api/pedagogy";
 
-const STATUS_LABELS: Record<SchoolYearItem['status'], string> = {
-  PREPARATION: 'Préparation',
-  OUVERTE: 'Ouverte',
-  EN_COURS: 'En cours',
-  CLOTURE_EN_COURS: 'Clôture en cours',
-  CLOTUREE: 'Clôturée',
-};
-
-const STATUS_BADGE: Record<SchoolYearItem['status'], string> = {
-  PREPARATION: 'warning',
-  OUVERTE: 'info',
-  EN_COURS: 'active',
-  CLOTURE_EN_COURS: 'warning',
-  CLOTUREE: 'inactive',
+const STATUS_LABELS: Record<SchoolYearItem["status"], string> = {
+  PREPARATION: "Préparation",
+  OUVERTE: "Ouverte",
+  EN_COURS: "En cours",
+  CLOTURE_EN_COURS: "Clôture en cours",
+  CLOTUREE: "Clôturée",
 };
 
 const schema = z.object({
   label: z
     .string()
-    .min(4, 'Le libellé est requis.')
-    .regex(/^\d{4}-\d{4}$/, 'Format requis : AAAA-AAAA (ex: 2025-2026)'),
-  start_date: z.string().min(1, 'La date de début est requise.'),
-  end_date: z.string().min(1, 'La date de fin est requise.'),
-  status: z.enum(['PREPARATION', 'OUVERTE', 'EN_COURS', 'CLOTURE_EN_COURS', 'CLOTUREE']),
+    .min(4, "Le libellé est requis.")
+    .regex(/^\d{4}-\d{4}$/, "Format requis : AAAA-AAAA (ex: 2025-2026)"),
+  start_date: z.string().min(1, "La date de début est requise."),
+  end_date: z.string().min(1, "La date de fin est requise."),
+  status: z.enum([
+    "PREPARATION",
+    "OUVERTE",
+    "EN_COURS",
+    "CLOTURE_EN_COURS",
+    "CLOTUREE",
+  ]),
   is_current: z.boolean(),
 });
 
 type FormValues = z.infer<typeof schema>;
 
-type DialogMode = { type: 'create' } | { type: 'edit'; year: SchoolYearItem };
+type DialogMode = { type: "create" } | { type: "edit"; year: SchoolYearItem };
 
 export default function SchoolYearsPage() {
   const { data: session } = useSession();
@@ -87,43 +90,60 @@ export default function SchoolYearsPage() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [dialogMode, setDialogMode] = useState<DialogMode | null>(null);
 
-  const token = session?.accessToken ?? '';
+  const token = session?.accessToken ?? "";
 
   useEffect(() => {
-    if (!token) { setLoading(false); return; }
+    if (!token) return;
     let mounted = true;
-    setLoading(true);
     getSchoolYears(token)
-      .then((res) => { if (mounted) { setYears(res.results); setTotal(res.count); } })
-      .catch((e) => toast.error(e instanceof Error ? e.message : 'Erreur de chargement.'))
-      .finally(() => { if (mounted) setLoading(false); });
-    return () => { mounted = false; };
+      .then((res) => {
+        if (mounted) {
+          setYears(res.results);
+          setTotal(res.count);
+        }
+      })
+      .catch((e) =>
+        toast.error(e instanceof Error ? e.message : "Erreur de chargement."),
+      )
+      .finally(() => {
+        if (mounted) setLoading(false);
+      });
+    return () => {
+      mounted = false;
+    };
   }, [token, refreshKey]);
 
   const refresh = () => setRefreshKey((k) => k + 1);
 
   const hasActiveYear = years.some((y) => y.is_current);
 
-  const openCreate = () => setDialogMode({ type: 'create' });
-  const openEdit = (year: SchoolYearItem) => setDialogMode({ type: 'edit', year });
+  const openCreate = () => setDialogMode({ type: "create" });
+  const openEdit = (year: SchoolYearItem) =>
+    setDialogMode({ type: "edit", year });
 
   const handleActivate = async (year: SchoolYearItem) => {
     try {
-      await updateSchoolYear(token, year.id, { is_current: true, status: 'EN_COURS' });
+      await updateSchoolYear(token, year.id, {
+        is_current: true,
+        status: "EN_COURS",
+      });
       toast.success(`${year.label} définie comme année courante.`);
       refresh();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Erreur.');
+      toast.error(e instanceof Error ? e.message : "Erreur.");
     }
   };
 
   const handleClose = async (year: SchoolYearItem) => {
     try {
-      await updateSchoolYear(token, year.id, { status: 'CLOTUREE', is_current: false });
+      await updateSchoolYear(token, year.id, {
+        status: "CLOTUREE",
+        is_current: false,
+      });
       toast.success(`${year.label} clôturée.`);
       refresh();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Erreur.');
+      toast.error(e instanceof Error ? e.message : "Erreur.");
     }
   };
 
@@ -139,7 +159,8 @@ export default function SchoolYearsPage() {
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            Aucune année scolaire active. Veuillez en activer une pour utiliser les autres modules.
+            Aucune année scolaire active. Veuillez en activer une pour utiliser
+            les autres modules.
           </AlertDescription>
         </Alert>
       )}
@@ -159,13 +180,19 @@ export default function SchoolYearsPage() {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={6} className="py-8 text-center text-muted-foreground">
+                <TableCell
+                  colSpan={6}
+                  className="py-8 text-center text-muted-foreground"
+                >
                   Chargement...
                 </TableCell>
               </TableRow>
             ) : years.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="py-8 text-center text-muted-foreground">
+                <TableCell
+                  colSpan={6}
+                  className="py-8 text-center text-muted-foreground"
+                >
                   Aucune année scolaire trouvée.
                 </TableCell>
               </TableRow>
@@ -175,27 +202,34 @@ export default function SchoolYearsPage() {
                   <TableCell className="font-medium">
                     {year.label}
                     {year.is_current && (
-                      <Badge variant="default" className="ml-2 bg-green-600 text-white text-xs">
+                      <Badge
+                        variant="default"
+                        className="ml-2 bg-green-600 text-white text-xs"
+                      >
                         Courante
                       </Badge>
                     )}
                   </TableCell>
                   <TableCell>
-                    {new Date(year.start_date).toLocaleDateString('fr-FR')}
+                    {new Date(year.start_date).toLocaleDateString("fr-FR")}
                   </TableCell>
                   <TableCell>
-                    {new Date(year.end_date).toLocaleDateString('fr-FR')}
+                    {new Date(year.end_date).toLocaleDateString("fr-FR")}
                   </TableCell>
                   <TableCell>
                     <StatusBadge status={STATUS_LABELS[year.status]} />
                   </TableCell>
-                  <TableCell>{year.is_current ? 'Oui' : 'Non'}</TableCell>
+                  <TableCell>{year.is_current ? "Oui" : "Non"}</TableCell>
                   <TableCell>
                     <div className="flex justify-end gap-2">
-                      <Button variant="outline" size="sm" onClick={() => openEdit(year)}>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => openEdit(year)}
+                      >
                         Modifier
                       </Button>
-                      {!year.is_current && year.status !== 'CLOTUREE' && (
+                      {!year.is_current && year.status !== "CLOTUREE" && (
                         <ConfirmDialog
                           title="Activer cette année"
                           description={`Définir "${year.label}" comme année courante ? L'année actuellement active sera désactivée.`}
@@ -205,12 +239,16 @@ export default function SchoolYearsPage() {
                           onConfirm={() => handleActivate(year)}
                         />
                       )}
-                      {year.status === 'EN_COURS' && (
+                      {year.status === "EN_COURS" && (
                         <ConfirmDialog
                           title="Clôturer cette année"
                           description={`Clôturer "${year.label}" ? Cette action est irréversible.`}
                           variant="destructive"
-                          trigger={<Button variant="destructive" size="sm">Clôturer</Button>}
+                          trigger={
+                            <Button variant="destructive" size="sm">
+                              Clôturer
+                            </Button>
+                          }
                           confirmLabel="Clôturer"
                           loadingLabel="Clôture..."
                           onConfirm={() => handleClose(year)}
@@ -224,7 +262,9 @@ export default function SchoolYearsPage() {
           </TableBody>
         </Table>
         {!loading && total > 0 && (
-          <p className="px-4 py-2 text-sm text-muted-foreground">{total} année(s) au total</p>
+          <p className="px-4 py-2 text-sm text-muted-foreground">
+            {total} année(s) au total
+          </p>
         )}
       </div>
 
@@ -233,7 +273,10 @@ export default function SchoolYearsPage() {
           mode={dialogMode}
           token={token}
           onClose={() => setDialogMode(null)}
-          onSuccess={() => { setDialogMode(null); refresh(); }}
+          onSuccess={() => {
+            setDialogMode(null);
+            refresh();
+          }}
         />
       )}
     </section>
@@ -253,16 +296,16 @@ function SchoolYearDialog({
   onClose: () => void;
   onSuccess: () => void;
 }) {
-  const isEditing = mode.type === 'edit';
+  const isEditing = mode.type === "edit";
   const year = isEditing ? mode.year : null;
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
-      label: year?.label ?? '',
-      start_date: year?.start_date ?? '',
-      end_date: year?.end_date ?? '',
-      status: year?.status ?? 'PREPARATION',
+      label: year?.label ?? "",
+      start_date: year?.start_date ?? "",
+      end_date: year?.end_date ?? "",
+      status: year?.status ?? "PREPARATION",
       is_current: year?.is_current ?? false,
     },
   });
@@ -271,14 +314,14 @@ function SchoolYearDialog({
     try {
       if (isEditing && year) {
         await updateSchoolYear(token, year.id, values);
-        toast.success('Année scolaire modifiée.');
+        toast.success("Année scolaire modifiée.");
       } else {
         await createSchoolYear(token, values);
-        toast.success('Année scolaire créée.');
+        toast.success("Année scolaire créée.");
       }
       onSuccess();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Erreur.');
+      toast.error(e instanceof Error ? e.message : "Erreur.");
     }
   };
 
@@ -287,7 +330,9 @@ function SchoolYearDialog({
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>
-            {isEditing ? 'Modifier l\'année scolaire' : 'Nouvelle année scolaire'}
+            {isEditing
+              ? "Modifier l'année scolaire"
+              : "Nouvelle année scolaire"}
           </DialogTitle>
         </DialogHeader>
 
@@ -349,10 +394,16 @@ function SchoolYearDialog({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="PREPARATION">En préparation</SelectItem>
-                      <SelectItem value="OUVERTE">Ouverte aux inscriptions</SelectItem>
+                      <SelectItem value="PREPARATION">
+                        En préparation
+                      </SelectItem>
+                      <SelectItem value="OUVERTE">
+                        Ouverte aux inscriptions
+                      </SelectItem>
                       <SelectItem value="EN_COURS">En cours</SelectItem>
-                      <SelectItem value="CLOTURE_EN_COURS">Clôture en cours</SelectItem>
+                      <SelectItem value="CLOTURE_EN_COURS">
+                        Clôture en cours
+                      </SelectItem>
                       <SelectItem value="CLOTUREE">Clôturée</SelectItem>
                     </SelectContent>
                   </Select>
@@ -367,9 +418,14 @@ function SchoolYearDialog({
               render={({ field }) => (
                 <FormItem className="flex items-center gap-2 space-y-0">
                   <FormControl>
-                    <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                    <Checkbox
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
                   </FormControl>
-                  <FormLabel className="font-normal">Définir comme année courante</FormLabel>
+                  <FormLabel className="font-normal">
+                    Définir comme année courante
+                  </FormLabel>
                 </FormItem>
               )}
             />
@@ -379,7 +435,11 @@ function SchoolYearDialog({
                 Annuler
               </Button>
               <Button type="submit" disabled={form.formState.isSubmitting}>
-                {form.formState.isSubmitting ? 'Enregistrement...' : isEditing ? 'Modifier' : 'Créer'}
+                {form.formState.isSubmitting
+                  ? "Enregistrement..."
+                  : isEditing
+                    ? "Modifier"
+                    : "Créer"}
               </Button>
             </DialogFooter>
           </form>

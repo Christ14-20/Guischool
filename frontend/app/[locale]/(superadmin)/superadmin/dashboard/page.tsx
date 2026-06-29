@@ -4,94 +4,139 @@ import {
   type SuperadminGrowthPoint,
   type SuperadminKpi,
   type SuperadminSchool,
-} from '@/components/superadmin/superadmin-dashboard-view';
-import { auth } from '@/auth';
-import { getSchools, getSystemAlerts } from '@/lib/api/superadmin';
+} from "@/components/superadmin/superadmin-dashboard-view";
+import { auth } from "@/auth";
+import { getSchools, getSystemAlerts } from "@/lib/api/superadmin";
 
 function monthLabel(date: Date) {
-  return date.toLocaleDateString('fr-FR', { month: 'short' });
+  return date.toLocaleDateString("fr-FR", { month: "short" });
 }
 
 function makeFallbackData() {
   const latestSchools: SuperadminSchool[] = [
-    { id: '1', name: 'Groupe Scolaire Horizon', plan: 'Pro', status: 'Active' },
-    { id: '2', name: 'Complexe La Reussite', plan: 'Starter', status: 'Trial' },
-    { id: '3', name: 'College Nongo', plan: 'Enterprise', status: 'Suspended' },
-    { id: '4', name: 'College Djenabou', plan: 'Pro', status: 'Active' },
-    { id: '5', name: 'Groupe Scolaire Matoto', plan: 'Starter', status: 'Active' },
+    { id: "1", name: "Groupe Scolaire Horizon", plan: "Pro", status: "Active" },
+    { id: "2", name: "Complexe La Reussite", plan: "Starter", status: "Trial" },
+    { id: "3", name: "College Nongo", plan: "Enterprise", status: "Suspended" },
+    { id: "4", name: "College Djenabou", plan: "Pro", status: "Active" },
+    {
+      id: "5",
+      name: "Groupe Scolaire Matoto",
+      plan: "Starter",
+      status: "Active",
+    },
   ];
 
   const growthData: SuperadminGrowthPoint[] = [
-    { month: 'nov', schools: 8 },
-    { month: 'dec', schools: 11 },
-    { month: 'jan', schools: 15 },
-    { month: 'fev', schools: 18 },
-    { month: 'mar', schools: 22 },
-    { month: 'avr', schools: 25 },
+    { month: "nov", schools: 8 },
+    { month: "dec", schools: 11 },
+    { month: "jan", schools: 15 },
+    { month: "fev", schools: 18 },
+    { month: "mar", schools: 22 },
+    { month: "avr", schools: 25 },
   ];
 
   const alerts: SuperadminAlert[] = [
-    { id: 'a-1', level: 'WARNING', message: '2 ecoles approchent leur limite de stockage.' },
-    { id: 'a-2', level: 'INFO', message: 'Synchronisation journaliere effectuee avec succes.' },
+    {
+      id: "a-1",
+      level: "WARNING",
+      message: "2 ecoles approchent leur limite de stockage.",
+    },
+    {
+      id: "a-2",
+      level: "INFO",
+      message: "Synchronisation journaliere effectuee avec succes.",
+    },
   ];
 
-  const activeCount = latestSchools.filter((row) => row.status.toUpperCase() === 'ACTIVE').length;
-  const suspendedCount = latestSchools.filter((row) => row.status.toUpperCase() === 'SUSPENDED').length;
+  const activeCount = latestSchools.filter(
+    (row) => row.status.toUpperCase() === "ACTIVE",
+  ).length;
+  const suspendedCount = latestSchools.filter(
+    (row) => row.status.toUpperCase() === "SUSPENDED",
+  ).length;
 
   const kpis: SuperadminKpi[] = [
-    { label: 'Ecoles totales', value: String(latestSchools.length), icon: 'schools' },
-    { label: 'Ecoles actives', value: String(activeCount), icon: 'active' },
-    { label: 'Ecoles suspendues', value: String(suspendedCount), icon: 'suspended' },
-    { label: 'MRR estime', value: '12 500 000 GNF', icon: 'mrr' },
+    {
+      label: "Ecoles totales",
+      value: String(latestSchools.length),
+      icon: "schools",
+    },
+    { label: "Ecoles actives", value: String(activeCount), icon: "active" },
+    {
+      label: "Ecoles suspendues",
+      value: String(suspendedCount),
+      icon: "suspended",
+    },
+    { label: "MRR estime", value: "12 500 000 GNF", icon: "mrr" },
   ];
 
   return { kpis, growthData, latestSchools, alerts };
 }
 
 async function getSuperadminDashboardData(accessToken: string) {
-
   try {
-    const [schoolsPage, activePage, suspendedPage, alertsPage] = await Promise.all([
-      getSchools(accessToken, { page: 1, page_size: 5 }),
-      getSchools(accessToken, { page: 1, page_size: 1, status: 'ACTIVE' }),
-      getSchools(accessToken, { page: 1, page_size: 1, status: 'SUSPENDED' }),
-      getSystemAlerts(accessToken, { is_resolved: 'false', page_size: 5 }),
-    ]);
+    const [schoolsPage, activePage, suspendedPage, alertsPage] =
+      await Promise.all([
+        getSchools(accessToken, { page: 1, page_size: 5 }),
+        getSchools(accessToken, { page: 1, page_size: 1, status: "ACTIVE" }),
+        getSchools(accessToken, { page: 1, page_size: 1, status: "SUSPENDED" }),
+        getSystemAlerts(accessToken, { is_resolved: "false", page_size: 5 }),
+      ]);
 
     const schoolsItems = schoolsPage.results;
 
-    const latestSchools: SuperadminSchool[] = schoolsItems.slice(0, 5).map((item: any, index: number) => ({
-      id: String(item.id ?? index),
-      name: item.name ?? item.nom ?? `Ecole ${index + 1}`,
-      plan: item.plan?.name ?? item.plan_name ?? 'N/A',
-      status: item.status ?? 'Active',
-    }));
+    const latestSchools: SuperadminSchool[] = schoolsItems
+      .slice(0, 5)
+      .map((item: Record<string, unknown>, index: number) => ({
+        id: String(item.id ?? index),
+        name: String(item.name ?? item.nom ?? `Ecole ${index + 1}`),
+        plan: String(
+          (item.plan as Record<string, unknown> | undefined)?.name ??
+            item.plan_name ??
+            "N/A",
+        ),
+        status: String(item.status ?? "Active"),
+      }));
 
     const totalSchools = schoolsPage.count;
     const activeCount = activePage.count;
     const suspendedCount = suspendedPage.count;
     const alertsItems = alertsPage.results;
 
-    const alerts: SuperadminAlert[] = alertsItems.slice(0, 5).map((item: any, index: number) => ({
-      id: String(item.id ?? index),
-      level: String(item.level ?? 'INFO').toUpperCase() as SuperadminAlert['level'],
-      message: item.message ?? 'Alerte systeme',
-    }));
+    const alerts: SuperadminAlert[] = alertsItems
+      .slice(0, 5)
+      .map((item: Record<string, unknown>, index: number) => ({
+        id: String(item.id ?? index),
+        level: String(
+          item.level ?? "INFO",
+        ).toUpperCase() as SuperadminAlert["level"],
+        message: String(item.message ?? "Alerte systeme"),
+      }));
 
     const now = new Date();
-    const growthData: SuperadminGrowthPoint[] = Array.from({ length: 6 }).map((_, index) => {
-      const d = new Date(now.getFullYear(), now.getMonth() - (5 - index), 1);
-      return {
-        month: monthLabel(d),
-        schools: Math.max(0, totalSchools - (5 - index) * 2),
-      };
-    });
+    const growthData: SuperadminGrowthPoint[] = Array.from({ length: 6 }).map(
+      (_, index) => {
+        const d = new Date(now.getFullYear(), now.getMonth() - (5 - index), 1);
+        return {
+          month: monthLabel(d),
+          schools: Math.max(0, totalSchools - (5 - index) * 2),
+        };
+      },
+    );
 
     const kpis: SuperadminKpi[] = [
-      { label: 'Ecoles totales', value: String(totalSchools), icon: 'schools' },
-      { label: 'Ecoles actives', value: String(activeCount), icon: 'active' },
-      { label: 'Ecoles suspendues', value: String(suspendedCount), icon: 'suspended' },
-      { label: 'MRR estime', value: `${(totalSchools * 500000).toLocaleString('fr-FR')} GNF`, icon: 'mrr' },
+      { label: "Ecoles totales", value: String(totalSchools), icon: "schools" },
+      { label: "Ecoles actives", value: String(activeCount), icon: "active" },
+      {
+        label: "Ecoles suspendues",
+        value: String(suspendedCount),
+        icon: "suspended",
+      },
+      {
+        label: "MRR estime",
+        value: `${(totalSchools * 500000).toLocaleString("fr-FR")} GNF`,
+        icon: "mrr",
+      },
     ];
 
     return { kpis, growthData, latestSchools, alerts };
@@ -104,7 +149,9 @@ export default async function SuperadminDashboardPage() {
   const session = await auth();
   const accessToken = session?.accessToken;
 
-  const data = accessToken ? await getSuperadminDashboardData(accessToken) : makeFallbackData();
+  const data = accessToken
+    ? await getSuperadminDashboardData(accessToken)
+    : makeFallbackData();
 
   return (
     <SuperadminDashboardView
