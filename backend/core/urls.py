@@ -45,6 +45,9 @@ urlpatterns = [
         
         # Support
         path("support/", include("apps.support.api.urls")),
+
+        # Synchronisation Offline
+        path("sync/", include("apps.sync.api.urls")),
     ])),
 
     # Documentation API (Swagger/Redoc)

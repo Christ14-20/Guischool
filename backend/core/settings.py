@@ -35,6 +35,7 @@ INSTALLED_APPS = [
     "apps.finance",
     "apps.monitoring",
     "apps.support",
+    "apps.sync",
 ]
 
 # ─── Middleware ───────────────────────────────────────────────────────

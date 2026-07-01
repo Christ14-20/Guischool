@@ -173,13 +173,13 @@
 **Description :** Mettre en place les endpoints de synchronisation pour le mode offline (CDC §3.3).
 
 **Checklist Backend :**
-- [ ] Ajouter champ `updated_at` avec auto-update sur tous les modèles critiques
-- [ ] Ajouter champ `version` (integer) sur `AttendanceRecord`, `Grade` pour détection conflits
-- [ ] Endpoint : `POST /sync/push/` → reçoit batch de modifications offline, retourne conflicts
-- [ ] Endpoint : `GET /sync/pull/?since={timestamp}` → retourne delta depuis dernière sync
-- [ ] Logique de résolution conflits : LAST_WRITE_WINS pour présences, SERVER_WINS pour notes validées
-- [ ] File d'attente sync avec priorité : Paiements > Présences > Notes > Messages
-- [ ] Endpoint : `GET /sync/status/` → état de la file d'attente
+- [x] Ajouter champ `updated_at` avec auto-update sur tous les modèles critiques (18 modèles : 14 pedagogy, 3 finance, 1 superadmin)
+- [x] Ajouter champ `version` (integer) sur `Attendance` et `Grade` pour détection conflits
+- [x] Endpoint : `POST /sync/push/` → reçoit batch de modifications offline, retourne conflicts
+- [x] Endpoint : `GET /sync/pull/?since={timestamp}` → retourne delta depuis dernière sync
+- [x] Logique de résolution conflits : LAST_WRITE_WINS pour présences, SERVER_WINS pour notes validées
+- [x] File d'attente sync avec priorité : Paiements > Présences > Notes > Messages
+- [x] Endpoint : `GET /sync/status/` → état de la file d'attente
 
 **Labels :** `offline` `sync` `priorité-haute`
 

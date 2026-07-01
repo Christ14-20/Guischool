@@ -28,6 +28,7 @@ class SchoolYear(models.Model):
     end_date = models.DateField()
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="PREPARATION")
     is_current = models.BooleanField(default=False)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         unique_together = [("tenant", "label")]
@@ -81,6 +82,7 @@ class Level(models.Model):
         verbose_name="Type d'évaluation",
     )
     order_index = models.PositiveSmallIntegerField(default=0)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         unique_together = [("tenant", "cycle", "name")]
@@ -122,6 +124,7 @@ class Filiere(models.Model):
         verbose_name="Matières dominantes",
         help_text="Liste des codes de matières ex: ['FR', 'MATH', 'PC']"
     )
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         unique_together = [("tenant", "code")]
@@ -158,6 +161,7 @@ class Class(models.Model):
         on_delete=models.SET_NULL, related_name="main_classes",
     )
     is_mixed = models.BooleanField(default=False, verbose_name="Classe mixte")
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         unique_together = [("tenant", "school_year", "name")]
@@ -225,6 +229,7 @@ class MixedClass(models.Model):
         help_text="Répartition du temps d'enseignement par niveau (JSON)",
     )
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         verbose_name = "Classe mixte"
@@ -269,6 +274,7 @@ class Subject(models.Model):
     name = models.CharField(max_length=100)
     category = models.CharField(max_length=20, choices=CATEGORY_CHOICES, default="OTHER")
     is_official = models.BooleanField(default=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         unique_together = [("tenant", "code")]
@@ -289,6 +295,7 @@ class ClassSubject(models.Model):
         "authentication.User", null=True, blank=True,
         on_delete=models.SET_NULL, related_name="taught_subjects",
     )
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         unique_together = [("classe", "subject")]
@@ -322,6 +329,7 @@ class ClassGroup(models.Model):
         verbose_name="Horaire spécifique",
         help_text="Horaire optionnel du groupe (jour, début, fin, salle)",
     )
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         unique_together = [("tenant", "classe_mere", "name")]
@@ -347,6 +355,7 @@ class SubGroup(models.Model):
         "authentication.User", null=True, blank=True,
         on_delete=models.SET_NULL, related_name="subgroups",
     )
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         verbose_name = "Sous-groupe"
@@ -388,6 +397,7 @@ class TimetableSlot(models.Model):
     end_time = models.TimeField()
     is_recurring = models.BooleanField(default=True)
     specific_date = models.DateField(null=True, blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         verbose_name = "Créneau horaire"
@@ -417,6 +427,8 @@ class Attendance(models.Model):
         "authentication.User", on_delete=models.PROTECT, related_name="created_attendances",
     )
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    version = models.IntegerField(default=1)
 
     class Meta:
         verbose_name = "Présence"
@@ -444,6 +456,7 @@ class Evaluation(models.Model):
     is_published = models.BooleanField(default=False)
     is_locked = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         verbose_name = "Évaluation"
@@ -568,6 +581,7 @@ class Enrollment(models.Model):
         verbose_name="Niveau dans la classe mixte",
         help_text="Niveau spécifique de l'élève au sein d'une classe mixte",
     )
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         unique_together = [("eleve", "annee_scolaire")]
@@ -620,6 +634,7 @@ class Grade(models.Model):
     justification_modification = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    version = models.IntegerField(default=1)
 
     class Meta:
         verbose_name = "Note"
@@ -678,6 +693,7 @@ class YearEndDecision(models.Model):
     prise_par = models.ForeignKey("authentication.User", on_delete=models.PROTECT, related_name="year_end_decisions")
     date_decision = models.DateField(auto_now_add=True)
     commentaire = models.TextField(blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         unique_together = [("eleve", "annee_scolaire")]

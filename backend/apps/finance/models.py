@@ -31,6 +31,7 @@ class FeeCategory(models.Model):
         on_delete=models.SET_NULL, related_name="fee_categories",
     )
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         verbose_name = "Catégorie de frais"
@@ -90,6 +91,7 @@ class Payment(models.Model):
     receipt_url = models.URLField(blank=True)
     sms_notification_sent = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         verbose_name = "Paiement"
@@ -116,6 +118,7 @@ class Invoice(models.Model):
     pdf_url = models.URLField(blank=True)
     generated_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         unique_together = [("tenant", "student", "school_year")]
