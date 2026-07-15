@@ -1,0 +1,163 @@
+[
+  {
+    "model": "authentication.permission",
+    "pk": "11111111-0001-0000-0000-000000000001",
+    "fields": {
+      "codename": "auth:login",
+      "name": "Se connecter",
+      "module": "auth",
+      "created_at": "2025-01-01T00:00:00Z",
+      "updated_at": "2025-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "authentication.permission",
+    "pk": "11111111-0001-0000-0000-000000000002",
+    "fields": {
+      "codename": "auth:refresh",
+      "name": "Rafraîchir le token",
+      "module": "auth",
+      "created_at": "2025-01-01T00:00:00Z",
+      "updated_at": "2025-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "authentication.permission",
+    "pk": "11111111-0001-0000-0000-000000000003",
+    "fields": {
+      "codename": "auth:logout",
+      "name": "Se déconnecter",
+      "module": "auth",
+      "created_at": "2025-01-01T00:00:00Z",
+      "updated_at": "2025-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "authentication.permission",
+    "pk": "11111111-0001-0000-0000-000000000004",
+    "fields": {
+      "codename": "users:read:me",
+      "name": "Lire son propre profil",
+      "module": "users",
+      "created_at": "2025-01-01T00:00:00Z",
+      "updated_at": "2025-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "authentication.permission",
+    "pk": "11111111-0001-0000-0000-000000000005",
+    "fields": {
+      "codename": "users:update:me",
+      "name": "Modifier son propre profil",
+      "module": "users",
+      "created_at": "2025-01-01T00:00:00Z",
+      "updated_at": "2025-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "authentication.permission",
+    "pk": "11111111-0001-0000-0000-000000000006",
+    "fields": {
+      "codename": "auth:permissions:read",
+      "name": "Lire ses permissions",
+      "module": "auth",
+      "created_at": "2025-01-01T00:00:00Z",
+      "updated_at": "2025-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "authentication.role",
+    "pk": "22222222-0001-0000-0000-000000000001",
+    "fields": {
+      "name": "SUPER_ADMIN",
+      "label": "Super Administrateur",
+      "description": "Accès total à la plateforme, hors tenant.",
+      "permissions": [
+        "11111111-0001-0000-0000-000000000001",
+        "11111111-0001-0000-0000-000000000002",
+        "11111111-0001-0000-0000-000000000003",
+        "11111111-0001-0000-0000-000000000004",
+        "11111111-0001-0000-0000-000000000005",
+        "11111111-0001-0000-0000-000000000006"
+      ],
+      "created_at": "2025-01-01T00:00:00Z",
+      "updated_at": "2025-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "authentication.role",
+    "pk": "22222222-0001-0000-0000-000000000002",
+    "fields": {
+      "name": "DIRECTOR",
+      "label": "Directeur",
+      "description": "Accès complet à l'espace scolaire de son établissement.",
+      "permissions": [
+        "11111111-0001-0000-0000-000000000001",
+        "11111111-0001-0000-0000-000000000002",
+        "11111111-0001-0000-0000-000000000003",
+        "11111111-0001-0000-0000-000000000004",
+        "11111111-0001-0000-0000-000000000005",
+        "11111111-0001-0000-0000-000000000006"
+      ],
+      "created_at": "2025-01-01T00:00:00Z",
+      "updated_at": "2025-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "authentication.role",
+    "pk": "22222222-0001-0000-0000-000000000003",
+    "fields": {
+      "name": "STUDENT_STUDIES",
+      "label": "Directeur des études / Scolarité",
+      "description": "Gestion pédagogique et administrative des élèves.",
+      "permissions": [
+        "11111111-0001-0000-0000-000000000001",
+        "11111111-0001-0000-0000-000000000002",
+        "11111111-0001-0000-0000-000000000003",
+        "11111111-0001-0000-0000-000000000004",
+        "11111111-0001-0000-0000-000000000005",
+        "11111111-0001-0000-0000-000000000006"
+      ],
+      "created_at": "2025-01-01T00:00:00Z",
+      "updated_at": "2025-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "authentication.role",
+    "pk": "22222222-0001-0000-0000-000000000004",
+    "fields": {
+      "name": "TEACHER",
+      "label": "Enseignant",
+      "description": "Saisie des notes et présences de ses matières.",
+      "permissions": [
+        "11111111-0001-0000-0000-000000000001",
+        "11111111-0001-0000-0000-000000000002",
+        "11111111-0001-0000-0000-000000000003",
+        "11111111-0001-0000-0000-000000000004",
+        "11111111-0001-0000-0000-000000000005",
+        "11111111-0001-0000-0000-000000000006"
+      ],
+      "created_at": "2025-01-01T00:00:00Z",
+      "updated_at": "2025-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "authentication.role",
+    "pk": "22222222-0001-0000-0000-000000000005",
+    "fields": {
+      "name": "PARENT",
+      "label": "Parent d'élève",
+      "description": "Consultation du suivi de ses enfants.",
+      "permissions": [
+        "11111111-0001-0000-0000-000000000001",
+        "11111111-0001-0000-0000-000000000002",
+        "11111111-0001-0000-0000-000000000003",
+        "11111111-0001-0000-0000-000000000004",
+        "11111111-0001-0000-0000-000000000005",
+        "11111111-0001-0000-0000-000000000006"
+      ],
+      "created_at": "2025-01-01T00:00:00Z",
+      "updated_at": "2025-01-01T00:00:00Z"
+    }
+  }
+]
