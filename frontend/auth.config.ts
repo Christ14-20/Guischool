@@ -1,0 +1,47 @@
+import type { NextAuthConfig } from "next-auth";
+
+export const authConfig: NextAuthConfig = {
+  pages: {
+    signIn: "/login",
+  },
+  callbacks: {
+    authorized({ auth, request: { nextUrl } }) {
+      const isLoggedIn = !!auth?.user;
+      const isApiRoute = nextUrl.pathname.startsWith("/api");
+      const isAuthRoute = nextUrl.pathname.startsWith("/login");
+      const isSuperAdminRoute = nextUrl.pathname.startsWith("/superadmin");
+      
+      // Laisser passer les API routes (NextAuth gère lui-même ses routes,
+      // et d'autres APIs peuvent être appelées librement)
+      if (isApiRoute) return true;
+
+      if (isAuthRoute) {
+        if (isLoggedIn) {
+          // Rediriger l'utilisateur connecté vers son dashboard respectif
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const role = (auth as any)?.user?.role;
+          if (role === "SUPER_ADMIN") {
+            return Response.redirect(new URL("/superadmin/dashboard", nextUrl));
+          } else {
+            return Response.redirect(new URL("/dashboard", nextUrl));
+          }
+        }
+        return true;
+      }
+
+      if (!isLoggedIn) {
+        return false; // Redirige vers /login
+      }
+
+      // Protection par rôle
+      if (isSuperAdminRoute) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        return (auth as any)?.user?.role === "SUPER_ADMIN";
+      }
+
+      // Pour toutes les autres routes protégées (/dashboard, etc.)
+      return true;
+    },
+  },
+  providers: [], // Configuré dans auth.ts pour éviter les imports de modules Node sur l'Edge runtime
+} satisfies NextAuthConfig;

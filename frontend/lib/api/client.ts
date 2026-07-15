@@ -1,4 +1,5 @@
 import axios from "axios";
+import { auth } from "@/auth";
 
 // URL de base de l'API Django (côté serveur Next.js)
 const DJANGO_API_URL = process.env.NEXT_PUBLIC_DJANGO_API_URL || "http://localhost:8000/api/v1";
@@ -41,3 +42,21 @@ clientApi.interceptors.response.use(
     });
   }
 );
+
+/**
+ * Helper serveur pour récupérer une instance Axios déjà configurée
+ * avec le token de session JWT.
+ */
+export async function getBackendClient() {
+  const session = await auth();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const token = (session as any)?.accessToken;
+
+  return axios.create({
+    baseURL: DJANGO_API_URL,
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+  });
+}
