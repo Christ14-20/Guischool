@@ -17,7 +17,7 @@ from drf_spectacular.views import (
 
 api_v1_patterns = [
     # Applications
-    path("auth/", include("apps.authentication.urls")),
+    path("", include("apps.authentication.urls")),
     # Les urls de superadmin, pedagogy, finance et monitoring seront incluses à mesure de leur implémentation.
 ]
 

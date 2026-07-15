@@ -34,11 +34,18 @@ class LoginView(APIView):
 
     @method_decorator(ratelimit(key="ip", rate="10/m", method="POST", block=True))
     def post(self, request):
+        from rest_framework.exceptions import PermissionDenied
         serializer = CustomTokenObtainPairSerializer(data=request.data)
         try:
             serializer.is_valid(raise_exception=True)
+        except PermissionDenied as e:
+            # Compte suspendu — message exact du contrat §9 (403)
+            return error_response(
+                str(e.detail) if hasattr(e, "detail") else str(e),
+                status_code=status.HTTP_403_FORBIDDEN,
+            )
         except Exception as e:
-            # Identifiants incorrects — message exact du contrat §1
+            # Identifiants incorrects — message exact du contrat §1 (401)
             return error_response(
                 "Identifiants incorrects",
                 status_code=status.HTTP_401_UNAUTHORIZED,

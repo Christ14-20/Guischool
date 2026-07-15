@@ -9,3 +9,7 @@ CORS_ALLOW_ALL_ORIGINS = True
 
 # Cache local en mémoire pour simplifier en dev si Redis n'est pas lancé
 # Mais base.py utilise Redis, ce qui est parfait pour le dev via Docker.
+
+# Désactiver le rate limiting en développement et pour les tests
+RATELIMIT_ENABLE = False
+
