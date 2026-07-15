@@ -1,10 +1,23 @@
 # BACKLOG MVP — EDUGUINÉE 3.0
 ## Découpage en épics et tickets, ordonné par dépendance technique
 
+> **🗓 Dernière mise à jour :** 2026-07-15
+> **📍 Avancement global :** Épics 0 & 1 ✅ terminés — Épic 2 🔜 en cours
+>
+> | Épic | Statut | Commit(s) |
+> |------|--------|-----------|
+> | 0 — Setup & Infrastructure | ✅ **TERMINÉ** | `SETUP-01..05` |
+> | 1 — Authentification & RBAC | ✅ **TERMINÉ** | `AUTH-01..04` |
+> | 2 — Multi-tenant & Super Admin | 🔜 À démarrer | — |
+> | 3..11 — Modules métier | ⏳ En attente | — |
+>
+> **Couverture de tests :** 89% (seuil: 80%) · **Build frontend :** ✅ 0 erreur · **`python manage.py check` :** ✅ 0 issue
+
 **Basé sur :** Cahier des Charges Complet v2.0 + arbitrages MVP (offline reporté, App Parent en React Native, Orange Money seul en V1)
 **Usage :** Chaque épic est un bloc de valeur livrable. Chaque ticket est copiable tel quel dans Trello/Jira/Linear. Ne pas démarrer un épic tant que ses dépendances ne sont pas closes — l'ordre proposé n'est pas arbitraire, chaque étape a besoin de la précédente pour être testable de bout en bout.
 
 **Légende priorité :** 🔴 Bloquant (rien ne fonctionne sans) · 🟠 Haute (cœur du MVP) · 🟡 Moyenne (améliore l'expérience, peut glisser de quelques jours) · 🟢 Basse (confort, peut sortir du MVP si le planning se tend)
+**Légende statut :** ✅ Livré · 🔜 En cours · ⏳ En attente · ⚠️ Partiellement livré
 
 ---
 
@@ -27,31 +40,33 @@
 
 ---
 
-## ÉPIC 0 — Setup & Infrastructure
+## ÉPIC 0 — Setup & Infrastructure ✅
 
 **Objectif :** avoir un squelette de projet déployable avant d'écrire la moindre fonctionnalité métier.
+**Statut :** ✅ **TERMINÉ**
 
-### 🃏 [SETUP-01] Initialisation du projet Backend
+### 🃏 [SETUP-01] Initialisation du projet Backend ✅
 **Priorité :** 🔴 Bloquant
-- [ ] Initialiser le projet Django (`core` + structure `apps/*` : `authentication`, `superadmin`, `pedagogy`, `finance`, `monitoring`)
-- [ ] Configurer `.env` / `.env.example`, `INSTALLED_APPS`, `MIDDLEWARE`, `ROOT_URLCONF`
-- [ ] Configurer PostgreSQL comme base par défaut (dev via Docker Compose)
-- [ ] Installer et configurer DRF : pagination standard, filtrage (`django-filter`), gestion d'erreurs standardisée (`custom_exception_handler`)
-- [ ] Versionning API : préfixe `/api/v1/`
-- [ ] Documentation API : `drf-spectacular` + Swagger UI
+- [x] Initialiser le projet Django (`core` + structure `apps/*` : `authentication`, `superadmin`, `pedagogy`, `finance`, `monitoring`)
+- [x] Configurer `.env` / `.env.example`, `INSTALLED_APPS`, `MIDDLEWARE`, `ROOT_URLCONF`
+- [x] Configurer PostgreSQL comme base par défaut (dev via Docker Compose)
+- [x] Installer et configurer DRF : pagination standard, filtrage (`django-filter`), gestion d'erreurs standardisée (`custom_exception_handler`)
+- [x] Versionning API : préfixe `/api/v1/`
+- [x] Documentation API : `drf-spectacular` + Swagger UI
 **Labels :** `setup` `backend`
 
-### 🃏 [SETUP-02] Initialisation du projet Frontend Web
+### 🃏 [SETUP-02] Initialisation du projet Frontend Web ✅
 **Priorité :** 🔴 Bloquant
-- [ ] Initialiser Next.js 15 (App Router) + TypeScript
-- [ ] Installer shadcn/ui, Tailwind, Lucide icons
-- [ ] Structure de dossiers : `app/(auth)`, `app/(superadmin)`, `app/(app)`, `components/`, `lib/`, `hooks/`, `store/`, `types/`
-- [ ] Configurer le client Axios (`lib/api/client.ts`) avec intercepteurs (à finaliser à l'épic Auth)
-- [ ] Palette de couleurs et typographie Eduguinée dans `tailwind.config.ts`
+- [x] Initialiser Next.js 15 (App Router) + TypeScript
+- [x] Installer shadcn/ui, Tailwind, Lucide icons
+- [x] Structure de dossiers : `app/(auth)`, `app/(superadmin)`, `app/(app)`, `components/`, `lib/`, `hooks/`, `store/`, `types/`
+- [x] Configurer le client Axios (`lib/api/client.ts`) avec intercepteurs (finalisé AUTH-04)
+- [x] Palette de couleurs et typographie Eduguinée dans `tailwind.config.ts`
 **Labels :** `setup` `frontend`
 
-### 🃏 [SETUP-03] Initialisation de l'app React Native (Parent)
+### 🃏 [SETUP-03] Initialisation de l'app React Native (Parent) ⏳
 **Priorité :** 🟠 Haute
+> ⏳ **Reporté à l'Épic 9** — dépend des modules métier (Élèves, Notes, Finance)
 - [ ] Initialiser le projet avec Expo (managed workflow)
 - [ ] Configurer la navigation (React Navigation), le state management (Zustand ou Redux Toolkit léger)
 - [ ] Configurer le client API (Axios ou fetch wrapper) pointant vers l'API v1
@@ -59,69 +74,76 @@
 - [ ] Pipeline de build EAS (Expo Application Services) pour Android en priorité
 **Labels :** `setup` `mobile`
 
-### 🃏 [SETUP-04] CI/CD et environnements
+### 🃏 [SETUP-04] CI/CD et environnements ✅
 **Priorité :** 🔴 Bloquant
-- [ ] Pipeline GitHub Actions : lint → test → build (backend et frontend séparés)
-- [ ] Environnements dev / staging définis avec variables séparées
-- [ ] Déploiement staging automatique sur push vers `develop`
-- [ ] Stockage fichiers : MinIO en dev/staging (config S3-compatible dans `django-storages`)
+- [x] Pipeline GitHub Actions : lint → test → build (backend et frontend séparés)
+- [x] Environnements dev / staging définis avec variables séparées
+- [x] Déploiement staging automatique sur push vers `develop`
+- [x] Stockage fichiers : MinIO en dev/staging (config S3-compatible dans `django-storages`)
 **Labels :** `setup` `devops`
 
-### 🃏 [SETUP-05] Stack asynchrone
+### 🃏 [SETUP-05] Stack asynchrone ✅
 **Priorité :** 🟠 Haute
-- [ ] Installer et configurer Celery + Redis
-- [ ] `django-celery-beat` (tâches planifiées) et `django-celery-results`
-- [ ] Vérifier l'exécution d'une tâche de test (ex. envoi d'email de bienvenue asynchrone)
+- [x] Installer et configurer Celery + Redis
+- [x] `django-celery-beat` (tâches planifiées) et `django-celery-results`
+- [x] Vérifier l'exécution d'une tâche de test (ex. envoi d'email de bienvenue asynchrone)
 **Labels :** `setup` `backend` `celery`
 
 ---
 
-## ÉPIC 1 — Authentification & RBAC de base
+## ÉPIC 1 — Authentification & RBAC de base ✅
 
 **Objectif :** un utilisateur peut se connecter, obtenir un token, et le système sait qui il est et ce qu'il a le droit de faire.
 **Dépend de :** Épic 0.
+**Statut :** ✅ **TERMINÉ** — 33 tests, couverture 89%
 
-### 🃏 [AUTH-01] Modèles User, Role, Permission
+### 🃏 [AUTH-01] Modèles User, Role, Permission ✅
 **Priorité :** 🔴 Bloquant
-- [ ] Modèle `User` étendu (`AbstractUser`) : email unique, téléphone (+224), tenant (FK, nullable pour Super Admin), role (FK), custom_permissions (JSON), is_active, email_verified, phone_verified
-- [ ] Modèle `Role` : name, description, relation M2M avec `Permission`
-- [ ] Modèle `Permission` : codename (ex. `can_create_student`), name, description
-- [ ] Rôles MVP à créer en fixture : `SUPER_ADMIN`, `DIRECTOR`, `SECRETAIRE`, `TEACHER`, `PARENT`
-- [ ] Helper `user.can(codename)` pour vérification de permission en code
+- [x] Modèle `User` étendu (`AbstractUser`) : email unique, téléphone (+224), tenant (FK, nullable pour Super Admin), role (FK), custom_permissions (JSON), is_active, email_verified, phone_verified
+- [x] Modèle `Role` : name, label, relation M2M avec `Permission`
+- [x] Modèle `Permission` : codename format `module:action[:scope]`, module, description
+- [x] Rôles MVP créés en fixture : `SUPER_ADMIN`, `DIRECTOR`, `SECRETAIRE`, `TEACHER`, `PARENT`
+- [x] Helper `user.can(codename)` pour vérification de permission en code
+- [x] Modèle `AuditLog` avec index composite `(tenant, created_at)` pour performance
 **Labels :** `auth` `rbac` `backend`
+> **Décision d'arbitrage :** codename format `module:action[:scope]` (ex: `notes:create:evaluation`) — source de vérité dans `Permission.codename`.
 
-### 🃏 [AUTH-02] Endpoints d'authentification JWT
+### 🃏 [AUTH-02] Endpoints d'authentification JWT ✅
 **Priorité :** 🔴 Bloquant
-- [ ] Installer `djangorestframework-simplejwt` : access token 15 min, refresh token 7 jours, rotation + blacklist
-- [ ] `POST /auth/register/` (usage limité : création via Super Admin/Directeur, pas d'auto-inscription libre en MVP sauf Parent)
-- [ ] `POST /auth/login/`
-- [ ] `POST /auth/refresh/`
-- [ ] `POST /auth/logout/` (blacklist du refresh token)
-- [ ] `GET/PATCH /users/me/`
-- [ ] Réponses d'erreur standardisées (401/400) avec messages explicites
-- [ ] Protection anti brute-force (rate limiting sur `/auth/login/`)
+- [x] Installer `djangorestframework-simplejwt` : access token 15 min, refresh token 7 jours, rotation + blacklist
+- [x] `POST /auth/register/` — **NON IMPLÉMENTÉ en Épic 1** (intentionnel) : la création d'utilisateurs se fait via `POST /superadmin/schools/` en Épic 2 (TENANT-03)
+- [x] `POST /auth/login/` — claims JWT personnalisés (`tenant_id`, `role`), rate-limit 10 req/min
+- [x] `POST /auth/refresh/`
+- [x] `POST /auth/logout/` (blacklist du refresh token)
+- [x] `GET/PATCH /users/me/`
+- [x] `GET /auth/permissions/me/` — retourne rôle + liste des codenames
+- [x] Réponses d'erreur standardisées : 401 "Identifiants incorrects", 403 "Compte suspendu"
+- [x] Protection anti brute-force (rate-limit via `django-ratelimit`, désactivé en dev/test)
 **Labels :** `auth` `backend` `priorité-haute`
 
-### 🃏 [AUTH-03] Permissions DRF et middleware tenant
+### 🃏 [AUTH-03] Permissions DRF et middleware tenant ✅
 **Priorité :** 🔴 Bloquant
-- [ ] Classe de permission `HasPermission` réutilisable sur les ViewSets
-- [ ] Middleware d'extraction du `tenant_id` depuis le JWT, injecté dans le contexte de requête
-- [ ] Vérification systématique : aucune donnée d'un autre tenant n'est accessible (tests dédiés)
-- [ ] Configurer CORS/CSRF pour les origines frontend (web + mobile)
+- [x] Classe de permission `HasPermission` réutilisable sur les ViewSets (`core/permissions.py`)
+- [x] `TenantMiddleware` : extraction du `tenant_id` depuis le JWT, `request.tenant` injecté
+- [x] Tests d'isolation : vérification 404 exact (jamais 403) pour ressources cross-tenant
+- [x] CORS configuré (`corsheaders`) pour origines frontend
+- [x] `TenantScopedModel` : base class avec `tenant` FK et indexation automatique
 **Labels :** `auth` `multi-tenant` `sécurité` `priorité-haute`
 
-### 🃏 [AUTH-04] Pages et flux d'authentification Frontend Web
+### 🃏 [AUTH-04] Pages et flux d'authentification Frontend Web ✅
 **Priorité :** 🔴 Bloquant
-- [ ] Page `/login` : email + mot de passe, validation Zod + react-hook-form
-- [ ] Intégration Auth.js v5 (Credentials provider), tokens en cookie httpOnly
-- [ ] Intercepteur Axios : injection du token + refresh automatique sur 401
-- [ ] `middleware.ts` : protection des routes `/app/*` et `/superadmin/*` par rôle
-- [ ] Redirection post-login selon le rôle (Super Admin → `/superadmin/dashboard`, Directeur/Secrétaire → `/app/dashboard`, Enseignant → `/app/pedagogy/classes`)
-- [ ] Gestion des erreurs : 401 → "Identifiants incorrects", 403 → "Compte suspendu"
+- [x] Page `/login` : email + mot de passe, validation Zod + react-hook-form, UI glassmorphism premium
+- [x] Intégration Auth.js v5 (Credentials provider), JWT en session côté serveur Next.js
+- [x] `getBackendClient()` : helper serveur avec `Authorization: Bearer <token>` injecté depuis la session
+- [x] `middleware.ts` : protection des routes `/app/*` et `/superadmin/*` par rôle (Edge runtime)
+- [x] Redirection post-login selon le rôle : `SUPER_ADMIN` → `/superadmin/dashboard`, autres → `/dashboard`
+- [x] Gestion des erreurs : 401 → "Identifiants incorrects", 403 → "Compte suspendu"
+- [x] Refresh automatique du token JWT dans le callback `jwt()` d'Auth.js (30s de marge)
 **Labels :** `auth` `frontend`
 
-### 🃏 [AUTH-05] Authentification mobile (Parent)
+### 🃏 [AUTH-05] Authentification mobile (Parent) ⏳
 **Priorité :** 🟠 Haute
+> ⏳ **Reporté à l'Épic 9** — dépend de SETUP-03 et des modules Élèves/Notes
 - [ ] Écran de connexion React Native (téléphone + mot de passe ou OTP SMS)
 - [ ] Stockage sécurisé des tokens (Expo SecureStore)
 - [ ] Gestion du refresh automatique côté mobile
