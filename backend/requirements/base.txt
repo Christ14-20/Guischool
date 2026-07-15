@@ -1,0 +1,40 @@
+# Core
+Django==5.1.4
+djangorestframework==3.15.2
+django-cors-headers==4.6.0
+
+# Database
+psycopg2-binary==2.9.10
+
+# Auth JWT
+djangorestframework-simplejwt==5.3.1
+
+# Filtering
+django-filter==24.3
+
+# API Documentation
+drf-spectacular==0.27.2
+
+# Password hashing (Argon2id — §5.1 CDC)
+# Django 5 supporte PASSWORD_HASHERS = ['django.contrib.auth.hashers.Argon2PasswordHasher']
+# nativement avec argon2-cffi, aucun wrapper supplémentaire nécessaire
+argon2-cffi==23.1.0
+
+# Environment variables
+python-decouple==3.8
+
+# Async tasks
+celery==5.4.0
+redis==5.2.1
+django-celery-beat==2.7.0
+django-celery-results==2.5.1
+
+# File storage (S3-compatible, MinIO)
+django-storages==1.14.4
+boto3==1.35.95
+
+# Rate limiting
+django-ratelimit==4.1.0
+
+# Utilities
+Pillow==11.1.0
