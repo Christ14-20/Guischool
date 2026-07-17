@@ -1,5 +1,7 @@
 import React from "react";
 import Link from "next/link";
+import { signOut } from "@/auth";
+
 
 
 export default function SuperAdminLayout({
@@ -41,9 +43,16 @@ export default function SuperAdminLayout({
           </Link>
         </nav>
         <div className="border-t border-slate-800 pt-4 mt-auto">
-          <button className="w-full text-left text-sm text-slate-400 hover:text-white">
-            Déconnexion
-          </button>
+          <form
+            action={async () => {
+              "use server";
+              await signOut({ redirectTo: "/login" });
+            }}
+          >
+            <button type="submit" className="w-full text-left text-sm text-slate-400 hover:text-white cursor-pointer">
+              Déconnexion
+            </button>
+          </form>
         </div>
       </aside>
       
