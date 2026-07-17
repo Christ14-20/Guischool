@@ -32,3 +32,105 @@ class PlanSerializer(serializers.ModelSerializer):
                 "Le prix mensuel ne peut pas être négatif."
             )
         return value
+
+
+class TenantPlanNestedSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Plan
+        fields = ["id", "name"]
+
+
+class TenantCreateSerializer(serializers.Serializer):
+    """
+    Serializer pour la requête POST de création d'école (§2.1 du contrat d'API).
+    """
+
+    name = serializers.CharField(max_length=150)
+    school_type = serializers.ChoiceField(choices=Tenant.SchoolType.choices)
+    code_minedu = serializers.CharField(max_length=50, required=False, allow_null=True)
+    contact_name = serializers.CharField(max_length=150)
+    contact_phone = serializers.CharField(max_length=20)
+    contact_email = serializers.EmailField()
+    region = serializers.CharField(max_length=100, required=False, default="")
+    prefecture = serializers.CharField(max_length=100, required=False, default="")
+    commune = serializers.CharField(max_length=100, required=False, default="")
+    quartier = serializers.CharField(max_length=150, required=False, default="")
+    plan_id = serializers.UUIDField()
+    latitude = serializers.DecimalField(max_digits=9, decimal_places=6, required=False, allow_null=True)
+    longitude = serializers.DecimalField(max_digits=9, decimal_places=6, required=False, allow_null=True)
+    logo = serializers.URLField(required=False, default="", allow_blank=True)
+
+    def validate_contact_phone(self, value):
+        from core.utils import is_valid_guinea_phone
+        if not is_valid_guinea_phone(value):
+            raise serializers.ValidationError("Le format du téléphone doit être +224XXXXXXXXX (9 chiffres après l'indicatif).")
+        return value
+
+
+class TenantListSerializer(serializers.ModelSerializer):
+    """
+    Serializer pour la liste des écoles (§2.2 du contrat d'API).
+    """
+
+    plan = TenantPlanNestedSerializer(read_only=True)
+    student_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Tenant
+        fields = [
+            "id",
+            "name",
+            "slug",
+            "status",
+            "plan",
+            "student_count",
+            "created_at",
+        ]
+
+    def get_student_count(self, obj) -> int:
+        return obj.get_student_count()
+
+
+class TenantDetailSerializer(serializers.ModelSerializer):
+    """
+    Serializer pour le détail complet d'une école (§2.3 du contrat d'API).
+    """
+
+    plan = TenantPlanNestedSerializer(read_only=True)
+    student_count = serializers.SerializerMethodField()
+    staff_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Tenant
+        fields = [
+            "id",
+            "name",
+            "slug",
+            "code_minedu",
+            "school_type",
+            "status",
+            "plan",
+            "contact_name",
+            "contact_phone",
+            "contact_email",
+            "region",
+            "prefecture",
+            "commune",
+            "quartier",
+            "latitude",
+            "longitude",
+            "logo",
+            "settings",
+            "trial_ends_at",
+            "student_count",
+            "staff_count",
+            "created_at",
+            "updated_at",
+        ]
+
+    def get_student_count(self, obj) -> int:
+        return obj.get_student_count()
+
+    def get_staff_count(self, obj) -> int:
+        return obj.get_staff_count()
+
