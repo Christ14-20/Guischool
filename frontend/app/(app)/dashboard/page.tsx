@@ -1,6 +1,16 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React from "react";
+import { auth } from "@/auth";
+import { redirect } from "next/navigation";
 
-export default function TenantAppDashboard() {
+export default async function TenantAppDashboard() {
+  const session = await auth();
+
+  // Si l'utilisateur est un SUPER_ADMIN, il doit être redirigé vers sa propre console d'administration.
+  if (session?.user && (session.user as any).role === "SUPER_ADMIN") {
+    redirect("/superadmin/dashboard");
+  }
+
   return (
     <div className="space-y-6">
       <div>

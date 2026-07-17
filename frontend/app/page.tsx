@@ -1,8 +1,20 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 
-// La route racine "/" redirige systématiquement vers /dashboard.
-// Le middleware Auth.js (middleware.ts) se chargera de renvoyer
-// vers /login si l'utilisateur n'est pas authentifié.
-export default function RootPage() {
-  redirect("/dashboard");
+// La route racine "/" redirige systématiquement vers le bon dashboard
+// en fonction du rôle de l'utilisateur connecté.
+export default async function RootPage() {
+  const session = await auth();
+
+  if (session?.user) {
+    const role = (session.user as any).role;
+    if (role === "SUPER_ADMIN") {
+      redirect("/superadmin/dashboard");
+    } else {
+      redirect("/dashboard");
+    }
+  }
+
+  redirect("/login");
 }
