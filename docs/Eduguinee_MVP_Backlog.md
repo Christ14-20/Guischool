@@ -157,46 +157,47 @@
 **Objectif :** l'équipe Eduguinée peut créer une école, celle-ci dispose immédiatement d'un espace isolé avec un compte directeur fonctionnel.
 **Dépend de :** Épic 1.
 
-### 🃏 [TENANT-01] Modèle Tenant et isolation applicative
+### 🃏 [TENANT-01] Modèle Tenant et isolation applicative ✅
 **Priorité :** 🔴 Bloquant
-- [ ] Modèle `Tenant` : id (UUID), name, slug (unique), code_minedu (optionnel), type, status (Active/Suspended/Trial/Cancelled), created_at, settings (JSONB)
-- [ ] FK `tenant` ajoutée à toutes les entités métier (Student, Class, User, Payment, etc.)
-- [ ] Filtrage systématique par tenant dans chaque `get_queryset()` des ViewSets
-- [ ] Tests d'isolation : vérifier qu'aucune requête ne peut retourner des données d'un autre tenant
+- [x] Modèle `Tenant` : id (UUID), name, slug (unique), code_minedu (optionnel), type, status (Active/Suspended/Trial/Cancelled), created_at, settings (JSONB)
+- [x] FK `tenant` ajoutée à toutes les entités métier (Student, Class, User, Payment, etc.)
+- [x] Filtrage systématique par tenant dans chaque `get_queryset()` des ViewSets
+- [x] Tests d'isolation : vérifier qu'aucune requête ne peut retourner des données d'un autre tenant
 **Labels :** `multi-tenant` `backend` `priorité-haute`
 
-### 🃏 [TENANT-02] Modèle Plan (simplifié V1)
+### 🃏 [TENANT-02] Modèle Plan (simplifié V1) ✅
 **Priorité :** 🟠 Haute
-- [ ] Modèle `Plan` : name, max_students, max_staff, price_monthly (2 plans suffisent en V1 : Starter / Pro, pas de logique de facturation SaaS automatisée)
-- [ ] Association `Tenant.plan` (FK)
-- [ ] Middleware de contrôle de limite : blocage de création d'élève au-delà de `max_students` avec message explicite
+- [x] Modèle `Plan` : name, max_students, max_staff, price_monthly (2 plans suffisent en V1 : Starter / Pro, pas de logique de facturation SaaS automatisée)
+- [x] Association `Tenant.plan` (FK)
+- [x] Middleware de contrôle de limite : blocage de création d'élève au-delà de `max_students` avec message explicite
 **Labels :** `multi-tenant` `plans` `backend`
 
-### 🃏 [TENANT-03] Création d'une école — workflow complet
+### 🃏 [TENANT-03] Création d'une école — workflow complet ✅
 **Priorité :** 🔴 Bloquant
-- [ ] `POST /superadmin/schools/` : validations (nom unique, sous-domaine disponible, email non utilisé, téléphone valide)
-- [ ] Génération automatique du slug/sous-domaine
-- [ ] Attribution automatique du plan par défaut (essai 30 jours)
-- [ ] Création automatique du compte Directeur (mot de passe temporaire, changement obligatoire au premier login)
-- [ ] Service métier dédié `tenant_service.py` (pas de logique dans les vues)
+- [x] `POST /superadmin/schools/` : validations (nom unique, sous-domaine disponible, email non utilisé, téléphone valide)
+- [x] Génération automatique du slug/sous-domaine
+- [x] Attribution automatique du plan par défaut (essai 30 jours)
+- [x] Création automatique du compte Directeur (mot de passe temporaire, changement obligatoire au premier login)
+- [x] Service métier dédié `tenant_service.py` (pas de logique dans les vues)
 **Labels :** `multi-tenant` `superadmin` `backend` `priorité-haute`
 
-### 🃏 [TENANT-04] Gestion des écoles côté Super Admin
+### 🃏 [TENANT-04] Gestion des écoles côté Super Admin ✅
 **Priorité :** 🟠 Haute
-- [ ] `GET /superadmin/schools/` (filtres statut/plan/recherche)
-- [ ] `GET /superadmin/schools/{id}/`
-- [ ] `PATCH /superadmin/schools/{id}/suspend/` (soft uniquement en V1, hard en V2)
-- [ ] `PATCH /superadmin/schools/{id}/reactivate/`
-- [ ] Notification email/SMS au contact principal à chaque changement de statut
+- [x] `GET /superadmin/schools/` (filtres statut/plan/recherche)
+- [x] `GET /superadmin/schools/{id}/`
+- [x] `PATCH /superadmin/schools/{id}/suspend/` (soft uniquement en V1, hard en V2)
+- [x] `PATCH /superadmin/schools/{id}/reactivate/`
+- [x] Notification email/SMS au contact principal à chaque changement de statut (Celery async)
 **Labels :** `multi-tenant` `superadmin` `backend`
 
-### 🃏 [TENANT-05] Interface Super Admin
+### 🃏 [TENANT-05] Interface Super Admin ✅
 **Priorité :** 🟠 Haute
-- [ ] Page `/superadmin/dashboard` : KPI cards (nb écoles, actives/suspendues/trial), liste des dernières écoles créées
-- [ ] Page `/superadmin/schools` : `DataTable` avec filtres, `StatusBadge`, actions (voir/suspendre/réactiver)
-- [ ] Page `/superadmin/schools/new` : formulaire de création
-- [ ] Page `/superadmin/schools/[id]` : détail (infos générales, plan, actions)
+- [x] Page `/superadmin/dashboard` : KPI cards (nb écoles, actives/suspendues/trial), liste des dernières écoles créées
+- [x] Page `/superadmin/schools` : `DataTable` avec filtres, `StatusBadge`, actions (voir/suspendre/réactiver)
+- [x] Page `/superadmin/schools/new` : formulaire de création avec affichage des identifiants temporaires générés
+- [x] Page `/superadmin/schools/[id]` : détail (infos générales, plan, quotas d'utilisation, actions de statut)
 **Labels :** `multi-tenant` `superadmin` `frontend`
+
 
 ---
 ## ÉPIC 3 — Années scolaires, Classes, Niveaux, Matières

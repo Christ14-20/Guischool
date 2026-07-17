@@ -1,4 +1,6 @@
 import React from "react";
+import Link from "next/link";
+
 
 export default function SuperAdminLayout({
   children,
@@ -19,18 +21,24 @@ export default function SuperAdminLayout({
           <div className="px-3 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">
             Gestion
           </div>
-          <a
-            href="#"
-            className="flex items-center gap-3 px-3 py-2 rounded-lg bg-indigo-600/10 text-indigo-400 font-medium"
+          <Link
+            href="/superadmin/dashboard"
+            className="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/50 transition-all font-medium"
+          >
+            Tableau de Bord
+          </Link>
+          <Link
+            href="/superadmin/schools"
+            className="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/50 transition-all font-medium"
           >
             Établissements
-          </a>
-          <a
-            href="#"
-            className="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/50 transitions-all"
+          </Link>
+          <Link
+            href="/superadmin/plans"
+            className="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/50 transition-all font-medium"
           >
             Plans & Quotas
-          </a>
+          </Link>
         </nav>
         <div className="border-t border-slate-800 pt-4 mt-auto">
           <button className="w-full text-left text-sm text-slate-400 hover:text-white">
