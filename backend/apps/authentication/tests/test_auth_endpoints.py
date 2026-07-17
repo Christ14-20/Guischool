@@ -27,6 +27,9 @@ def tenant(plan):
         school_type=Tenant.SchoolType.MIXTE,
         status=Tenant.Status.ACTIVE,
         plan=plan,
+        contact_name="Directeur Test",
+        contact_phone="+224620000001",
+        contact_email="directeur@ecole-test.gn",
     )
 
 
@@ -38,6 +41,9 @@ def suspended_tenant(plan):
         school_type=Tenant.SchoolType.MIXTE,
         status=Tenant.Status.SUSPENDED,
         plan=plan,
+        contact_name="Directeur Suspendu",
+        contact_phone="+224620000002",
+        contact_email="dir@ecole-suspendue.gn",
     )
 
 

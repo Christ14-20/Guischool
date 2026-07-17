@@ -41,6 +41,9 @@ def tenant_a(plan):
         school_type=Tenant.SchoolType.PRIMAIRE,
         status=Tenant.Status.ACTIVE,
         plan=plan,
+        contact_name="Directeur A",
+        contact_phone="+224620000001",
+        contact_email="contact@ecole-a.gn",
     )
 
 
@@ -52,6 +55,9 @@ def tenant_b(plan):
         school_type=Tenant.SchoolType.LYCEE,
         status=Tenant.Status.ACTIVE,
         plan=plan,
+        contact_name="Directeur B",
+        contact_phone="+224620000002",
+        contact_email="contact@ecole-b.gn",
     )
 
 
@@ -149,6 +155,9 @@ class TestTenantIsolation:
             school_type=Tenant.SchoolType.MIXTE,
             status=Tenant.Status.SUSPENDED,
             plan=plan,
+            contact_name="Directeur Suspendu",
+            contact_phone="+224620000003",
+            contact_email="suspended@ecole.gn",
         )
         role = Role.objects.get_or_create(
             name="DIRECTOR", defaults={"label": "Directeur"}
