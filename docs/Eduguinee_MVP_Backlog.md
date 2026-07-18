@@ -160,7 +160,7 @@
 ### 🃏 [TENANT-01] Modèle Tenant et isolation applicative ✅
 **Priorité :** 🔴 Bloquant
 - [x] Modèle `Tenant` : id (UUID), name, slug (unique), code_minedu (optionnel), type, status (Active/Suspended/Trial/Cancelled), created_at, settings (JSONB)
-- [x] FK `tenant` ajoutée à toutes les entités métier (Student, Class, User, Payment, etc.)
+- [x] Base `TenantScopedModel` prête pour héritage (avec FK `tenant`) et appliquée à `User` (les autres entités en hériteront à leur création en Épics 3/4/7)
 - [x] Filtrage systématique par tenant dans chaque `get_queryset()` des ViewSets
 - [x] Tests d'isolation : vérifier qu'aucune requête ne peut retourner des données d'un autre tenant
 **Labels :** `multi-tenant` `backend` `priorité-haute`
