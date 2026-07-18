@@ -1,14 +1,14 @@
 # BACKLOG MVP — EDUGUINÉE 3.0
 ## Découpage en épics et tickets, ordonné par dépendance technique
 
-> **🗓 Dernière mise à jour :** 2026-07-15
-> **📍 Avancement global :** Épics 0 & 1 ✅ terminés — Épic 2 🔜 en cours
+> **🗓 Dernière mise à jour :** 2026-07-17
+> **📍 Avancement global :** Épics 0, 1 & 2 ✅ terminés
 >
 > | Épic | Statut | Commit(s) |
 > |------|--------|-----------|
 > | 0 — Setup & Infrastructure | ✅ **TERMINÉ** | `SETUP-01..05` |
 > | 1 — Authentification & RBAC | ✅ **TERMINÉ** | `AUTH-01..04` |
-> | 2 — Multi-tenant & Super Admin | 🔜 À démarrer | — |
+> | 2 — Multi-tenant & Super Admin | ✅ **TERMINÉ** | `TENANT-01..05` |
 > | 3..11 — Modules métier | ⏳ En attente | — |
 >
 > **Couverture de tests :** 89% (seuil: 80%) · **Build frontend :** ✅ 0 erreur · **`python manage.py check` :** ✅ 0 issue
@@ -169,7 +169,7 @@
 **Priorité :** 🟠 Haute
 - [x] Modèle `Plan` : name, max_students, max_staff, price_monthly (2 plans suffisent en V1 : Starter / Pro, pas de logique de facturation SaaS automatisée)
 - [x] Association `Tenant.plan` (FK)
-- [x] Middleware de contrôle de limite : blocage de création d'élève au-delà de `max_students` avec message explicite
+- [ ] Middleware de contrôle de limite : blocage de création d'élève au-delà de `max_students` (utilitaire prêt, intégration en Épic 4)
 **Labels :** `multi-tenant` `plans` `backend`
 
 ### 🃏 [TENANT-03] Création d'une école — workflow complet ✅
