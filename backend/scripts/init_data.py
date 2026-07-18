@@ -14,7 +14,13 @@ Crée dans l'ordre :
 """
 
 import os
+import sys
 import django
+
+# Permet d'exécuter le script directement avec `python scripts/init_data.py` depuis le dossier backend/
+backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if backend_dir not in sys.path:
+    sys.path.append(backend_dir)
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings.development")
 django.setup()

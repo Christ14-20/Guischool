@@ -7,6 +7,7 @@ env/
 venv/
 ENV/
 .env
+.coverage
 
 # Next.js
 .next/
