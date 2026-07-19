@@ -50,7 +50,7 @@ export default async function SuperAdminSchoolsPage({ searchParams }: SchoolsPag
     // 2. Fetch plans for the dropdown filter
     const plansResp = await client.get("/superadmin/plans/");
     if (plansResp.data?.status === "success") {
-      plans = plansResp.data.data;
+      plans = Array.isArray(plansResp.data.data) ? plansResp.data.data : [];
     }
   } catch (err: any) {
     console.error("Schools data fetch error:", err.message);
