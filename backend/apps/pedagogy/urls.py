@@ -1,10 +1,11 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 
-from apps.pedagogy.views import SchoolYearViewSet, PeriodViewSet
+from apps.pedagogy.views import SchoolYearViewSet, PeriodViewSet, LevelViewSet
 
 router = DefaultRouter()
 router.register(r"schoolyears", SchoolYearViewSet, basename="schoolyear")
+router.register(r"levels", LevelViewSet, basename="level")
 
 urlpatterns = [
     path("", include(router.urls)),

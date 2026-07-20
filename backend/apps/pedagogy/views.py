@@ -2,11 +2,13 @@ from rest_framework import viewsets, mixins, status
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from django_filters.rest_framework import DjangoFilterBackend
 
 from core.permissions import HasPermission
 from core.utils import success_response, created_response, error_response
-from apps.pedagogy.models import SchoolYear, AcademicPeriod
+from apps.pedagogy.models import Level, SchoolYear, AcademicPeriod
 from apps.pedagogy.serializers import (
+    LevelSerializer,
     SchoolYearSerializer,
     SchoolYearDetailSerializer,
     AcademicPeriodSerializer,
@@ -147,3 +149,23 @@ class PeriodViewSet(
         close_period(period)
         serializer = AcademicPeriodSerializer(period)
         return success_response(serializer.data)
+
+
+class LevelViewSet(
+    mixins.ListModelMixin,
+    viewsets.GenericViewSet,
+):
+    """
+    GET /pedagogy/levels/ — liste des niveaux standards (non paginée, catalogue fixe)
+    Filtres : ?cycle=COLLEGE
+    """
+
+    queryset = Level.objects.all()
+    serializer_class = LevelSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ["cycle"]
+    pagination_class = None
+
+    def get_queryset(self):
+        return self.queryset.filter(tenant=self.request.tenant)

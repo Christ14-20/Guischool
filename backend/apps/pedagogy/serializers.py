@@ -1,8 +1,15 @@
 from rest_framework import serializers
-from apps.pedagogy.models import SchoolYear, AcademicPeriod
+from apps.pedagogy.models import Level, SchoolYear, AcademicPeriod
 from apps.pedagogy.services.school_year_service import (
     validate_no_period_overlap,
 )
+
+
+class LevelSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Level
+        fields = ["id", "cycle", "name", "order_index"]
+        read_only_fields = ["id"]
 
 
 class SchoolYearSerializer(serializers.ModelSerializer):

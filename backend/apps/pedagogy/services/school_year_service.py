@@ -2,7 +2,7 @@ from django.db import transaction
 from django.db.models import Q
 from rest_framework.exceptions import ValidationError as DRFValidationError
 
-from apps.pedagogy.models import SchoolYear, AcademicPeriod
+from apps.pedagogy.models import Level, SchoolYear, AcademicPeriod
 
 
 def set_current_school_year(school_year: SchoolYear) -> SchoolYear:
@@ -78,3 +78,39 @@ def check_year_is_open(school_year: SchoolYear) -> bool:
     À brancher sur les endpoints de saisie.
     """
     return school_year.status == SchoolYear.Status.ACTIVE
+
+
+STANDARD_LEVELS = [
+    ("CP1", Level.Cycle.PRIMAIRE, 1),
+    ("CP2", Level.Cycle.PRIMAIRE, 2),
+    ("CE1", Level.Cycle.PRIMAIRE, 3),
+    ("CE2", Level.Cycle.PRIMAIRE, 4),
+    ("CM1", Level.Cycle.PRIMAIRE, 5),
+    ("CM2", Level.Cycle.PRIMAIRE, 6),
+    ("6ème", Level.Cycle.COLLEGE, 7),
+    ("5ème", Level.Cycle.COLLEGE, 8),
+    ("4ème", Level.Cycle.COLLEGE, 9),
+    ("3ème", Level.Cycle.COLLEGE, 10),
+    ("2nde", Level.Cycle.LYCEE, 11),
+    ("1ère", Level.Cycle.LYCEE, 12),
+    ("Terminale", Level.Cycle.LYCEE, 13),
+]
+
+
+def seed_standard_levels_for_tenant(tenant) -> list[Level]:
+    """
+    Crée les 13 niveaux standards guinéens pour un tenant donné.
+    Appelé automatiquement à la création d'une école (create_school).
+    Ignore les niveaux déjà existants (idempotent).
+    Retourne la liste des niveaux créés.
+    """
+    created = []
+    for name, cycle, order in STANDARD_LEVELS:
+        level, was_created = Level.objects.get_or_create(
+            tenant=tenant,
+            name=name,
+            defaults={"cycle": cycle, "order_index": order},
+        )
+        if was_created:
+            created.append(level)
+    return created

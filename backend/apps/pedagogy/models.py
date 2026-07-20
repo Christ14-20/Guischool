@@ -2,6 +2,23 @@ from django.db import models
 from core.models import TenantScopedModel
 
 
+class Level(TenantScopedModel):
+    class Cycle(models.TextChoices):
+        PRIMAIRE = "PRIMAIRE", "Primaire"
+        COLLEGE = "COLLEGE", "Collège"
+        LYCEE = "LYCEE", "Lycée"
+
+    cycle = models.CharField(max_length=20, choices=Cycle.choices)
+    name = models.CharField(max_length=50)
+    order_index = models.PositiveSmallIntegerField()
+
+    class Meta:
+        ordering = ["order_index"]
+
+    def __str__(self):
+        return self.name
+
+
 class SchoolYear(TenantScopedModel):
     class Status(models.TextChoices):
         PREPARATION = "PREPARATION", "Préparation"
