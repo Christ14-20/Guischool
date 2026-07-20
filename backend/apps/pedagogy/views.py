@@ -32,7 +32,7 @@ class SchoolYearViewSet(
 ):
     """
     GET  /pedagogy/schoolyears/           — liste des années scolaires (lecture ouverte)
-    POST /pedagogy/schoolyears/           — création (DIRECTOR/SECRETAIRE)
+    POST /pedagogy/schoolyears/           — création (DIRECTOR/STUDENT_STUDIES)
     GET  /pedagogy/schoolyears/{id}/      — détail d'une année avec ses périodes
     PATCH /pedagogy/schoolyears/{id}/set-current/ — définir l'année courante (DIRECTOR)
     """
@@ -83,7 +83,7 @@ class PeriodViewSet(
 ):
     """
     GET  /pedagogy/school-years/{school_year_pk}/periods/  — liste des périodes
-    POST /pedagogy/school-years/{school_year_pk}/periods/  — création (DIRECTOR/SECRETAIRE)
+    POST /pedagogy/school-years/{school_year_pk}/periods/  — création (DIRECTOR/STUDENT_STUDIES)
     """
 
     queryset = AcademicPeriod.objects.all()
@@ -163,7 +163,7 @@ class ClassViewSet(
 ):
     """
     GET  /pedagogy/classes/           — liste paginée des classes
-    POST /pedagogy/classes/           — création (DIRECTOR/SECRETAIRE)
+    POST /pedagogy/classes/           — création (DIRECTOR/STUDENT_STUDIES)
     GET  /pedagogy/classes/{id}/      — détail d'une classe
 
     Filtres : ?school_year_id=...&level_id=...&search=6ème
@@ -223,7 +223,7 @@ class SubjectViewSet(
 ):
     """
     GET  /pedagogy/subjects/           — liste des matières
-    POST /pedagogy/subjects/           — création (DIRECTOR/SECRETAIRE)
+    POST /pedagogy/subjects/           — création (DIRECTOR/STUDENT_STUDIES)
     """
 
     queryset = Subject.objects.all()

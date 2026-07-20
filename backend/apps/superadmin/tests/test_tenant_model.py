@@ -182,13 +182,13 @@ class TestTenantModel:
 
     def test_get_staff_count_counts_multiple_roles(self, tenant, director_role):
         """Plusieurs utilisateurs du même tenant sont tous comptés."""
-        secretaire_role, _ = Role.objects.get_or_create(
-            name="SECRETAIRE", defaults={"label": "Secrétaire"}
+        studies_role, _ = Role.objects.get_or_create(
+            name="STUDENT_STUDIES", defaults={"label": "Directeur des études / Scolarité"}
         )
         teacher_role, _ = Role.objects.get_or_create(
             name="TEACHER", defaults={"label": "Enseignant"}
         )
-        for i, role in enumerate([director_role, secretaire_role, teacher_role]):
+        for i, role in enumerate([director_role, studies_role, teacher_role]):
             User.objects.create_user(
                 username=f"user-{i}",
                 email=f"user{i}@palmiers.gn",

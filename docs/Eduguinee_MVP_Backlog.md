@@ -104,7 +104,7 @@
 - [x] Modèle `User` étendu (`AbstractUser`) : email unique, téléphone (+224), tenant (FK, nullable pour Super Admin), role (FK), custom_permissions (JSON), is_active, email_verified, phone_verified
 - [x] Modèle `Role` : name, label, relation M2M avec `Permission`
 - [x] Modèle `Permission` : codename format `module:action[:scope]`, module, description
-- [x] Rôles MVP créés en fixture : `SUPER_ADMIN`, `DIRECTOR`, `SECRETAIRE`, `TEACHER`, `PARENT`
+- [x] Rôles MVP créés en fixture : `SUPER_ADMIN`, `DIRECTOR`, `STUDENT_STUDIES` (« Directeur des études / Scolarité »), `TEACHER`, `PARENT`
 - [x] Helper `user.can(codename)` pour vérification de permission en code
 - [x] Modèle `AuditLog` avec index composite `(tenant, created_at)` pour performance
 **Labels :** `auth` `rbac` `backend`
