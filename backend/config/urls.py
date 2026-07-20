@@ -20,6 +20,7 @@ api_v1_patterns = [
     path("", include("apps.authentication.urls")),
     path("superadmin/", include("apps.superadmin.urls")),
     path("pedagogy/", include("apps.pedagogy.urls")),
+    path("students/", include("apps.pedagogy.student_urls")),
 ]
 
 urlpatterns = [

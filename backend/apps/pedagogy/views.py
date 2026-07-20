@@ -7,7 +7,10 @@ from django_filters.rest_framework import DjangoFilterBackend
 
 from core.permissions import HasPermission
 from core.utils import success_response, created_response, error_response
-from apps.pedagogy.models import Level, SchoolClass, SchoolYear, AcademicPeriod, Subject, ClassSubject
+from apps.pedagogy.models import (
+    Level, SchoolClass, SchoolYear, AcademicPeriod, Subject, ClassSubject,
+    Student, Guardian,
+)
 from apps.pedagogy.serializers import (
     LevelSerializer,
     ClassSerializer,
@@ -17,6 +20,7 @@ from apps.pedagogy.serializers import (
     AcademicPeriodCreateSerializer,
     SubjectSerializer,
     ClassSubjectSerializer,
+    GuardianSerializer,
 )
 from apps.pedagogy.services.school_year_service import (
     set_current_school_year,
@@ -309,3 +313,59 @@ class ClassSubjectViewSet(
         self.perform_create(serializer)
         output = ClassSubjectSerializer(serializer.instance, context=self.get_serializer_context())
         return created_response(output.data)
+
+
+class GuardianViewSet(
+    mixins.ListModelMixin,
+    mixins.CreateModelMixin,
+    viewsets.GenericViewSet,
+):
+    """
+    GET  /students/{student_pk}/guardians/   — liste des responsables d'un élève
+    POST /students/{student_pk}/guardians/   — ajouter un responsable (DIRECTOR/STUDENT_STUDIES)
+    """
+
+    queryset = Guardian.objects.all()
+    serializer_class = GuardianSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return self.queryset.filter(
+            tenant=self.request.tenant,
+            student_id=self.kwargs["student_pk"],
+        )
+
+    def get_permissions(self):
+        if self.action in ("create",):
+            return [IsAuthenticated(), HasPermission("eleves:create")]
+        return [IsAuthenticated()]
+
+    def _get_student_or_none(self):
+        return Student.objects.filter(
+            id=self.kwargs["student_pk"], tenant=self.request.tenant
+        ).first()
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context["student"] = self._get_student_or_none()
+        return context
+
+    def list(self, request, *args, **kwargs):
+        if not self._get_student_or_none():
+            return error_response(
+                "Ressource non trouvée",
+                status_code=status.HTTP_404_NOT_FOUND,
+            )
+        serializer = self.get_serializer(self.get_queryset(), many=True)
+        return success_response(serializer.data)
+
+    def create(self, request, *args, **kwargs):
+        if not self._get_student_or_none():
+            return error_response(
+                "Ressource non trouvée",
+                status_code=status.HTTP_404_NOT_FOUND,
+            )
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        return created_response(serializer.data)

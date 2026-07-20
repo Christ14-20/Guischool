@@ -231,6 +231,36 @@ class Enrollment(TenantScopedModel):
         return f"{self.student.matricule} → {self.classe.name} ({self.school_year.label})"
 
 
+class Guardian(TenantScopedModel):
+    class Lien(models.TextChoices):
+        PERE = "PERE", "Père"
+        MERE = "MERE", "Mère"
+        TUTEUR = "TUTEUR", "Tuteur"
+        AUTRE = "AUTRE", "Autre"
+
+    student = models.ForeignKey(
+        Student, on_delete=models.CASCADE, related_name="guardians"
+    )
+    user = models.ForeignKey(
+        "authentication.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="guardian_profiles",
+    )
+    lien = models.CharField(max_length=10, choices=Lien.choices)
+    nom_complet = models.CharField(max_length=200)
+    telephone = models.CharField(max_length=20)
+    email = models.EmailField(blank=True)
+    is_contact_urgence = models.BooleanField(default=True)
+
+    class Meta:
+        indexes = [models.Index(fields=["telephone"])]
+
+    def __str__(self):
+        return f"{self.nom_complet} ({self.get_lien_display()})"
+
+
 class MatriculeSequence(TenantScopedModel):
     """
     Compteur de matricule par (tenant, school_year).

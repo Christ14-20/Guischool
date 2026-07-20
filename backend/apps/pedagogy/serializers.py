@@ -1,5 +1,8 @@
 from rest_framework import serializers
-from apps.pedagogy.models import Level, SchoolClass, SchoolYear, AcademicPeriod, Subject, ClassSubject
+from apps.pedagogy.models import (
+    Level, SchoolClass, SchoolYear, AcademicPeriod, Subject, ClassSubject,
+    Student, Guardian, Enrollment,
+)
 from apps.pedagogy.services.school_year_service import (
     validate_no_period_overlap,
 )
@@ -216,6 +219,33 @@ class SubjectNestedSerializer(serializers.ModelSerializer):
     class Meta:
         model = Subject
         fields = ["id", "code", "name"]
+
+
+class GuardianSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Guardian
+        fields = [
+            "id", "lien", "nom_complet", "telephone", "email", "is_contact_urgence",
+            "created_at", "updated_at",
+        ]
+        read_only_fields = ["id", "created_at", "updated_at"]
+
+    def validate_telephone(self, value):
+        from core.utils import is_valid_guinea_phone
+        if not is_valid_guinea_phone(value):
+            raise serializers.ValidationError("Format attendu : +224XXXXXXXXX")
+        return value
+
+    def create(self, validated_data):
+        validated_data["tenant"] = self.context["request"].tenant
+        validated_data["student"] = self.context["student"]
+        return super().create(validated_data)
+
+
+class GuardianNestedSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Guardian
+        fields = ["id", "lien", "nom_complet", "telephone"]
 
 
 class ClassSubjectSerializer(serializers.ModelSerializer):
