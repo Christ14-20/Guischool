@@ -194,7 +194,7 @@ class TestStudentEnrollment:
         assert "guardian" in errors
         assert "telephone" in errors["guardian"]
 
-    def test_year_not_open_returns_422(
+    def test_prep_year_is_open_returns_201(
         self, director_user, tenant, prep_year, level
     ):
         classe = SchoolClass.objects.create(
@@ -205,6 +205,26 @@ class TestStudentEnrollment:
         resp = client.post(
             reverse("student-list"),
             _payload(classe, prep_year),
+            format="json",
+        )
+        assert resp.status_code == 201, resp.content
+
+    def test_closed_year_returns_422(
+        self, director_user, tenant, level
+    ):
+        closed_year = SchoolYear.objects.create(
+            tenant=tenant, label="2023-2024",
+            start_date=datetime.date(2023, 9, 15), end_date=datetime.date(2024, 7, 10),
+            status=SchoolYear.Status.CLOSED,
+        )
+        classe = SchoolClass.objects.create(
+            tenant=tenant, school_year=closed_year, level=level,
+            name="6ème B", capacity=50,
+        )
+        client = login_client(APIClient(), director_user.email)
+        resp = client.post(
+            reverse("student-list"),
+            _payload(classe, closed_year),
             format="json",
         )
         assert resp.status_code == 422

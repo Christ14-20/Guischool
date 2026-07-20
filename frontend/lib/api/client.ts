@@ -10,6 +10,7 @@ const DJANGO_API_URL = process.env.NEXT_PUBLIC_DJANGO_API_URL || "http://localho
  */
 export const serverApi = axios.create({
   baseURL: DJANGO_API_URL,
+  adapter: "http",
   headers: {
     "Content-Type": "application/json",
   },
@@ -54,6 +55,7 @@ export async function getBackendClient() {
 
   return axios.create({
     baseURL: DJANGO_API_URL,
+    adapter: "http",
     headers: {
       "Content-Type": "application/json",
       ...(token ? { Authorization: `Bearer ${token}` } : {}),

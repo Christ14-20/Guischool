@@ -14,7 +14,12 @@ export default async function NewSchoolPage() {
     const client = await getBackendClient();
     const plansResp = await client.get("/superadmin/plans/");
     if (plansResp.data?.status === "success") {
-      plans = Array.isArray(plansResp.data.data) ? plansResp.data.data : [];
+      const payload = plansResp.data.data;
+      if (Array.isArray(payload)) {
+        plans = payload;
+      } else if (Array.isArray(payload?.results)) {
+        plans = payload.results;
+      }
     }
   } catch (err: any) {
     console.error("NewSchoolPage plans fetch error:", err.message);

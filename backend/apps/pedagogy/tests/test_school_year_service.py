@@ -213,5 +213,5 @@ class TestCheckUtilities:
             status=SchoolYear.Status.CLOSED,
         )
         assert check_year_is_open(sy_active) is True
-        assert check_year_is_open(sy_prep) is False
+        assert check_year_is_open(sy_prep) is True
         assert check_year_is_open(sy_closed) is False

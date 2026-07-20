@@ -2,8 +2,9 @@
 import React from "react";
 import Link from "next/link";
 import { getBackendClient } from "@/lib/api/client";
-import { GraduationCap, Users, DoorOpen, Search } from "lucide-react";
+import { GraduationCap, Users, DoorOpen } from "lucide-react";
 import ClassSheet from "./ClassSheet";
+import LevelFilterSelect from "./LevelFilterSelect";
 
 export const dynamic = "force-dynamic";
 
@@ -36,7 +37,9 @@ export default async function ClassesPage({ searchParams }: ClassesPageProps) {
     if (classesResp.data?.status === "success") {
       classes = classesResp.data.data.results ?? [];
     }
-    if (levelsResp.data?.status === "success") {
+    if (Array.isArray(levelsResp.data)) {
+      levels = levelsResp.data;
+    } else if (levelsResp.data?.status === "success") {
       levels = levelsResp.data.data ?? [];
     }
     if (syResp.data?.status === "success") {
@@ -83,22 +86,7 @@ export default async function ClassesPage({ searchParams }: ClassesPageProps) {
       {/* Level filter */}
       <div className="bg-slate-900/40 border border-slate-800/80 rounded-xl p-4 shadow-xl backdrop-blur-md">
         <form method="get" className="flex items-center gap-4">
-          <div className="relative flex-1 max-w-xs">
-            <Search className="absolute left-3 top-2.5 size-4 text-slate-500" />
-            <select
-              name="level_id"
-              defaultValue={levelFilter}
-              onChange={(e) => e.target.form?.submit()}
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-4 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors appearance-none"
-            >
-              <option value="">Tous les niveaux</option>
-              {levels.map((lv: any) => (
-                <option key={lv.id} value={lv.id}>
-                  {lv.name}
-                </option>
-              ))}
-            </select>
-          </div>
+          <LevelFilterSelect levels={levels} defaultValue={levelFilter} />
           {levelFilter && (
             <Link
               href="/pedagogy/classes"

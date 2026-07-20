@@ -18,9 +18,13 @@ interface JWTToken {
  */
 async function refreshAccessToken(token: JWTToken): Promise<JWTToken> {
   try {
-    const response = await axios.post(`${DJANGO_API_URL}/auth/refresh/`, {
-      refresh_token: token.refreshToken,
-    });
+    const response = await axios.post(
+      `${DJANGO_API_URL}/auth/refresh/`,
+      {
+        refresh_token: token.refreshToken,
+      },
+      { adapter: "http" }
+    );
 
     const { access_token } = response.data.data;
     
@@ -57,10 +61,14 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
 
         try {
           // Appel à l'API de login Django
-          const response = await axios.post(`${DJANGO_API_URL}/auth/login/`, {
-            email: credentials.email,
-            password: credentials.password,
-          });
+          const response = await axios.post(
+            `${DJANGO_API_URL}/auth/login/`,
+            {
+              email: credentials.email,
+              password: credentials.password,
+            },
+            { adapter: "http" }
+          );
 
           if (response.data?.status === "success") {
             const { access_token, refresh_token, user } = response.data.data;

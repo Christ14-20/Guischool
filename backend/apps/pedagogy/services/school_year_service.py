@@ -73,11 +73,11 @@ def check_period_is_open(period: AcademicPeriod) -> bool:
 
 def check_year_is_open(school_year: SchoolYear) -> bool:
     """
-    TODO Épic 4/5/6 : utilitaire de vérification d'année scolaire ouverte.
-    Actuellement non appelé — retourne True.
-    À brancher sur les endpoints de saisie.
+    Une année scolaire est « ouverte » à la saisie (inscriptions, notes, présences)
+    tant qu'elle n'est pas clôturée (cf. Backlog STRUCT-01 : blocage uniquement si CLOSED).
+    Les statuts PREPARATION et ACTIVE autorisent donc les inscriptions.
     """
-    return school_year.status == SchoolYear.Status.ACTIVE
+    return school_year.status != SchoolYear.Status.CLOSED
 
 
 STANDARD_LEVELS = [

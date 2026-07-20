@@ -338,16 +338,21 @@ class TestReinscription:
         assert student.classe_actuelle_id == target_class.id
         assert student.enrollments.count() == 2
 
-    def test_reinscription_year_not_open_422(
-        self, director_user, student, tenant, next_year_prep, level
+    def test_reinscription_year_closed_422(
+        self, director_user, student, tenant, level
     ):
+        closed_year = SchoolYear.objects.create(
+            tenant=tenant, label="2023-2024",
+            start_date=datetime.date(2023, 9, 15), end_date=datetime.date(2024, 7, 10),
+            status=SchoolYear.Status.CLOSED,
+        )
         target_class = SchoolClass.objects.create(
-            tenant=tenant, school_year=next_year_prep, level=level, name="5ème B", capacity=50
+            tenant=tenant, school_year=closed_year, level=level, name="5ème B", capacity=50
         )
         client = login_client(APIClient(), director_user.email)
         resp = client.post(
             reverse("student-reinscription", args=[student.id]),
-            {"classe_id": str(target_class.id), "school_year_id": str(next_year_prep.id)},
+            {"classe_id": str(target_class.id), "school_year_id": str(closed_year.id)},
             format="json",
         )
         assert resp.status_code == 422
