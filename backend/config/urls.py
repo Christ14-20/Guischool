@@ -19,6 +19,7 @@ api_v1_patterns = [
     # Applications
     path("", include("apps.authentication.urls")),
     path("superadmin/", include("apps.superadmin.urls")),
+    path("pedagogy/", include("apps.pedagogy.urls")),
 ]
 
 urlpatterns = [
