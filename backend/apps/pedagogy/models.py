@@ -78,14 +78,8 @@ class SchoolClass(TenantScopedModel):
 
     @property
     def current_headcount(self) -> int:
-        """
-        Retourne le nombre d'élèves actifs dans cette classe.
-        ÉPIC 3 : retourne 0 — le modèle Student n'existe pas encore.
-        ÉPIC 4 : remplacer par :
-            return self.students.filter(status=Student.Status.ACTIF).count()
-        TODO Épic 4 : brancher le vrai calcul Student
-        """
-        return 0
+        """Nombre d'élèves actifs rattachés à cette classe (classe_actuelle)."""
+        return self.students.filter(statut=Student.Status.ACTIF).count()
 
 
 class Subject(TenantScopedModel):
@@ -140,6 +134,127 @@ class ClassSubject(TenantScopedModel):
 
     def __str__(self):
         return f"{self.class_obj.name} / {self.subject.code}"
+
+
+class Student(TenantScopedModel):
+    class Sexe(models.TextChoices):
+        M = "M", "Masculin"
+        F = "F", "Féminin"
+
+    class Status(models.TextChoices):
+        ACTIF = "ACTIF", "Actif"
+        SUSPENDU = "SUSPENDU", "Suspendu"
+        TRANSFERE = "TRANSFERE", "Transféré"
+        SORTI = "SORTI", "Sorti"
+        ARCHIVE = "ARCHIVE", "Archivé"
+
+    matricule = models.CharField(max_length=20, db_index=True)
+    nom = models.CharField(max_length=100)
+    prenom = models.CharField(max_length=150)
+    date_naissance = models.DateField()
+    lieu_naissance = models.CharField(max_length=150, blank=True)
+    sexe = models.CharField(max_length=1, choices=Sexe.choices)
+    photo = models.URLField(blank=True)
+    classe_actuelle = models.ForeignKey(
+        SchoolClass,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="students",
+    )
+    annee_inscription = models.ForeignKey(
+        SchoolYear,
+        on_delete=models.PROTECT,
+        related_name="students_first_enrolled",
+    )
+    statut = models.CharField(
+        max_length=20, choices=Status.choices, default=Status.ACTIF, db_index=True
+    )
+    created_by = models.ForeignKey(
+        "authentication.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name="students_created",
+    )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["tenant", "matricule"],
+                name="uniq_matricule_per_tenant",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["tenant", "statut"]),
+            models.Index(fields=["nom", "prenom", "date_naissance"]),
+        ]
+
+    def __str__(self):
+        return f"{self.matricule} — {self.prenom} {self.nom}"
+
+
+class Enrollment(TenantScopedModel):
+    class TypeInscription(models.TextChoices):
+        NOUVELLE = "NOUVELLE_INSCRIPTION", "Nouvelle inscription"
+        REINSCRIPTION = "REINSCRIPTION", "Réinscription"
+        TRANSFERT = "TRANSFERT_ENTRANT", "Transfert entrant"
+
+    student = models.ForeignKey(
+        Student, on_delete=models.CASCADE, related_name="enrollments"
+    )
+    classe = models.ForeignKey(
+        SchoolClass, on_delete=models.PROTECT, related_name="enrollments"
+    )
+    school_year = models.ForeignKey(
+        SchoolYear, on_delete=models.PROTECT, related_name="enrollments"
+    )
+    type_inscription = models.CharField(
+        max_length=25, choices=TypeInscription.choices
+    )
+    date_inscription = models.DateField(auto_now_add=True)
+    inscrit_par = models.ForeignKey(
+        "authentication.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name="enrollments_created",
+    )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["student", "school_year"],
+                name="uniq_enrollment_per_year",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.student.matricule} → {self.classe.name} ({self.school_year.label})"
+
+
+class MatriculeSequence(TenantScopedModel):
+    """
+    Compteur de matricule par (tenant, school_year).
+
+    Verrouillé via SELECT ... FOR UPDATE dans le service d'inscription
+    pour éviter les collisions en cas d'inscriptions concurrentes.
+    Le matricule final est au format {ANNEE}-{SEQ:05d}.
+    """
+
+    school_year = models.ForeignKey(
+        SchoolYear, on_delete=models.CASCADE, related_name="matricule_sequences"
+    )
+    last_seq = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["tenant", "school_year"],
+                name="uniq_matricule_sequence_per_year",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.school_year.label} → {self.last_seq}"
 
 
 class AcademicPeriod(TenantScopedModel):
