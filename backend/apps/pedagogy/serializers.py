@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from apps.pedagogy.models import (
     Level, SchoolClass, SchoolYear, AcademicPeriod, Subject, ClassSubject,
-    Student, Guardian, Enrollment,
+    Student, Guardian, Enrollment, Attendance,
 )
 from apps.pedagogy.services.school_year_service import (
     validate_no_period_overlap,
@@ -408,3 +408,38 @@ class ClassSubjectSerializer(serializers.ModelSerializer):
             ).first()
 
         return super().create(validated_data)
+
+
+class AttendanceRecordInputSerializer(serializers.Serializer):
+    student_id = serializers.UUIDField()
+    status = serializers.ChoiceField(choices=Attendance.Status.choices)
+    minutes_late = serializers.IntegerField(min_value=0, required=False, allow_null=True)
+
+
+class AttendanceBatchSerializer(serializers.Serializer):
+    classe_id = serializers.UUIDField()
+    date = serializers.DateField()
+    records = AttendanceRecordInputSerializer(many=True, allow_empty=False)
+
+
+class AttendanceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Attendance
+        fields = ["id", "student_id", "date", "status", "is_locked"]
+        read_only_fields = fields
+
+
+class AttendanceUpdateSerializer(serializers.Serializer):
+    status = serializers.ChoiceField(
+        choices=Attendance.Status.choices, required=False
+    )
+    minutes_late = serializers.IntegerField(
+        min_value=0, required=False, allow_null=True
+    )
+
+    def validate(self, attrs):
+        if not attrs:
+            raise serializers.ValidationError(
+                "Au moins un champ (status ou minutes_late) est requis."
+            )
+        return attrs

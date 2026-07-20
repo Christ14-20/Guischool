@@ -72,9 +72,9 @@ class TestPermission:
     def test_codename_unique(self):
         """Deux permissions ne peuvent pas avoir le même codename."""
         from django.db import IntegrityError
-        Permission.objects.create(codename="attendance:create")
+        Permission.objects.create(codename="sample:duplicate")
         with pytest.raises(IntegrityError):
-            Permission.objects.create(codename="attendance:create")
+            Permission.objects.create(codename="sample:duplicate")
 
     def test_str_returns_codename(self):
         perm = Permission(codename="eleves:read")

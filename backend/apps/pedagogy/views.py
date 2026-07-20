@@ -11,7 +11,7 @@ from core.pagination import StandardPagination
 from core.utils import success_response, created_response, error_response
 from apps.pedagogy.models import (
     Level, SchoolClass, SchoolYear, AcademicPeriod, Subject, ClassSubject,
-    Student, Guardian,
+    Student, Guardian, Attendance,
 )
 from apps.pedagogy.serializers import (
     LevelSerializer,
@@ -30,6 +30,9 @@ from apps.pedagogy.serializers import (
     ReinscriptionSerializer,
     ArchiverSerializer,
     EnrollmentNestedSerializer,
+    AttendanceBatchSerializer,
+    AttendanceSerializer,
+    AttendanceUpdateSerializer,
 )
 from apps.pedagogy.services.school_year_service import (
     set_current_school_year,
@@ -41,7 +44,15 @@ from apps.pedagogy.services.student_service import (
     archive_student,
     EnrollmentError,
 )
-from apps.pedagogy.tasks import send_enrollment_confirmation_sms
+from apps.pedagogy.services.attendance_service import (
+    create_batch_attendance,
+    update_attendance_record,
+    AttendanceError,
+)
+from apps.pedagogy.tasks import (
+    send_enrollment_confirmation_sms,
+    send_absence_notification_sms,
+)
 from apps.monitoring.services import audit_log, get_client_ip
 
 
@@ -612,3 +623,153 @@ class GuardianViewSet(
         serializer.is_valid(raise_exception=True)
         self.perform_create(serializer)
         return created_response(serializer.data)
+
+
+class AttendanceViewSet(
+    mixins.CreateModelMixin,
+    mixins.ListModelMixin,
+    viewsets.GenericViewSet,
+):
+    """
+    /pedagogy/attendances/ — saisie et consultation des présences (Épic 5).
+
+    - POST  /pedagogy/attendances/         saisie en lot d'une classe/date (attendance:create)
+    - GET   /pedagogy/attendances/         liste filtrée (lecture ouverte, authentifié)
+    - PATCH /pedagogy/attendances/{id}/    correction d'une présence (attendance:create)
+
+    Le PATCH générique est un ajout hors contrat original (cf. §10) résolvant
+    l'incohérence du message 409 qui invite à « Utiliser PATCH ».
+    """
+
+    queryset = Attendance.objects.all()
+    permission_classes = [IsAuthenticated]
+
+    def get_permissions(self):
+        if self.action in ("create", "partial_update"):
+            return [IsAuthenticated(), HasPermission("attendance:create")]
+        return [IsAuthenticated()]
+
+    def get_queryset(self):
+        qs = Attendance.objects.filter(tenant=self.request.tenant).order_by(
+            "-date", "student__nom", "student__prenom"
+        )
+        params = self.request.query_params
+
+        classe_id = params.get("classe_id")
+        if classe_id:
+            qs = qs.filter(classe_id=classe_id)
+
+        student_id = params.get("student_id")
+        if student_id:
+            qs = qs.filter(student_id=student_id)
+
+        date = params.get("date")
+        if date:
+            qs = qs.filter(date=date)
+
+        date_from = params.get("date_from")
+        if date_from:
+            qs = qs.filter(date__gte=date_from)
+
+        date_to = params.get("date_to")
+        if date_to:
+            qs = qs.filter(date__lte=date_to)
+
+        return qs
+
+    def list(self, request, *args, **kwargs):
+        serializer = AttendanceSerializer(self.get_queryset(), many=True)
+        return success_response(serializer.data)
+
+    def create(self, request, *args, **kwargs):
+        serializer = AttendanceBatchSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+
+        classe = SchoolClass.objects.filter(
+            id=data["classe_id"], tenant=request.tenant
+        ).first()
+        if classe is None:
+            return error_response(
+                "Ressource non trouvée", status_code=status.HTTP_404_NOT_FOUND
+            )
+
+        try:
+            created, sms_queued_for = create_batch_attendance(
+                tenant=request.tenant,
+                classe=classe,
+                date=data["date"],
+                records=data["records"],
+                created_by=request.user,
+            )
+        except AttendanceError as exc:
+            return error_response(
+                exc.message, status_code=exc.status_code, errors=exc.errors
+            )
+
+        for student_id in sms_queued_for:
+            student = next(
+                a.student for a in created if str(a.student_id) == student_id
+            )
+            guardian = (
+                student.guardians.filter(is_contact_urgence=True).first()
+                or student.guardians.first()
+            )
+            send_absence_notification_sms.delay(student_id, guardian.telephone)
+
+        audit_log(
+            user=request.user,
+            tenant=request.tenant,
+            action="attendance.create",
+            target_model="SchoolClass",
+            target_id=classe.id,
+            extra={"date": str(data["date"]), "created_count": len(created)},
+            ip_address=get_client_ip(request),
+        )
+
+        return created_response(
+            {
+                "classe_id": str(classe.id),
+                "date": str(data["date"]),
+                "created_count": len(created),
+                "sms_queued_for": sms_queued_for,
+            }
+        )
+
+    def _get_object_or_none(self):
+        return Attendance.objects.filter(
+            id=self.kwargs["pk"], tenant=self.request.tenant
+        ).first()
+
+    def partial_update(self, request, *args, **kwargs):
+        attendance = self._get_object_or_none()
+        if attendance is None:
+            return error_response(
+                "Ressource non trouvée", status_code=status.HTTP_404_NOT_FOUND
+            )
+
+        serializer = AttendanceUpdateSerializer(data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+
+        try:
+            update_attendance_record(
+                attendance=attendance,
+                status=data.get("status"),
+                minutes_late=data["minutes_late"] if "minutes_late" in data else ...,
+            )
+        except AttendanceError as exc:
+            return error_response(
+                exc.message, status_code=exc.status_code, errors=exc.errors
+            )
+
+        audit_log(
+            user=request.user,
+            tenant=request.tenant,
+            action="attendance.update",
+            target_model="Attendance",
+            target_id=attendance.id,
+            ip_address=get_client_ip(request),
+        )
+
+        return success_response(AttendanceSerializer(attendance).data)

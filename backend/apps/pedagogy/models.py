@@ -315,3 +315,44 @@ class AcademicPeriod(TenantScopedModel):
 
     def __str__(self):
         return f"{self.name} ({self.school_year.label})"
+
+
+class Attendance(TenantScopedModel):
+    class Status(models.TextChoices):
+        PRESENT = "PRESENT", "Présent"
+        ABSENT = "ABSENT", "Absent"
+        ABSENT_JUSTIFIE = "ABSENT_JUSTIFIE", "Absent justifié"
+        RETARD = "RETARD", "Retard"
+
+    student = models.ForeignKey(
+        Student, on_delete=models.CASCADE, related_name="attendances"
+    )
+    classe = models.ForeignKey(
+        SchoolClass, on_delete=models.CASCADE, related_name="attendances"
+    )
+    date = models.DateField(db_index=True)
+    status = models.CharField(max_length=20, choices=Status.choices)
+    minutes_late = models.PositiveSmallIntegerField(null=True, blank=True)
+    justification_text = models.TextField(blank=True)
+    created_by = models.ForeignKey(
+        "authentication.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name="attendances_recorded",
+    )
+    is_locked = models.BooleanField(default=False)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["student", "date"],
+                name="uniq_attendance_per_student_per_day",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["classe", "date"]),
+            models.Index(fields=["tenant", "created_at"]),
+        ]
+
+    def __str__(self):
+        return f"{self.student.matricule} — {self.date} ({self.status})"

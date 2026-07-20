@@ -3,7 +3,7 @@ from rest_framework.routers import DefaultRouter
 
 from apps.pedagogy.views import (
     SchoolYearViewSet, PeriodViewSet, LevelViewSet, ClassViewSet,
-    SubjectViewSet, ClassSubjectViewSet,
+    SubjectViewSet, ClassSubjectViewSet, AttendanceViewSet,
 )
 
 router = DefaultRouter()
@@ -28,5 +28,15 @@ urlpatterns = [
         "classes/<uuid:class_pk>/subjects/",
         ClassSubjectViewSet.as_view({"get": "list", "post": "create"}),
         name="class-subjects",
+    ),
+    path(
+        "attendances/",
+        AttendanceViewSet.as_view({"get": "list", "post": "create"}),
+        name="attendance-list",
+    ),
+    path(
+        "attendances/<uuid:pk>/",
+        AttendanceViewSet.as_view({"patch": "partial_update"}),
+        name="attendance-detail",
     ),
 ]
