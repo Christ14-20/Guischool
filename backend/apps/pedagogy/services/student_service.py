@@ -166,3 +166,78 @@ def enroll_student(
     )
 
     return student
+
+
+@transaction.atomic
+def reinscribe_student(
+    *,
+    student: Student,
+    classe: SchoolClass,
+    school_year: SchoolYear,
+    created_by,
+) -> Enrollment:
+    """
+    Réinscription d'un élève existant sur une nouvelle année scolaire.
+
+    Conditions (MVP — cf. décision A7) :
+    - statut ACTIF (422 sinon)
+      TODO Épic 6 : accepter aussi une décision de fin d'année ADMIS/REDOUBLE
+      validée (modèle YearEndDecision, hors périmètre Épic 4).
+    - année cible ouverte (422)
+    - pas d'inscription déjà existante sur cette année (409)
+
+    Crée un nouvel Enrollment (type REINSCRIPTION) et met à jour la classe
+    actuelle de l'élève.
+    """
+    from apps.pedagogy.services.school_year_service import check_year_is_open
+
+    if student.statut != Student.Status.ACTIF:
+        raise EnrollmentError(
+            "La décision de fin d'année précédente n'a pas encore été validée",
+            status_code=422,
+        )
+
+    if not check_year_is_open(school_year):
+        raise EnrollmentError(
+            "La réinscription n'est possible que sur une année scolaire ouverte",
+            status_code=422,
+        )
+
+    if Enrollment.objects.filter(
+        student=student, school_year=school_year
+    ).exists():
+        raise EnrollmentError(
+            "L'élève est déjà inscrit pour cette année scolaire",
+            status_code=409,
+        )
+
+    if classe.current_headcount >= classe.capacity:
+        raise EnrollmentError(
+            f"La classe {classe.name} a atteint sa capacité maximale "
+            f"({classe.current_headcount}/{classe.capacity})",
+            status_code=422,
+        )
+
+    enrollment = Enrollment.objects.create(
+        tenant=student.tenant,
+        student=student,
+        classe=classe,
+        school_year=school_year,
+        type_inscription=Enrollment.TypeInscription.REINSCRIPTION,
+        inscrit_par=created_by,
+    )
+
+    student.classe_actuelle = classe
+    student.save(update_fields=["classe_actuelle", "updated_at"])
+
+    return enrollment
+
+
+def archive_student(student: Student) -> Student:
+    """
+    Archive un élève (jamais de suppression physique). Idempotent côté modèle :
+    passe simplement le statut à ARCHIVE.
+    """
+    student.statut = Student.Status.ARCHIVE
+    student.save(update_fields=["statut", "updated_at"])
+    return student

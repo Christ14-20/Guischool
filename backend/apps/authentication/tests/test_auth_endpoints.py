@@ -299,7 +299,9 @@ class TestPermissionsMeView:
 
     def test_permissions_me_returns_role_and_codenames(self, api_client, director_user, director_role):
         """GET /auth/permissions/me/ retourne le rôle et les codenames."""
-        perm = Permission.objects.create(codename="eleves:read", module="eleves")
+        perm, _ = Permission.objects.get_or_create(
+            codename="eleves:read", defaults={"module": "eleves"}
+        )
         director_role.permissions.add(perm)
 
         url = reverse("auth-login")

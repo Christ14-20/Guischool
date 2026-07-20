@@ -4,8 +4,10 @@ from rest_framework.filters import SearchFilter, OrderingFilter
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
+from django.db.models import Q
 
 from core.permissions import HasPermission
+from core.pagination import StandardPagination
 from core.utils import success_response, created_response, error_response
 from apps.pedagogy.models import (
     Level, SchoolClass, SchoolYear, AcademicPeriod, Subject, ClassSubject,
@@ -23,12 +25,22 @@ from apps.pedagogy.serializers import (
     GuardianSerializer,
     StudentCreateSerializer,
     StudentDetailSerializer,
+    StudentListSerializer,
+    StudentUpdateSerializer,
+    ReinscriptionSerializer,
+    ArchiverSerializer,
+    EnrollmentNestedSerializer,
 )
 from apps.pedagogy.services.school_year_service import (
     set_current_school_year,
     close_period,
 )
-from apps.pedagogy.services.student_service import enroll_student, EnrollmentError
+from apps.pedagogy.services.student_service import (
+    enroll_student,
+    reinscribe_student,
+    archive_student,
+    EnrollmentError,
+)
 from apps.pedagogy.tasks import send_enrollment_confirmation_sms
 from apps.monitoring.services import audit_log, get_client_ip
 
@@ -322,25 +334,184 @@ class ClassSubjectViewSet(
 
 class StudentViewSet(
     mixins.CreateModelMixin,
+    mixins.ListModelMixin,
+    mixins.RetrieveModelMixin,
     viewsets.GenericViewSet,
 ):
     """
-    POST /students/ — inscription transactionnelle (élève + tuteur + enrollment).
-    Permission : eleves:create (DIRECTOR, STUDENT_STUDIES).
-    Contournement du doublon probable : ?force=true.
+    /students/ — gestion des élèves (Épic 4).
+
+    - POST   /students/                    inscription transactionnelle (eleves:create)
+    - GET    /students/                    liste paginée + filtres (eleves:read)
+    - GET    /students/{id}/               détail (eleves:read)
+    - PATCH  /students/{id}/               modification partielle (eleves:update)
+    - POST   /students/{id}/reinscription/ réinscription (eleves:update)
+    - POST   /students/{id}/archiver/      archivage (eleves:update)
+
+    Contournement du doublon probable à l'inscription : ?force=true.
     """
 
     queryset = Student.objects.all()
-    serializer_class = StudentCreateSerializer
+    pagination_class = StandardPagination
     permission_classes = [IsAuthenticated]
 
     def get_permissions(self):
         if self.action == "create":
             return [IsAuthenticated(), HasPermission("eleves:create")]
-        return [IsAuthenticated()]
+        if self.action in ("list", "retrieve"):
+            return [IsAuthenticated(), HasPermission("eleves:read")]
+        return [IsAuthenticated(), HasPermission("eleves:update")]
+
+    def get_serializer_class(self):
+        if self.action == "list":
+            return StudentListSerializer
+        if self.action == "partial_update":
+            return StudentUpdateSerializer
+        if self.action == "create":
+            return StudentCreateSerializer
+        return StudentDetailSerializer
 
     def get_queryset(self):
-        return self.queryset.filter(tenant=self.request.tenant)
+        qs = (
+            Student.objects.filter(tenant=self.request.tenant)
+            .select_related("classe_actuelle")
+            .prefetch_related("guardians")
+            .order_by("nom", "prenom")
+        )
+
+        params = self.request.query_params
+        classe_id = params.get("classe_id")
+        if classe_id:
+            qs = qs.filter(classe_actuelle_id=classe_id)
+
+        statut = params.get("statut")
+        if statut:
+            qs = qs.filter(statut=statut)
+
+        school_year_id = params.get("school_year_id")
+        if school_year_id:
+            qs = qs.filter(enrollments__school_year_id=school_year_id).distinct()
+
+        search = params.get("search")
+        if search:
+            qs = qs.filter(
+                Q(nom__icontains=search)
+                | Q(prenom__icontains=search)
+                | Q(matricule__icontains=search)
+            )
+
+        return qs
+
+    def _get_object_or_404(self):
+        student = (
+            Student.objects.filter(id=self.kwargs["pk"], tenant=self.request.tenant)
+            .select_related("classe_actuelle")
+            .prefetch_related("guardians", "enrollments__classe", "enrollments__school_year")
+            .first()
+        )
+        return student
+
+    def retrieve(self, request, *args, **kwargs):
+        student = self._get_object_or_404()
+        if student is None:
+            return error_response(
+                "Ressource non trouvée", status_code=status.HTTP_404_NOT_FOUND
+            )
+        serializer = StudentDetailSerializer(
+            student, context=self.get_serializer_context()
+        )
+        return success_response(serializer.data)
+
+    def partial_update(self, request, *args, **kwargs):
+        student = self._get_object_or_404()
+        if student is None:
+            return error_response(
+                "Ressource non trouvée", status_code=status.HTTP_404_NOT_FOUND
+            )
+        serializer = StudentUpdateSerializer(
+            student, data=request.data, partial=True,
+            context=self.get_serializer_context(),
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+
+        audit_log(
+            user=request.user,
+            tenant=request.tenant,
+            action="student.update",
+            target_model="Student",
+            target_id=student.id,
+            ip_address=get_client_ip(request),
+        )
+
+        output = StudentDetailSerializer(
+            student, context=self.get_serializer_context()
+        )
+        return success_response(output.data)
+
+    @action(detail=True, methods=["post"])
+    def reinscription(self, request, *args, **kwargs):
+        student = self._get_object_or_404()
+        if student is None:
+            return error_response(
+                "Ressource non trouvée", status_code=status.HTTP_404_NOT_FOUND
+            )
+
+        serializer = ReinscriptionSerializer(
+            data=request.data, context=self.get_serializer_context()
+        )
+        serializer.is_valid(raise_exception=True)
+
+        try:
+            enrollment = reinscribe_student(
+                student=student,
+                classe=serializer._classe,
+                school_year=serializer._school_year,
+                created_by=request.user,
+            )
+        except EnrollmentError as exc:
+            return error_response(
+                exc.message, status_code=exc.status_code, errors=exc.errors
+            )
+
+        audit_log(
+            user=request.user,
+            tenant=request.tenant,
+            action="student.reinscription",
+            target_model="Enrollment",
+            target_id=enrollment.id,
+            ip_address=get_client_ip(request),
+        )
+
+        output = EnrollmentNestedSerializer(
+            enrollment, context=self.get_serializer_context()
+        )
+        return created_response(output.data)
+
+    @action(detail=True, methods=["post"])
+    def archiver(self, request, *args, **kwargs):
+        student = self._get_object_or_404()
+        if student is None:
+            return error_response(
+                "Ressource non trouvée", status_code=status.HTTP_404_NOT_FOUND
+            )
+
+        serializer = ArchiverSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        archive_student(student)
+
+        audit_log(
+            user=request.user,
+            tenant=request.tenant,
+            action="student.archive",
+            target_model="Student",
+            target_id=student.id,
+            extra={"motif": serializer.validated_data["motif"]},
+            ip_address=get_client_ip(request),
+        )
+
+        return success_response({"id": str(student.id), "statut": student.statut})
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)

@@ -286,17 +286,82 @@ class StudentCreateSerializer(serializers.Serializer):
         return value
 
 
+class EnrollmentNestedSerializer(serializers.ModelSerializer):
+    classe = ClassNestedSerializer(read_only=True)
+    school_year = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Enrollment
+        fields = [
+            "id", "type_inscription", "classe", "school_year", "date_inscription",
+        ]
+
+    def get_school_year(self, obj):
+        return {"id": str(obj.school_year_id), "label": obj.school_year.label}
+
+
+class StudentListSerializer(serializers.ModelSerializer):
+    classe_actuelle = ClassNestedSerializer(read_only=True)
+    guardian_phone = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Student
+        fields = [
+            "id", "matricule", "nom", "prenom", "classe_actuelle", "statut",
+            "guardian_phone",
+        ]
+
+    def get_guardian_phone(self, obj):
+        guardian = (
+            obj.guardians.filter(is_contact_urgence=True).first()
+            or obj.guardians.first()
+        )
+        return guardian.telephone if guardian else None
+
+
 class StudentDetailSerializer(serializers.ModelSerializer):
     classe_actuelle = ClassNestedSerializer(read_only=True)
     guardians = GuardianNestedSerializer(many=True, read_only=True)
+    enrollments = EnrollmentNestedSerializer(many=True, read_only=True)
 
     class Meta:
         model = Student
         fields = [
             "id", "matricule", "nom", "prenom", "date_naissance", "lieu_naissance",
-            "sexe", "statut", "photo", "classe_actuelle", "guardians",
+            "sexe", "statut", "photo", "classe_actuelle", "guardians", "enrollments",
             "created_at",
         ]
+
+
+class StudentUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Student
+        fields = ["nom", "prenom", "date_naissance", "lieu_naissance", "sexe", "photo"]
+
+
+class ReinscriptionSerializer(serializers.Serializer):
+    classe_id = serializers.UUIDField()
+    school_year_id = serializers.UUIDField()
+
+    def validate_classe_id(self, value):
+        tenant = self.context["request"].tenant
+        classe = SchoolClass.objects.filter(id=value, tenant=tenant).first()
+        if classe is None:
+            raise serializers.ValidationError("Classe introuvable")
+        self._classe = classe
+        return value
+
+    def validate_school_year_id(self, value):
+        tenant = self.context["request"].tenant
+        school_year = SchoolYear.objects.filter(id=value, tenant=tenant).first()
+        if school_year is None:
+            raise serializers.ValidationError("Année scolaire introuvable")
+        self._school_year = school_year
+        return value
+
+
+class ArchiverSerializer(serializers.Serializer):
+    motif = serializers.CharField(max_length=255, required=False, allow_blank=True, default="")
 
 
 class ClassSubjectSerializer(serializers.ModelSerializer):
