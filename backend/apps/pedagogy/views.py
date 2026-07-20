@@ -1,18 +1,22 @@
 from rest_framework import viewsets, mixins, status
 from rest_framework.decorators import action
+from rest_framework.filters import SearchFilter, OrderingFilter
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 
 from core.permissions import HasPermission
 from core.utils import success_response, created_response, error_response
-from apps.pedagogy.models import Level, SchoolYear, AcademicPeriod
+from apps.pedagogy.models import Level, SchoolClass, SchoolYear, AcademicPeriod, Subject, ClassSubject
 from apps.pedagogy.serializers import (
     LevelSerializer,
+    ClassSerializer,
     SchoolYearSerializer,
     SchoolYearDetailSerializer,
     AcademicPeriodSerializer,
     AcademicPeriodCreateSerializer,
+    SubjectSerializer,
+    ClassSubjectSerializer,
 )
 from apps.pedagogy.services.school_year_service import (
     set_current_school_year,
@@ -151,6 +155,40 @@ class PeriodViewSet(
         return success_response(serializer.data)
 
 
+class ClassViewSet(
+    mixins.ListModelMixin,
+    mixins.CreateModelMixin,
+    viewsets.GenericViewSet,
+):
+    """
+    GET  /pedagogy/classes/           — liste paginée des classes
+    POST /pedagogy/classes/           — création (DIRECTOR/SECRETAIRE)
+
+    Filtres : ?school_year_id=...&level_id=...&search=6ème
+    """
+
+    queryset = SchoolClass.objects.all().select_related("level", "main_teacher")
+    serializer_class = ClassSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend, SearchFilter]
+    filterset_fields = ["school_year_id", "level_id"]
+    search_fields = ["name"]
+
+    def get_queryset(self):
+        return self.queryset.filter(tenant=self.request.tenant).order_by("name")
+
+    def get_permissions(self):
+        if self.action in ("create",):
+            return [IsAuthenticated(), HasPermission("pedagogy:create:schoolyear")]
+        return [IsAuthenticated()]
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        return created_response(serializer.data)
+
+
 class LevelViewSet(
     mixins.ListModelMixin,
     viewsets.GenericViewSet,
@@ -169,3 +207,98 @@ class LevelViewSet(
 
     def get_queryset(self):
         return self.queryset.filter(tenant=self.request.tenant)
+
+
+class SubjectViewSet(
+    mixins.ListModelMixin,
+    mixins.CreateModelMixin,
+    viewsets.GenericViewSet,
+):
+    """
+    GET  /pedagogy/subjects/           — liste des matières
+    POST /pedagogy/subjects/           — création (DIRECTOR/SECRETAIRE)
+    """
+
+    queryset = Subject.objects.all()
+    serializer_class = SubjectSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return self.queryset.filter(tenant=self.request.tenant).order_by("code")
+
+    def get_permissions(self):
+        if self.action in ("create",):
+            return [IsAuthenticated(), HasPermission("pedagogy:create:schoolyear")]
+        return [IsAuthenticated()]
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        return created_response(serializer.data)
+
+
+class ClassSubjectViewSet(
+    mixins.ListModelMixin,
+    mixins.CreateModelMixin,
+    viewsets.GenericViewSet,
+):
+    """
+    GET  /pedagogy/classes/{class_pk}/subjects/   — liste des matières d'une classe
+    POST /pedagogy/classes/{class_pk}/subjects/   — ajouter une matière à une classe
+    """
+
+    queryset = ClassSubject.objects.all().select_related("subject", "teacher")
+    serializer_class = ClassSubjectSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return self.queryset.filter(
+            class_obj__tenant=self.request.tenant,
+            class_obj_id=self.kwargs["class_pk"],
+        )
+
+    def get_permissions(self):
+        if self.action in ("create",):
+            return [IsAuthenticated(), HasPermission("pedagogy:create:schoolyear")]
+        return [IsAuthenticated()]
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        class_pk = self.kwargs.get("class_pk")
+        if class_pk:
+            class_obj = SchoolClass.objects.filter(
+                id=class_pk, tenant=self.request.tenant
+            ).first()
+            context["class_obj"] = class_obj
+        return context
+
+    def list(self, request, *args, **kwargs):
+        class_pk = kwargs.get("class_pk")
+        class_obj = SchoolClass.objects.filter(
+            id=class_pk, tenant=request.tenant
+        ).first()
+        if not class_obj:
+            return error_response(
+                "Ressource non trouvée",
+                status_code=status.HTTP_404_NOT_FOUND,
+            )
+        qs = self.get_queryset()
+        serializer = self.get_serializer(qs, many=True)
+        return success_response(serializer.data)
+
+    def create(self, request, *args, **kwargs):
+        class_pk = kwargs.get("class_pk")
+        class_obj = SchoolClass.objects.filter(
+            id=class_pk, tenant=request.tenant
+        ).first()
+        if not class_obj:
+            return error_response(
+                "Ressource non trouvée",
+                status_code=status.HTTP_404_NOT_FOUND,
+            )
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        output = ClassSubjectSerializer(serializer.instance, context=self.get_serializer_context())
+        return created_response(output.data)

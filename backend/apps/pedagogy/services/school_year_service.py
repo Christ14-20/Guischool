@@ -2,7 +2,7 @@ from django.db import transaction
 from django.db.models import Q
 from rest_framework.exceptions import ValidationError as DRFValidationError
 
-from apps.pedagogy.models import Level, SchoolYear, AcademicPeriod
+from apps.pedagogy.models import Level, SchoolYear, AcademicPeriod, Subject
 
 
 def set_current_school_year(school_year: SchoolYear) -> SchoolYear:
@@ -95,6 +95,39 @@ STANDARD_LEVELS = [
     ("1ère", Level.Cycle.LYCEE, 12),
     ("Terminale", Level.Cycle.LYCEE, 13),
 ]
+
+
+STANDARD_SUBJECTS = [
+    ("FR", "Français", "Langue"),
+    ("MATH", "Mathématiques", "Scientifique"),
+    ("PC", "Physique-Chimie", "Scientifique"),
+    ("SVT", "Sciences de la Vie et de la Terre", "Scientifique"),
+    ("HG", "Histoire-Géographie", "Humaines"),
+    ("ANG", "Anglais", "Langue"),
+    ("EPS", "Éducation Physique et Sportive", "Sport"),
+    ("EMC", "Enseignement Moral et Civique", "Civique"),
+    ("PHILO", "Philosophie", "Humaines"),
+    ("TIC", "Technologies de l'Information", "Technique"),
+]
+
+
+def seed_standard_subjects_for_tenant(tenant) -> list[Subject]:
+    """
+    Crée les ~10 matières standards guinéennes pour un tenant donné.
+    Appelé automatiquement à la création d'une école (create_school).
+    Ignore les matières déjà existantes (idempotent).
+    Retourne la liste des matières créées.
+    """
+    created = []
+    for code, name, category in STANDARD_SUBJECTS:
+        subject, was_created = Subject.objects.get_or_create(
+            tenant=tenant,
+            code=code,
+            defaults={"name": name, "category": category, "is_official": True},
+        )
+        if was_created:
+            created.append(subject)
+    return created
 
 
 def seed_standard_levels_for_tenant(tenant) -> list[Level]:

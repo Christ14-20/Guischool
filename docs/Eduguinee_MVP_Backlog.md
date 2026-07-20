@@ -228,12 +228,12 @@
 - [ ] Alerte de capacité à 90 %, blocage à 100 % (dérogation directeur non prioritaire en V1 — simple blocage acceptable)
 **Labels :** `pédagogie` `backend`
 
-### 🃏 [STRUCT-04] Matières et coefficients
+### 🃏 [STRUCT-04] Matières et coefficients ✅
 **Priorité :** 🔴 Bloquant
-- [ ] Modèle `Subject` : tenant, code, name, category, is_official
-- [ ] Modèle `ClassSubject` : class, subject, coefficient, weekly_hours, teacher (FK nullable)
-- [ ] `GET/POST /pedagogy/subjects/`, `GET/POST /pedagogy/classes/{id}/subjects/`
-- [ ] Fixture d'un catalogue de matières standard (français, maths, etc.) pour démarrer rapidement
+- [x] Modèle `Subject` : tenant, code, name, category, is_official
+- [x] Modèle `ClassSubject` : class, subject, coefficient, weekly_hours, teacher (FK nullable)
+- [x] `GET/POST /pedagogy/subjects/`, `GET/POST /pedagogy/classes/{id}/subjects/`
+- [x] Fixture d'un catalogue de matières standard (français, maths, etc.) pour démarrer rapidement
 **Labels :** `pédagogie` `backend`
 
 ### 🃏 [STRUCT-05] Interface Admin École — structure pédagogique

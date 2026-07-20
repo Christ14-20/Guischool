@@ -17,7 +17,10 @@ from rest_framework.exceptions import ValidationError
 from apps.authentication.models import User, Role
 from apps.superadmin.models import Tenant, Plan
 from apps.monitoring.services import audit_log
-from apps.pedagogy.services.school_year_service import seed_standard_levels_for_tenant
+from apps.pedagogy.services.school_year_service import (
+    seed_standard_levels_for_tenant,
+    seed_standard_subjects_for_tenant,
+)
 
 
 def generate_unique_slug(name: str) -> str:
@@ -152,7 +155,10 @@ def create_school(data: dict, ip_address: str = "") -> tuple[Tenant, str]:
         # 5. Seed des niveaux standards guinéens (STRUCT-02)
         seed_standard_levels_for_tenant(tenant)
 
-        # 6. Audit Log
+        # 6. Seed des matières standards guinéennes (STRUCT-04)
+        seed_standard_subjects_for_tenant(tenant)
+
+        # 8. Audit Log
         audit_log(
             user=None,  # Créé par le système (ou l'admin en session, loggé via le viewset)
             tenant=tenant,
