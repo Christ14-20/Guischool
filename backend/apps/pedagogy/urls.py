@@ -39,4 +39,9 @@ urlpatterns = [
         AttendanceViewSet.as_view({"patch": "partial_update"}),
         name="attendance-detail",
     ),
+    path(
+        "attendances/<uuid:pk>/justify/",
+        AttendanceViewSet.as_view({"patch": "justify"}),
+        name="attendance-justify",
+    ),
 ]

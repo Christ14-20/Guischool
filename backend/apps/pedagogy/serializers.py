@@ -443,3 +443,7 @@ class AttendanceUpdateSerializer(serializers.Serializer):
                 "Au moins un champ (status ou minutes_late) est requis."
             )
         return attrs
+
+
+class AttendanceJustifySerializer(serializers.Serializer):
+    justification_text = serializers.CharField()

@@ -21,6 +21,14 @@ def _add_attendance_create(role):
     role.permissions.add(perm)
 
 
+def _add_attendance_justify(role):
+    perm, _ = Permission.objects.get_or_create(
+        codename="attendance:justify",
+        defaults={"name": "Justifier une absence", "module": "attendance"},
+    )
+    role.permissions.add(perm)
+
+
 @pytest.fixture
 def plan(db):
     return Plan.objects.create(name="Plan Att", max_students=200, max_staff=20)
@@ -56,6 +64,16 @@ def teacher_role(db):
 
 
 @pytest.fixture
+def director_role(db):
+    role = Role.objects.get_or_create(
+        name="DIRECTOR", defaults={"description": "Directeur"}
+    )[0]
+    _add_attendance_create(role)
+    _add_attendance_justify(role)
+    return role
+
+
+@pytest.fixture
 def parent_role(db):
     return Role.objects.get_or_create(
         name="PARENT", defaults={"description": "Parent"}
@@ -67,6 +85,14 @@ def teacher_user(tenant, teacher_role):
     return User.objects.create_user(
         username="teach-att", email="teach-att@ecole.gn",
         password="SecurePass123!", role=teacher_role, tenant=tenant,
+    )
+
+
+@pytest.fixture
+def director_user(tenant, director_role):
+    return User.objects.create_user(
+        username="dir-att", email="dir-att@ecole.gn",
+        password="SecurePass123!", role=director_role, tenant=tenant,
     )
 
 
@@ -391,3 +417,102 @@ class TestLockStaleAttendances:
         assert locked == 1
         assert old.is_locked is True
         assert recent.is_locked is False
+
+
+@pytest.mark.django_db
+class TestAttendanceJustify:
+    def test_justify_sets_absent_justifie(
+        self, director_user, tenant, active_year, school_class
+    ):
+        s1 = _make_student(tenant, active_year, school_class)
+        att = Attendance.objects.create(
+            tenant=tenant, student=s1, classe=school_class,
+            date=datetime.date(2025, 10, 6), status=Attendance.Status.ABSENT,
+        )
+        client = login_client(APIClient(), director_user.email)
+        resp = client.patch(
+            reverse("attendance-justify", args=[att.id]),
+            {"justification_text": "Certificat médical remis le 07/10"},
+            format="json",
+        )
+        assert resp.status_code == 200
+        assert resp.json()["data"]["status"] == "ABSENT_JUSTIFIE"
+        att.refresh_from_db()
+        assert att.status == "ABSENT_JUSTIFIE"
+        assert att.justification_text == "Certificat médical remis le 07/10"
+
+    def test_justify_locked_returns_422(
+        self, director_user, tenant, active_year, school_class
+    ):
+        s1 = _make_student(tenant, active_year, school_class)
+        att = Attendance.objects.create(
+            tenant=tenant, student=s1, classe=school_class,
+            date=datetime.date(2025, 10, 6), status=Attendance.Status.ABSENT,
+            is_locked=True,
+        )
+        client = login_client(APIClient(), director_user.email)
+        resp = client.patch(
+            reverse("attendance-justify", args=[att.id]),
+            {"justification_text": "Retard justifié"}, format="json",
+        )
+        assert resp.status_code == 422
+        assert "verrouillé" in resp.json()["message"]
+        att.refresh_from_db()
+        assert att.status == "ABSENT"
+
+    def test_justify_requires_text(
+        self, director_user, tenant, active_year, school_class
+    ):
+        s1 = _make_student(tenant, active_year, school_class)
+        att = Attendance.objects.create(
+            tenant=tenant, student=s1, classe=school_class,
+            date=datetime.date(2025, 10, 6), status=Attendance.Status.ABSENT,
+        )
+        client = login_client(APIClient(), director_user.email)
+        resp = client.patch(
+            reverse("attendance-justify", args=[att.id]), {}, format="json"
+        )
+        assert resp.status_code == 400
+
+    def test_teacher_cannot_justify(
+        self, teacher_user, tenant, active_year, school_class
+    ):
+        s1 = _make_student(tenant, active_year, school_class)
+        att = Attendance.objects.create(
+            tenant=tenant, student=s1, classe=school_class,
+            date=datetime.date(2025, 10, 6), status=Attendance.Status.ABSENT,
+        )
+        client = login_client(APIClient(), teacher_user.email)
+        resp = client.patch(
+            reverse("attendance-justify", args=[att.id]),
+            {"justification_text": "Absence"}, format="json",
+        )
+        assert resp.status_code == 403
+        att.refresh_from_db()
+        assert att.status == "ABSENT"
+
+    def test_justify_cross_tenant_returns_404(
+        self, director_user, tenant_b
+    ):
+        year_b = SchoolYear.objects.create(
+            tenant=tenant_b, label="2025-2026",
+            start_date=datetime.date(2025, 9, 15), end_date=datetime.date(2026, 7, 10),
+            status=SchoolYear.Status.ACTIVE,
+        )
+        level_b = Level.objects.create(
+            tenant=tenant_b, cycle=Level.Cycle.COLLEGE, name="6ème", order_index=7
+        )
+        class_b = SchoolClass.objects.create(
+            tenant=tenant_b, school_year=year_b, level=level_b, name="6ème A", capacity=50
+        )
+        s_b = _make_student(tenant_b, year_b, class_b)
+        att_b = Attendance.objects.create(
+            tenant=tenant_b, student=s_b, classe=class_b,
+            date=datetime.date(2025, 10, 6), status=Attendance.Status.ABSENT,
+        )
+        client = login_client(APIClient(), director_user.email)
+        resp = client.patch(
+            reverse("attendance-justify", args=[att_b.id]),
+            {"justification_text": "Absence"}, format="json",
+        )
+        assert resp.status_code == 404

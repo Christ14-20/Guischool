@@ -33,6 +33,7 @@ from apps.pedagogy.serializers import (
     AttendanceBatchSerializer,
     AttendanceSerializer,
     AttendanceUpdateSerializer,
+    AttendanceJustifySerializer,
 )
 from apps.pedagogy.services.school_year_service import (
     set_current_school_year,
@@ -47,6 +48,7 @@ from apps.pedagogy.services.student_service import (
 from apps.pedagogy.services.attendance_service import (
     create_batch_attendance,
     update_attendance_record,
+    justify_attendance,
     AttendanceError,
 )
 from apps.pedagogy.tasks import (
@@ -647,6 +649,8 @@ class AttendanceViewSet(
     def get_permissions(self):
         if self.action in ("create", "partial_update"):
             return [IsAuthenticated(), HasPermission("attendance:create")]
+        if self.action == "justify":
+            return [IsAuthenticated(), HasPermission("attendance:justify")]
         return [IsAuthenticated()]
 
     def get_queryset(self):
@@ -773,3 +777,37 @@ class AttendanceViewSet(
         )
 
         return success_response(AttendanceSerializer(attendance).data)
+
+    @action(detail=True, methods=["patch"])
+    def justify(self, request, *args, **kwargs):
+        attendance = self._get_object_or_none()
+        if attendance is None:
+            return error_response(
+                "Ressource non trouvée", status_code=status.HTTP_404_NOT_FOUND
+            )
+
+        serializer = AttendanceJustifySerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        try:
+            justify_attendance(
+                attendance=attendance,
+                justification_text=serializer.validated_data["justification_text"],
+            )
+        except AttendanceError as exc:
+            return error_response(
+                exc.message, status_code=exc.status_code, errors=exc.errors
+            )
+
+        audit_log(
+            user=request.user,
+            tenant=request.tenant,
+            action="attendance.justify",
+            target_model="Attendance",
+            target_id=attendance.id,
+            ip_address=get_client_ip(request),
+        )
+
+        return success_response(
+            {"id": str(attendance.id), "status": attendance.status}
+        )

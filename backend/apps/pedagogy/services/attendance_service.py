@@ -120,3 +120,23 @@ def update_attendance_record(*, attendance: Attendance, status=None, minutes_lat
         attendance.save(update_fields=update_fields)
 
     return attendance
+
+
+def justify_attendance(*, attendance: Attendance, justification_text: str):
+    """
+    Justifie une absence (endpoint PATCH .../justify/) : passe le statut à
+    ABSENT_JUSTIFIE et enregistre le motif.
+
+    Lève AttendanceError 422 si la présence est verrouillée (is_locked=True).
+    """
+    if attendance.is_locked:
+        raise AttendanceError(
+            "Modification impossible : cet enregistrement est verrouillé "
+            "(plus de 24h)",
+            status_code=422,
+        )
+
+    attendance.status = Attendance.Status.ABSENT_JUSTIFIE
+    attendance.justification_text = justification_text
+    attendance.save(update_fields=["status", "justification_text", "updated_at"])
+    return attendance
