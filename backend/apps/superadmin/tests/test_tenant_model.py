@@ -3,16 +3,17 @@ apps/superadmin/tests/test_tenant_model.py — TENANT-01
 
 Tests unitaires sur le modèle Tenant :
 1. Structure du modèle (tous les champs §1.1 présents)
-2. get_student_count() == 0 en Épic 2 (test sentinelle — doit être mis à jour en Épic 4)
+2. get_student_count() : vrai comptage des élèves ACTIF (branché en Épic 4)
 3. get_staff_count() calculé pour de vrai avec User
 4. Isolation cross-tenant : ressource d'un autre tenant → 404 exact, jamais 403
 
-RÈGLE SENTINELLE student_count :
-    Ce test vérifie que get_student_count() == 0 INTENTIONNELLEMENT.
-    En Épic 4, lorsque Student sera créé, ce test DEVRA être mis à jour
-    pour vérifier le vrai comptage. S'il continue à passer sans modification,
-    c'est une régression silencieuse — le TODO en commentaire est insuffisant,
-    c'est l'assertion qui force l'attention.
+HISTORIQUE SENTINELLE student_count :
+    En Épic 2, get_student_count() retournait 0 (Student n'existait pas) et un
+    test sentinelle l'affirmait INTENTIONNELLEMENT pour forcer sa mise à jour.
+    En Épic 4, Student a été créé et get_student_count() branché sur le vrai
+    calcul ; la sentinelle a donc été remplacée par
+    test_get_student_count_counts_only_active_students (vrai comptage + exclusion
+    des élèves non-ACTIF).
 """
 
 import pytest
@@ -133,23 +134,46 @@ class TestTenantModel:
         """settings est un JSONField qui vaut {} par défaut."""
         assert tenant.settings == {}
 
-    # ── Sentinelle student_count ──────────────────────────────────────────────
+    # ── Comptage réel des élèves (branché en Épic 4) ──────────────────────────
 
-    def test_get_student_count_returns_zero_in_epic2(self, tenant):
+    def test_get_student_count_is_zero_for_empty_tenant(self, tenant):
+        """Un établissement sans élève retourne 0."""
+        assert tenant.get_student_count() == 0
+
+    def test_get_student_count_counts_only_active_students(self, tenant):
         """
-        SENTINELLE ÉPIC 2 → ÉPIC 4.
+        SENTINELLE (Épic 2 → mise à jour en Épic 4).
 
-        get_student_count() DOIT retourner 0 tant que Student n'existe pas.
-        Ce test DOIT être mis à jour en Épic 4 pour vérifier le vrai calcul.
-
-        Si ce test passe sans modification en Épic 4 après création de Student,
-        c'est une régression silencieuse — le comptage ne serait pas branché.
+        get_student_count() calcule désormais le vrai nombre d'élèves ACTIF
+        du tenant (via apps.pedagogy.models.Student). Les élèves dans un statut
+        non-ACTIF (ARCHIVE, SORTI, ...) ne sont pas comptés.
         """
-        assert tenant.get_student_count() == 0, (
-            "En Épic 2, get_student_count() doit retourner 0. "
-            "Si vous êtes en Épic 4 : mettez à jour cette assertion "
-            "pour vérifier le vrai comptage avec des données Student."
+        import datetime
+        from apps.pedagogy.models import Student, SchoolYear
+
+        year = SchoolYear.objects.create(
+            tenant=tenant, label="2025-2026",
+            start_date=datetime.date(2025, 9, 15),
+            end_date=datetime.date(2026, 7, 10),
         )
+        # 2 élèves ACTIF (défaut) + 1 ARCHIVE
+        Student.objects.create(
+            tenant=tenant, matricule="2025-00001", nom="Camara", prenom="Fatoumata",
+            date_naissance=datetime.date(2013, 3, 22), sexe=Student.Sexe.F,
+            annee_inscription=year,
+        )
+        Student.objects.create(
+            tenant=tenant, matricule="2025-00002", nom="Diallo", prenom="Ibrahima",
+            date_naissance=datetime.date(2012, 5, 10), sexe=Student.Sexe.M,
+            annee_inscription=year,
+        )
+        Student.objects.create(
+            tenant=tenant, matricule="2025-00003", nom="Sow", prenom="Aïcha",
+            date_naissance=datetime.date(2013, 1, 2), sexe=Student.Sexe.F,
+            annee_inscription=year, statut=Student.Status.ARCHIVE,
+        )
+
+        assert tenant.get_student_count() == 2
 
     # ── Staff count ───────────────────────────────────────────────────────────
 

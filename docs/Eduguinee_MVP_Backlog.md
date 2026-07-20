@@ -290,6 +290,21 @@
 - [x] `GET /students/{id}/`, `PATCH /students/{id}/`
 - [x] `POST /students/{id}/reinscription/` : conditions (statut ACTIF, année cible OUVERTE ; décision ADMIS/REDOUBLE = TODO Épic 6)
 - [x] `POST /students/{id}/archiver/` (jamais de suppression physique)
+
+> **Permissions hors contrat (décision explicite du PO) :** le contrat d'API ne définit
+> que `eleves:create`. Sur demande explicite, deux permissions supplémentaires ont été
+> créées en Épic 4 pour distinguer lecture et écriture (migration `pedagogy.0010`) :
+> - `eleves:read` → `GET /students/` + `GET /students/{id}/`
+> - `eleves:update` → `PATCH /students/{id}/` + `POST /students/{id}/reinscription/` + `POST /students/{id}/archiver/`
+>
+> **Attribution (fixtures) :** `eleves:create`, `eleves:read` et `eleves:update` sont
+> attribuées à **DIRECTOR** et **STUDENT_STUDIES** uniquement.
+> **TEACHER n'a AUCUNE permission `eleves:*`** (ni lecture ni écriture) — pas d'accès
+> à la liste ni à la fiche élève via ces endpoints.
+>
+> ⚠️ Ces codenames n'existent volontairement dans aucun des 4 documents de référence :
+> c'est une extension assumée, tracée ici pour mémoire.
+
 **Labels :** `élèves` `backend`
 
 ### 🃏 [STUDENT-MVP-05] Interface Admin École — Élèves ✅
