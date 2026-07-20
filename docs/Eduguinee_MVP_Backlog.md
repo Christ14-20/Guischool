@@ -2,7 +2,7 @@
 ## Découpage en épics et tickets, ordonné par dépendance technique
 
 > **🗓 Dernière mise à jour :** 2026-07-20
-> **📍 Avancement global :** Épics 0, 1, 2, 3 & 4 ✅ terminés
+> **📍 Avancement global :** Épics 0, 1, 2, 3, 4 & 5 ✅ terminés
 > >
 > | Épic | Statut | Commit(s) |
 > |------|--------|-----------|
@@ -11,9 +11,10 @@
 > | 2 — Multi-tenant & Super Admin | ✅ **TERMINÉ** | `TENANT-01..05` |
 > | 3 — Structure Pédagogique | ✅ **TERMINÉ** | `STRUCT-01..06` |
 > | 4 — Élèves (inscription, réinscription) | ✅ **TERMINÉ** | `STUDENT-MVP-01..05` |
-> | 5..11 — Modules métier | ⏳ En attente | — |
+> | 5 — Présences | ✅ **TERMINÉ** | `ATT-01..03` |
+> | 6..11 — Modules métier | ⏳ En attente | — |
 > >
-> **Couverture de tests :** 229 tests backend · **Build frontend :** ✅ 0 erreur · **`python manage.py check` :** ✅ 0 issue
+> **Couverture de tests :** 247 tests backend · **Build frontend :** ✅ 0 erreur · **`python manage.py check` :** ✅ 0 issue
 
 **Basé sur :** Cahier des Charges Complet v2.0 + arbitrages MVP (offline reporté, App Parent en React Native, Orange Money seul en V1)
 **Usage :** Chaque épic est un bloc de valeur livrable. Chaque ticket est copiable tel quel dans Trello/Jira/Linear. Ne pas démarrer un épic tant que ses dépendances ne sont pas closes — l'ordre proposé n'est pas arbitraire, chaque étape a besoin de la précédente pour être testable de bout en bout.
@@ -316,31 +317,35 @@
 
 ---
 
-## ÉPIC 5 — Présences
+## ÉPIC 5 — Présences ✅ **TERMINÉ**
 
 **Objectif :** l'enseignant peut faire l'appel, et un parent est notifié en cas d'absence.
 **Dépend de :** Épic 4.
 
-### 🃏 [ATT-01] Modèle et saisie des présences
-**Priorité :** 🟠 Haute
-- [ ] Modèle `Attendance` : tenant, student, class, date, status (Present/Absent/Absent_Justified/Late), minutes_late, created_by
-- [ ] `POST /pedagogy/attendances/` (saisie unitaire ou batch pour toute une classe)
-- [ ] `GET /pedagogy/attendances/` (filtres classe/élève/date)
-- [ ] Verrouillage de la modification après 24h (sauf déverrouillage par un admin)
+### 🃏 [ATT-01] Modèle et saisie des présences ✅
+**Priorité :** 🟠 Haute · **Commit :** `ATT-01`
+- [x] Modèle `Attendance` : tenant, student, classe, date, status (PRESENT/ABSENT/ABSENT_JUSTIFIE/RETARD), minutes_late, justification_text, created_by, is_locked ; `UniqueConstraint(student, date)`, index `(classe, date)` + `(tenant, created_at)`
+- [x] `POST /pedagogy/attendances/` — **saisie batch uniquement** (`classe_id` + `date` + `records[]`) ; `409` si présences déjà saisies, `422` si élève hors classe ; réponse `sms_queued_for` (élèves ABSENT joignables, calcul synchrone)
+- [x] `GET /pedagogy/attendances/` (filtres classe_id/student_id/date/date_from/date_to, lecture ouverte à tout rôle authentifié)
+- [x] `PATCH /pedagogy/attendances/{id}/` — correction générique ⚠️ **hors contrat** (résout l'incohérence du message 409, cf. contrat §5/§10) ; `422` si verrouillé
+- [x] Verrouillage 24h via tâche **Celery Beat** `lock_stale_attendances` (`PeriodicTask` horaire) — déverrouillage V1 = **Django Admin uniquement**
+- [x] Permission `attendance:create` → DIRECTOR / STUDENT_STUDIES / TEACHER
+- [x] Stub SMS absence (envoi réel différé à l'Épic 8)
 **Labels :** `présences` `backend`
 
-### 🃏 [ATT-02] Justification d'absence (simplifiée V1)
-**Priorité :** 🟡 Moyenne
-- [ ] Endpoint de soumission d'un justificatif (texte, sans upload de document en V1)
-- [ ] Validation par le Directeur/Secrétaire → passage au statut "Absent justifié"
-- [ ] *(Différé V2 : upload de certificat médical, mode QR code, statistiques avancées)*
+### 🃏 [ATT-02] Justification d'absence (simplifiée V1) ✅
+**Priorité :** 🟡 Moyenne · **Commit :** `ATT-02`
+- [x] `PATCH /pedagogy/attendances/{id}/justify/` (texte `justification_text`, sans upload de document en V1) → statut `ABSENT_JUSTIFIE`, `422` si verrouillé
+- [x] Permission `attendance:justify` → DIRECTOR / STUDENT_STUDIES **uniquement** (TEACHER exclu)
+- [x] *(Différé V2 : upload de certificat médical, mode QR code, statistiques avancées)*
 **Labels :** `présences` `backend`
 
-### 🃏 [ATT-03] Interface de saisie des présences
-**Priorité :** 🟠 Haute
-- [ ] Page `/app/pedagogy/attendance` : sélection classe + date, liste des élèves avec statut en ligne (radio ou boutons inline)
-- [ ] Bouton "Enregistrer tout" (soumission batch)
-- [ ] Indicateur simple d'assiduité par élève dans sa fiche
+### 🃏 [ATT-03] Interface de saisie des présences ✅
+**Priorité :** 🟠 Haute · **Commit :** `ATT-03`
+- [x] Page `/attendance` : sélection classe + date, liste des élèves avec statut en ligne (select inline) — mode saisie (batch) et mode correction (PATCH / justify) selon présence de données
+- [x] Bouton "Enregistrer tout" (soumission batch) + raccourcis "Marquer tous"
+- [x] Indicateur d'assiduité par élève dans sa fiche (onglet Présences : taux, présences/absences/retards + historique)
+- [x] Entrée "Présences" dans la barre latérale
 **Labels :** `présences` `frontend`
 
 ---

@@ -15,6 +15,7 @@ import {
   RefreshCw,
   Check,
   X,
+  CalendarCheck,
 } from "lucide-react";
 import StatutBadge from "../StatutBadge";
 import {
@@ -27,10 +28,12 @@ interface Props {
   student: any;
   classes: { id: string; name: string }[];
   schoolYears: { id: string; label: string }[];
+  attendances?: any[];
 }
 
 const TABS = [
   { key: "profil", label: "Profil", icon: User },
+  { key: "presences", label: "Présences", icon: CalendarCheck },
   { key: "notes", label: "Notes", icon: BookOpen },
   { key: "finances", label: "Finances", icon: Wallet },
   { key: "historique", label: "Historique", icon: History },
@@ -39,7 +42,12 @@ const TABS = [
 const inputClass =
   "w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 transition-colors";
 
-export default function StudentTabs({ student, classes, schoolYears }: Props) {
+export default function StudentTabs({
+  student,
+  classes,
+  schoolYears,
+  attendances = [],
+}: Props) {
   const router = useRouter();
   const [tab, setTab] = useState("profil");
 
@@ -97,6 +105,7 @@ export default function StudentTabs({ student, classes, schoolYears }: Props) {
           onChanged={() => router.refresh()}
         />
       )}
+      {tab === "presences" && <PresencesTab attendances={attendances} />}
       {tab === "notes" && <Placeholder label="Notes et bulletins" epic="Épic 6" />}
       {tab === "finances" && <Placeholder label="Frais et paiements" epic="Épic 7" />}
       {tab === "historique" && <HistoriqueTab enrollments={student.enrollments ?? []} />}
@@ -109,6 +118,99 @@ function Placeholder({ label, epic }: { label: string; epic: string }) {
     <div className="p-12 text-center text-slate-500 bg-slate-900/20 border border-slate-800/80 rounded-xl">
       <p className="font-medium text-slate-400">{label}</p>
       <p className="text-xs mt-1">Disponible prochainement ({epic}).</p>
+    </div>
+  );
+}
+
+const PRESENCE_LABELS: Record<string, string> = {
+  PRESENT: "Présent",
+  ABSENT: "Absent",
+  ABSENT_JUSTIFIE: "Absent justifié",
+  RETARD: "Retard",
+};
+
+const PRESENCE_STYLES: Record<string, string> = {
+  PRESENT: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
+  ABSENT: "bg-rose-500/10 text-rose-400 border-rose-500/20",
+  ABSENT_JUSTIFIE: "bg-amber-500/10 text-amber-400 border-amber-500/20",
+  RETARD: "bg-orange-500/10 text-orange-400 border-orange-500/20",
+};
+
+function PresencesTab({ attendances }: { attendances: any[] }) {
+  const total = attendances.length;
+  const present = attendances.filter((a) => a.status === "PRESENT").length;
+  const absent = attendances.filter(
+    (a) => a.status === "ABSENT" || a.status === "ABSENT_JUSTIFIE"
+  ).length;
+  const retard = attendances.filter((a) => a.status === "RETARD").length;
+  const taux = total > 0 ? Math.round((present / total) * 100) : null;
+
+  const sorted = [...attendances].sort((a, b) =>
+    (b.date ?? "").localeCompare(a.date ?? "")
+  );
+
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard
+          label="Taux d'assiduité"
+          value={taux === null ? "—" : `${taux}%`}
+          accent="text-indigo-400"
+        />
+        <StatCard label="Présences" value={String(present)} accent="text-emerald-400" />
+        <StatCard label="Absences" value={String(absent)} accent="text-rose-400" />
+        <StatCard label="Retards" value={String(retard)} accent="text-orange-400" />
+      </div>
+
+      {total === 0 ? (
+        <div className="p-12 text-center text-slate-500 bg-slate-900/20 border border-slate-800/80 rounded-xl">
+          Aucune présence enregistrée pour cet élève.
+        </div>
+      ) : (
+        <div className="bg-slate-900/40 border border-slate-800/80 rounded-xl shadow-xl backdrop-blur-md overflow-hidden">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="border-b border-slate-800/50 text-slate-400 text-xs font-semibold uppercase tracking-wider">
+                <th className="px-6 py-4">Date</th>
+                <th className="px-6 py-4">Statut</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-800/30 text-sm text-slate-300">
+              {sorted.map((a: any) => (
+                <tr key={a.id} className="hover:bg-slate-900/35 transition-colors">
+                  <td className="px-6 py-4 text-white">{a.date}</td>
+                  <td className="px-6 py-4">
+                    <span
+                      className={`inline-flex items-center px-2.5 py-0.5 rounded-lg border text-xs font-medium ${
+                        PRESENCE_STYLES[a.status] ?? ""
+                      }`}
+                    >
+                      {PRESENCE_LABELS[a.status] ?? a.status}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function StatCard({
+  label,
+  value,
+  accent,
+}: {
+  label: string;
+  value: string;
+  accent: string;
+}) {
+  return (
+    <div className="bg-slate-900/40 border border-slate-800/80 rounded-xl p-5 shadow-xl backdrop-blur-md">
+      <p className="text-xs text-slate-500 uppercase tracking-wider">{label}</p>
+      <p className={`text-2xl font-bold mt-1 ${accent}`}>{value}</p>
     </div>
   );
 }

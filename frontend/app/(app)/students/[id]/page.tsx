@@ -15,16 +15,20 @@ export default async function StudentDetailPage(props: {
   let student: any = null;
   let classes: any[] = [];
   let schoolYears: any[] = [];
+  let attendances: any[] = [];
   let errorMsg: string | null = null;
 
   try {
     const client = await getBackendClient();
-    const [studentResp, classesResp, syResp] = await Promise.all([
+    const [studentResp, classesResp, syResp, attResp] = await Promise.all([
       client
         .get(`/students/${id}/`)
         .catch(() => ({ data: { status: "error" } })),
       client.get("/pedagogy/classes/"),
       client.get("/pedagogy/schoolyears/"),
+      client
+        .get(`/pedagogy/attendances/?student_id=${id}`)
+        .catch(() => ({ data: { status: "error" } })),
     ]);
 
     if (studentResp.data?.status === "success") {
@@ -35,6 +39,9 @@ export default async function StudentDetailPage(props: {
     }
     if (syResp.data?.status === "success") {
       schoolYears = syResp.data.data.results ?? [];
+    }
+    if (attResp.data?.status === "success") {
+      attendances = attResp.data.data ?? [];
     }
   } catch {
     errorMsg = "Impossible de charger la fiche élève.";
@@ -65,6 +72,7 @@ export default async function StudentDetailPage(props: {
           student={student}
           classes={classes}
           schoolYears={schoolYears}
+          attendances={attendances}
         />
       )}
     </div>

@@ -528,6 +528,14 @@ Convention uniforme sur toutes les listes : `?champ=valeur` pour un filtre exact
 **Réponse `200` :** `{"data": {"id": "...", "status": "ABSENT_JUSTIFIE"}}`
 **Erreur `422` :** `{"message": "Modification impossible : cet enregistrement est verrouillé (plus de 24h)"}`
 
+### `PATCH /pedagogy/attendances/{id}/` ⚠️ *(ajout post-contrat — ATT-01)*
+> **Note :** cet endpoint ne figurait pas dans le contrat original. Il a été ajouté pour lever l'incohérence du message d'erreur `409` de `POST /pedagogy/attendances/` qui invite explicitement à « **Utiliser PATCH pour les modifier** » alors qu'aucun PATCH générique n'existait (seul `.../justify/` était spécifié). Il permet de corriger le statut d'une présence déjà saisie.
+
+**Auth :** JWT, permission `attendance:create`
+**Requête :** `{"status": "RETARD", "minutes_late": 15}` (au moins un champ ; `status` ∈ PRESENT/ABSENT/ABSENT_JUSTIFIE/RETARD)
+**Réponse `200` :** `{"data": {"id": "...", "student_id": "...", "date": "2025-10-06", "status": "RETARD", "is_locked": false}}`
+**Erreur `422` :** enregistrement verrouillé (> 24h).
+
 ---
 ## 6. Notes, Évaluations, Bulletins (Épic 6)
 
@@ -882,6 +890,7 @@ Pour garder une expérience cohérente, le frontend doit afficher **exactement**
 | Élèves | `/students/{id}/archiver/` | POST |
 | Élèves | `/students/{id}/guardians/` | GET, POST |
 | Présences | `/pedagogy/attendances/` | GET, POST |
+| Présences | `/pedagogy/attendances/{id}/` | PATCH ⚠️ (ajout post-contrat, cf. §5) |
 | Présences | `/pedagogy/attendances/{id}/justify/` | PATCH |
 | Notes | `/pedagogy/evaluations/` | POST |
 | Notes | `/pedagogy/evaluations/{id}/lock/` | PATCH |
