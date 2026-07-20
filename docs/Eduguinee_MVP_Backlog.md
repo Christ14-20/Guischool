@@ -1,17 +1,18 @@
 # BACKLOG MVP — EDUGUINÉE 3.0
 ## Découpage en épics et tickets, ordonné par dépendance technique
 
-> **🗓 Dernière mise à jour :** 2026-07-17
-> **📍 Avancement global :** Épics 0, 1 & 2 ✅ terminés
->
+> **🗓 Dernière mise à jour :** 2026-07-20
+> **📍 Avancement global :** Épics 0, 1, 2 & 3 ✅ terminés
+> >
 > | Épic | Statut | Commit(s) |
 > |------|--------|-----------|
 > | 0 — Setup & Infrastructure | ✅ **TERMINÉ** | `SETUP-01..05` |
 > | 1 — Authentification & RBAC | ✅ **TERMINÉ** | `AUTH-01..04` |
 > | 2 — Multi-tenant & Super Admin | ✅ **TERMINÉ** | `TENANT-01..05` |
-> | 3..11 — Modules métier | ⏳ En attente | — |
+> | 3 — Structure Pédagogique | ✅ **TERMINÉ** | `STRUCT-01..05` |
+> | 4..11 — Modules métier | ⏳ En attente | — |
 >
-> **Couverture de tests :** 89% (seuil: 80%) · **Build frontend :** ✅ 0 erreur · **`python manage.py check` :** ✅ 0 issue
+> **Couverture de tests :** 169 tests backend · **Build frontend :** ✅ 0 erreur · **`python manage.py check` :** ✅ 0 issue
 
 **Basé sur :** Cahier des Charges Complet v2.0 + arbitrages MVP (offline reporté, App Parent en React Native, Orange Money seul en V1)
 **Usage :** Chaque épic est un bloc de valeur livrable. Chaque ticket est copiable tel quel dans Trello/Jira/Linear. Ne pas démarrer un épic tant que ses dépendances ne sont pas closes — l'ordre proposé n'est pas arbitraire, chaque étape a besoin de la précédente pour être testable de bout en bout.
@@ -205,27 +206,27 @@
 **Objectif :** l'école peut définir sa structure pédagogique (quand, quoi, dans quelle classe) avant d'y rattacher des élèves.
 **Dépend de :** Épic 2.
 
-### 🃏 [STRUCT-01] Année scolaire et périodes
+### 🃏 [STRUCT-01] Année scolaire et périodes ✅
 **Priorité :** 🔴 Bloquant
-- [ ] Modèle `SchoolYear` : tenant, label (ex. `2025-2026`), start_date, end_date, status (Préparation/Active/Clôturée), is_current
-- [ ] Modèle `AcademicPeriod` (trimestres) : school_year, nom, dates, statut, ordre — validation anti-chevauchement
-- [ ] `GET/POST /pedagogy/schoolyears/`, `GET/POST /pedagogy/school-years/{id}/periods/`
-- [ ] Une seule année "courante" par tenant (contrainte applicative)
-- [ ] Blocage de toute saisie (note, présence, inscription) si l'année/la période est clôturée
+- [x] Modèle `SchoolYear` : tenant, label (ex. `2025-2026`), start_date, end_date, status (Préparation/Active/Clôturée), is_current
+- [x] Modèle `AcademicPeriod` (trimestres) : school_year, nom, dates, statut, ordre — validation anti-chevauchement
+- [x] `GET/POST /pedagogy/schoolyears/`, `GET/POST /pedagogy/school-years/{id}/periods/`
+- [x] Une seule année "courante" par tenant (contrainte applicative)
+- [ ] Blocage de toute saisie (note, présence, inscription) si l'année/la période est clôturée — utilitaires prêts, branchement reporté Épic 4+
 **Labels :** `pédagogie` `backend` `priorité-haute`
 
-### 🃏 [STRUCT-02] Niveaux et catalogue standard
+### 🃏 [STRUCT-02] Niveaux et catalogue standard ✅
 **Priorité :** 🟠 Haute
-- [ ] Modèle `Level` : tenant, cycle (Primaire/Collège/Lycée), name, order_index
-- [ ] Fixture des niveaux standards guinéens (CP1→CM2, 6ème→3ème, 2nde→Terminale)
-- [ ] `GET /pedagogy/levels/` avec filtre par cycle
+- [x] Modèle `Level` : tenant, cycle (Primaire/Collège/Lycée), name, order_index
+- [x] 13 niveaux standards guinéens seedés automatiquement à la création de l'école
+- [x] `GET /pedagogy/levels/` avec filtre par cycle
 **Labels :** `pédagogie` `backend`
 
-### 🃏 [STRUCT-03] Classes
+### 🃏 [STRUCT-03] Classes ✅
 **Priorité :** 🔴 Bloquant
-- [ ] Modèle `Class` : tenant, school_year, level, name, capacity, room, main_teacher (FK nullable)
-- [ ] `GET/POST /pedagogy/classes/`
-- [ ] Alerte de capacité à 90 %, blocage à 100 % (dérogation directeur non prioritaire en V1 — simple blocage acceptable)
+- [x] Modèle `SchoolClass` : tenant, school_year, level, name, capacity, room, main_teacher (FK nullable)
+- [x] `GET/POST /pedagogy/classes/`, `GET /pedagogy/classes/{id}/`
+- [ ] Alerte de capacité à 90 %, blocage à 100 % (dérogation directeur non prioritaire en V1 — simple blocage acceptable) — TODO Épic 4+
 **Labels :** `pédagogie` `backend`
 
 ### 🃏 [STRUCT-04] Matières et coefficients ✅
