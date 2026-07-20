@@ -2,7 +2,7 @@
 ## Découpage en épics et tickets, ordonné par dépendance technique
 
 > **🗓 Dernière mise à jour :** 2026-07-20
-> **📍 Avancement global :** Épics 0, 1, 2 & 3 ✅ terminés
+> **📍 Avancement global :** Épics 0, 1, 2, 3 & 4 ✅ terminés
 > >
 > | Épic | Statut | Commit(s) |
 > |------|--------|-----------|
@@ -10,10 +10,10 @@
 > | 1 — Authentification & RBAC | ✅ **TERMINÉ** | `AUTH-01..04` |
 > | 2 — Multi-tenant & Super Admin | ✅ **TERMINÉ** | `TENANT-01..05` |
 > | 3 — Structure Pédagogique | ✅ **TERMINÉ** | `STRUCT-01..06` |
-> | 4..11 — Modules métier | ⏳ En attente | — |
-> | 4..11 — Modules métier | ⏳ En attente | — |
->
-> **Couverture de tests :** 135 tests backend · **Build frontend :** ✅ 0 erreur · **`python manage.py check` :** ✅ 0 issue
+> | 4 — Élèves (inscription, réinscription) | ✅ **TERMINÉ** | `STUDENT-MVP-01..05` |
+> | 5..11 — Modules métier | ⏳ En attente | — |
+> >
+> **Couverture de tests :** 227 tests backend · **Build frontend :** ✅ 0 erreur · **`python manage.py check` :** ✅ 0 issue
 
 **Basé sur :** Cahier des Charges Complet v2.0 + arbitrages MVP (offline reporté, App Parent en React Native, Orange Money seul en V1)
 **Usage :** Chaque épic est un bloc de valeur livrable. Chaque ticket est copiable tel quel dans Trello/Jira/Linear. Ne pas démarrer un épic tant que ses dépendances ne sont pas closes — l'ordre proposé n'est pas arbitraire, chaque étape a besoin de la précédente pour être testable de bout en bout.
@@ -254,48 +254,49 @@
 
 ---
 
-## ÉPIC 4 — Élèves (fiche, inscription, réinscription)
+## ÉPIC 4 — Élèves (fiche, inscription, réinscription) ✅
 
 **Objectif :** un élève peut être inscrit et rattaché à une classe, avec son responsable légal, prêt à être suivi pédagogiquement et financièrement.
+**Statut :** ✅ **TERMINÉ**
 **Dépend de :** Épic 3.
 
-### 🃏 [STUDENT-MVP-01] Modèle Student et Enrollment
+### 🃏 [STUDENT-MVP-01] Modèle Student et Enrollment ✅
 **Priorité :** 🔴 Bloquant
-- [ ] Modèle `Student` : tenant, matricule (généré, format `{ANNEE}-{SEQ:05d}`), nom, prénom, date/lieu de naissance, sexe, photo, classe_actuelle (FK nullable), statut (ACTIF/SUSPENDU/TRANSFERE/SORTI/ARCHIVE), created_by
-- [ ] Modèle `Enrollment` : eleve, classe, annee_scolaire, type_inscription (NOUVELLE/REINSCRIPTION/TRANSFERT), date_inscription, inscrit_par
-- [ ] Génération automatique et unique du matricule par école/année
-- [ ] Validation anti-doublon (nom + prénom + date de naissance) avec alerte, blocage si matricule identique
+- [x] Modèle `Student` : tenant, matricule (généré, format `{ANNEE}-{SEQ:05d}`), nom, prénom, date/lieu de naissance, sexe, photo, classe_actuelle (FK nullable), statut (ACTIF/SUSPENDU/TRANSFERE/SORTI/ARCHIVE), created_by
+- [x] Modèle `Enrollment` : eleve, classe, annee_scolaire, type_inscription (NOUVELLE/REINSCRIPTION/TRANSFERT), date_inscription, inscrit_par
+- [x] Génération automatique et unique du matricule par école/année (`MatriculeSequence`, SELECT FOR UPDATE)
+- [x] Validation anti-doublon (nom + prénom + date de naissance) avec alerte, blocage si matricule identique
 **Labels :** `élèves` `backend` `priorité-haute`
 
-### 🃏 [STUDENT-MVP-02] Responsable légal (simplifié)
+### 🃏 [STUDENT-MVP-02] Responsable légal (simplifié) ✅
 **Priorité :** 🔴 Bloquant
-- [ ] Modèle `Guardian` : student (FK), type (Père/Mère/Tuteur/Autre), nom, téléphone (+224, regex validée), email (optionnel), lien de parenté
-- [ ] Minimum 1 responsable obligatoire à la création de l'élève
-- [ ] `GET/POST /students/{id}/guardians/`
-- [ ] *(Différé V2 : multi-responsables avancés, données médicales séparées, documents légaux)*
+- [x] Modèle `Guardian` : student (FK), type (Père/Mère/Tuteur/Autre), nom, téléphone (+224, regex validée), email (optionnel), lien de parenté
+- [x] Minimum 1 responsable obligatoire à la création de l'élève (imposé dans la transaction `POST /students/`)
+- [x] `GET/POST /students/{id}/guardians/`
+- [x] *(Différé V2 : multi-responsables avancés, données médicales séparées, documents légaux)*
 **Labels :** `élèves` `backend`
 
-### 🃏 [STUDENT-MVP-03] Inscription (formulaire simple, pas le wizard 5 étapes)
+### 🃏 [STUDENT-MVP-03] Inscription (formulaire simple, pas le wizard 5 étapes) ✅
 **Priorité :** 🔴 Bloquant
-- [ ] `POST /students/` : création élève + responsable + enrollment initial en une seule transaction
-- [ ] Validations métier : capacité classe, doublon, téléphone tuteur, année scolaire active
-- [ ] Génération du matricule et création de la fiche
-- [ ] Notification SMS au responsable (confirmation d'inscription) — dépend de l'Épic 8, peut être stubbée en attendant
+- [x] `POST /students/` : création élève + responsable + enrollment initial en une seule transaction
+- [x] Validations métier : capacité classe, doublon (`?force=true` pour contourner), téléphone tuteur, année scolaire active
+- [x] Génération du matricule et création de la fiche
+- [x] Notification SMS au responsable (confirmation d'inscription) — stub Celery non bloquant, intégration réelle Épic 8
 **Labels :** `élèves` `inscription` `backend` `priorité-haute`
 
-### 🃏 [STUDENT-MVP-04] Consultation, modification, réinscription
+### 🃏 [STUDENT-MVP-04] Consultation, modification, réinscription ✅
 **Priorité :** 🟠 Haute
-- [ ] `GET /students/` (filtres classe/statut/année/recherche texte), pagination
-- [ ] `GET /students/{id}/`, `PATCH /students/{id}/`
-- [ ] `POST /students/{id}/reinscription/` : conditions (statut ACTIF ou décision ADMIS/REDOUBLE validée, année cible OUVERTE)
-- [ ] `POST /students/{id}/archiver/` (jamais de suppression physique)
+- [x] `GET /students/` (filtres classe/statut/année/recherche texte), pagination
+- [x] `GET /students/{id}/`, `PATCH /students/{id}/`
+- [x] `POST /students/{id}/reinscription/` : conditions (statut ACTIF, année cible OUVERTE ; décision ADMIS/REDOUBLE = TODO Épic 6)
+- [x] `POST /students/{id}/archiver/` (jamais de suppression physique)
 **Labels :** `élèves` `backend`
 
-### 🃏 [STUDENT-MVP-05] Interface Admin École — Élèves
+### 🃏 [STUDENT-MVP-05] Interface Admin École — Élèves ✅
 **Priorité :** 🟠 Haute
-- [ ] Page `/app/students` : `DataTable` paginée (matricule, nom, classe, statut, tuteur), filtres, export CSV
-- [ ] Page `/app/students/new` : formulaire simple en une page (identité + tuteur + classe), validation Zod
-- [ ] Page `/app/students/[id]` : fiche élève avec tabs (Profil / Notes / Finances / Historique)
+- [x] Page `/students` : `DataTable` paginée (matricule, nom, classe, statut, tuteur), filtres, export CSV
+- [x] Page `/students/new` : formulaire simple en une page (identité + tuteur + classe), validation Zod
+- [x] Page `/students/[id]` : fiche élève avec tabs (Profil / Notes / Finances / Historique)
 **Labels :** `élèves` `frontend` `priorité-haute`
 
 ---
