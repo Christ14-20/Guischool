@@ -248,6 +248,57 @@ class GuardianNestedSerializer(serializers.ModelSerializer):
         fields = ["id", "lien", "nom_complet", "telephone"]
 
 
+class ClassNestedSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SchoolClass
+        fields = ["id", "name"]
+
+
+class StudentCreateSerializer(serializers.Serializer):
+    nom = serializers.CharField(max_length=100)
+    prenom = serializers.CharField(max_length=150)
+    date_naissance = serializers.DateField()
+    lieu_naissance = serializers.CharField(
+        max_length=150, required=False, allow_blank=True, default=""
+    )
+    sexe = serializers.ChoiceField(choices=Student.Sexe.choices)
+    classe_id = serializers.UUIDField()
+    school_year_id = serializers.UUIDField()
+    type_inscription = serializers.ChoiceField(
+        choices=Enrollment.TypeInscription.choices
+    )
+    guardian = GuardianSerializer()
+
+    def validate_classe_id(self, value):
+        tenant = self.context["request"].tenant
+        classe = SchoolClass.objects.filter(id=value, tenant=tenant).first()
+        if classe is None:
+            raise serializers.ValidationError("Classe introuvable")
+        self._classe = classe
+        return value
+
+    def validate_school_year_id(self, value):
+        tenant = self.context["request"].tenant
+        school_year = SchoolYear.objects.filter(id=value, tenant=tenant).first()
+        if school_year is None:
+            raise serializers.ValidationError("Année scolaire introuvable")
+        self._school_year = school_year
+        return value
+
+
+class StudentDetailSerializer(serializers.ModelSerializer):
+    classe_actuelle = ClassNestedSerializer(read_only=True)
+    guardians = GuardianNestedSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Student
+        fields = [
+            "id", "matricule", "nom", "prenom", "date_naissance", "lieu_naissance",
+            "sexe", "statut", "photo", "classe_actuelle", "guardians",
+            "created_at",
+        ]
+
+
 class ClassSubjectSerializer(serializers.ModelSerializer):
     subject = SubjectNestedSerializer(read_only=True)
     teacher = UserNestedSerializer(read_only=True, allow_null=True)

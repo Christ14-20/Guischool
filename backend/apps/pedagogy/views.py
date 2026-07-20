@@ -21,11 +21,16 @@ from apps.pedagogy.serializers import (
     SubjectSerializer,
     ClassSubjectSerializer,
     GuardianSerializer,
+    StudentCreateSerializer,
+    StudentDetailSerializer,
 )
 from apps.pedagogy.services.school_year_service import (
     set_current_school_year,
     close_period,
 )
+from apps.pedagogy.services.student_service import enroll_student, EnrollmentError
+from apps.pedagogy.tasks import send_enrollment_confirmation_sms
+from apps.monitoring.services import audit_log, get_client_ip
 
 
 class SchoolYearViewSet(
@@ -312,6 +317,73 @@ class ClassSubjectViewSet(
         serializer.is_valid(raise_exception=True)
         self.perform_create(serializer)
         output = ClassSubjectSerializer(serializer.instance, context=self.get_serializer_context())
+        return created_response(output.data)
+
+
+class StudentViewSet(
+    mixins.CreateModelMixin,
+    viewsets.GenericViewSet,
+):
+    """
+    POST /students/ — inscription transactionnelle (élève + tuteur + enrollment).
+    Permission : eleves:create (DIRECTOR, STUDENT_STUDIES).
+    Contournement du doublon probable : ?force=true.
+    """
+
+    queryset = Student.objects.all()
+    serializer_class = StudentCreateSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_permissions(self):
+        if self.action == "create":
+            return [IsAuthenticated(), HasPermission("eleves:create")]
+        return [IsAuthenticated()]
+
+    def get_queryset(self):
+        return self.queryset.filter(tenant=self.request.tenant)
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+
+        force = request.query_params.get("force", "").lower() == "true"
+
+        try:
+            student = enroll_student(
+                tenant=request.tenant,
+                created_by=request.user,
+                nom=data["nom"],
+                prenom=data["prenom"],
+                date_naissance=data["date_naissance"],
+                sexe=data["sexe"],
+                lieu_naissance=data.get("lieu_naissance", ""),
+                classe=serializer._classe,
+                school_year=serializer._school_year,
+                type_inscription=data["type_inscription"],
+                guardian_data=data["guardian"],
+                force=force,
+            )
+        except EnrollmentError as exc:
+            return error_response(
+                exc.message,
+                status_code=exc.status_code,
+                errors=exc.errors,
+            )
+
+        guardian_phone = data["guardian"]["telephone"]
+        send_enrollment_confirmation_sms.delay(str(student.id), guardian_phone)
+
+        audit_log(
+            user=request.user,
+            tenant=request.tenant,
+            action="student.create",
+            target_model="Student",
+            target_id=student.id,
+            ip_address=get_client_ip(request),
+        )
+
+        output = StudentDetailSerializer(student, context=self.get_serializer_context())
         return created_response(output.data)
 
 

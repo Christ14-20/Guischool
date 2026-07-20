@@ -109,18 +109,14 @@ class Tenant(TimestampedModel):
         """
         Retourne le nombre d'élèves actifs de cet établissement.
 
-        ÉPIC 2 : retourne 0 — le modèle Student n'existe pas encore.
-        ÉPIC 4 : remplacer par :
-            from apps.pedagogy.models import Student
-            return Student.objects.filter(
-                tenant=self, status=Student.Status.ACTIF
-            ).count()
-
         Point d'entrée unique : ne jamais calculer student_count
-        ailleurs que dans cette méthode (liste, détail, dashboard).
+        ailleurs que dans cette méthode (liste, détail, dashboard, limite plan).
         """
-        # TODO Épic 4 : brancher le vrai calcul Student
-        return 0
+        from apps.pedagogy.models import Student
+
+        return Student.objects.filter(
+            tenant=self, statut=Student.Status.ACTIF
+        ).count()
 
     def get_staff_count(self) -> int:
         """
