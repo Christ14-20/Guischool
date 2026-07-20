@@ -200,7 +200,7 @@
 
 
 ---
-## ÉPIC 3 — Années scolaires, Classes, Niveaux, Matières
+## ÉPIC 3 — Années scolaires, Classes, Niveaux, Matières ✅
 
 **Objectif :** l'école peut définir sa structure pédagogique (quand, quoi, dans quelle classe) avant d'y rattacher des élèves.
 **Dépend de :** Épic 2.
@@ -236,11 +236,11 @@
 - [x] Fixture d'un catalogue de matières standard (français, maths, etc.) pour démarrer rapidement
 **Labels :** `pédagogie` `backend`
 
-### 🃏 [STRUCT-05] Interface Admin École — structure pédagogique
+### 🃏 [STRUCT-05] Interface Admin École — structure pédagogique ✅
 **Priorité :** 🟠 Haute
-- [ ] Page `/app/pedagogy/school-years` : liste, création, badge "année courante"
-- [ ] Page `/app/pedagogy/classes` : vue grille/liste par niveau, `Sheet` de création/édition
-- [ ] Section "Matières" dans le détail d'une classe (coefficient, enseignant)
+- [x] Page `/pedagogy/school-years` : liste, création, badge "année courante"
+- [x] Page `/pedagogy/classes` : vue grille/liste par niveau, `Sheet` de création/édition
+- [x] Section "Matières" dans le détail d'une classe (coefficient, enseignant)
 **Labels :** `pédagogie` `frontend`
 
 ---

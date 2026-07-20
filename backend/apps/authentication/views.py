@@ -178,3 +178,19 @@ class PermissionsMeView(APIView):
                 "permissions": permissions,
             }
         )
+
+
+class TeachersListView(APIView):
+    """
+    GET /auth/teachers/ — Liste des enseignants du tenant courant.
+    Retourne id, first_name, last_name, email.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        from apps.authentication.models import User
+        teachers = User.objects.filter(
+            tenant=request.tenant,
+            role__name="TEACHER",
+        ).values("id", "first_name", "last_name", "email").order_by("first_name")
+        return success_response(list(teachers))

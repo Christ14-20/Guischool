@@ -5,7 +5,7 @@ Routes de l'app authentication montées sous /api/v1/ dans config/urls.py.
 """
 
 from django.urls import path
-from .views import LoginView, RefreshView, LogoutView, MeView, PermissionsMeView
+from .views import LoginView, RefreshView, LogoutView, MeView, PermissionsMeView, TeachersListView
 
 urlpatterns = [
     # Auth endpoints
@@ -16,4 +16,5 @@ urlpatterns = [
 
     # User endpoints
     path("users/me/", MeView.as_view(), name="users-me"),
+    path("auth/teachers/", TeachersListView.as_view(), name="auth-teachers"),
 ]
