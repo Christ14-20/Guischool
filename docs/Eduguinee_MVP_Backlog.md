@@ -9,10 +9,11 @@
 > | 0 — Setup & Infrastructure | ✅ **TERMINÉ** | `SETUP-01..05` |
 > | 1 — Authentification & RBAC | ✅ **TERMINÉ** | `AUTH-01..04` |
 > | 2 — Multi-tenant & Super Admin | ✅ **TERMINÉ** | `TENANT-01..05` |
-> | 3 — Structure Pédagogique | ✅ **TERMINÉ** | `STRUCT-01..05` |
+> | 3 — Structure Pédagogique | ✅ **TERMINÉ** | `STRUCT-01..06` |
+> | 4..11 — Modules métier | ⏳ En attente | — |
 > | 4..11 — Modules métier | ⏳ En attente | — |
 >
-> **Couverture de tests :** 169 tests backend · **Build frontend :** ✅ 0 erreur · **`python manage.py check` :** ✅ 0 issue
+> **Couverture de tests :** 135 tests backend · **Build frontend :** ✅ 0 erreur · **`python manage.py check` :** ✅ 0 issue
 
 **Basé sur :** Cahier des Charges Complet v2.0 + arbitrages MVP (offline reporté, App Parent en React Native, Orange Money seul en V1)
 **Usage :** Chaque épic est un bloc de valeur livrable. Chaque ticket est copiable tel quel dans Trello/Jira/Linear. Ne pas démarrer un épic tant que ses dépendances ne sont pas closes — l'ordre proposé n'est pas arbitraire, chaque étape a besoin de la précédente pour être testable de bout en bout.
@@ -243,6 +244,13 @@
 - [x] Page `/pedagogy/classes` : vue grille/liste par niveau, `Sheet` de création/édition
 - [x] Section "Matières" dans le détail d'une classe (coefficient, enseignant)
 **Labels :** `pédagogie` `frontend`
+
+### 🃏 [STRUCT-06] Endpoint liste des enseignants (support formulaires) ✅
+**Priorité :** 🟠 Haute
+- [x] `GET /auth/teachers/` — liste des enseignants du tenant (id, first_name, last_name, email) pour alimenter les sélecteurs `main_teacher_id` (classe) et `teacher_id` (matière)
+- [x] Nouvelle permission `authentication:read:teachers`, restreinte à `DIRECTOR` et `STUDENT_STUDIES` (migration `0002_add_read_teachers_permission`)
+- [x] `TEACHER` exclu de l'accès à la liste
+**Labels :** `pédagogie` `auth` `backend`
 
 ---
 

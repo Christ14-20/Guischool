@@ -17,6 +17,7 @@ from rest_framework_simplejwt.views import TokenRefreshView
 from django_ratelimit.decorators import ratelimit
 from django.utils.decorators import method_decorator
 
+from core.permissions import HasPermission
 from core.utils import success_response, error_response
 from apps.monitoring.services import audit_log, get_client_ip
 
@@ -184,8 +185,9 @@ class TeachersListView(APIView):
     """
     GET /auth/teachers/ — Liste des enseignants du tenant courant.
     Retourne id, first_name, last_name, email.
+    Permission : authentication:read:teachers (DIRECTOR, STUDENT_STUDIES uniquement).
     """
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, HasPermission("authentication:read:teachers")]
 
     def get(self, request):
         from apps.authentication.models import User
