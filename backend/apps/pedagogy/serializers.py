@@ -2,6 +2,7 @@ from rest_framework import serializers
 from apps.pedagogy.models import (
     Level, SchoolClass, SchoolYear, AcademicPeriod, Subject, ClassSubject,
     Student, Guardian, Enrollment, Attendance, Evaluation, Grade,
+    YearEndDecision,
 )
 from apps.pedagogy.services.school_year_service import (
     validate_no_period_overlap,
@@ -556,3 +557,55 @@ class GradeModifySerializer(serializers.Serializer):
     is_absent = serializers.BooleanField(required=False)
     comment = serializers.CharField(required=False, allow_blank=True)
     justification = serializers.CharField(required=True)
+
+
+class YearEndDecisionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = YearEndDecision
+        fields = [
+            "id", "student", "school_year", "decision",
+            "classe_destination", "moyenne_annuelle", "prise_par",
+            "created_at", "updated_at",
+        ]
+        read_only_fields = ["id", "moyenne_annuelle", "prise_par", "created_at", "updated_at"]
+
+    def validate_decision(self, value):
+        if value not in dict(YearEndDecision.Decision.choices):
+            raise serializers.ValidationError(
+                f"Décision invalide. Choisir parmi : {', '.join(dict(YearEndDecision.Decision.choices).keys())}"
+            )
+        return value
+
+    def validate(self, attrs):
+        student = attrs.get("student")
+        school_year = attrs.get("school_year")
+        decision = attrs.get("decision")
+        classe_destination = attrs.get("classe_destination")
+
+        if decision == YearEndDecision.Decision.ADMIS and not classe_destination:
+            raise serializers.ValidationError(
+                {"classe_destination": "Une classe de destination est requise pour une décision ADMIS."}
+            )
+        if decision == YearEndDecision.Decision.EXCLU and classe_destination:
+            raise serializers.ValidationError(
+                {"classe_destination": "Un élève exclu ne peut pas avoir de classe de destination."}
+            )
+        if classe_destination and classe_destination.tenant_id != student.tenant_id:
+            raise serializers.ValidationError(
+                {"classe_destination": "La classe de destination doit appartenir au même établissement que l'élève."}
+            )
+        return attrs
+
+    def create(self, validated_data):
+        validated_data["tenant"] = self.context["request"].tenant
+        validated_data["prise_par"] = self.context["request"].user
+        return super().create(validated_data)
+
+
+class PromotionsBulkSerializer(serializers.Serializer):
+    classe_origine_id = serializers.UUIDField()
+    school_year_cible_id = serializers.UUIDField()
+    decisions_filter = serializers.ChoiceField(
+        choices=["ADMIS", "ADMIS_REDOUBLE"],
+        default="ADMIS",
+    )

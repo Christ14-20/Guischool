@@ -4,8 +4,8 @@ from rest_framework.routers import DefaultRouter
 from apps.pedagogy.views import (
     SchoolYearViewSet, PeriodViewSet, LevelViewSet, ClassViewSet,
     SubjectViewSet, ClassSubjectViewSet, AttendanceViewSet,
-    EvaluationViewSet, GradeViewSet,
-    task_status,
+    EvaluationViewSet, GradeViewSet, YearEndDecisionViewSet,
+    task_status, promotions_bulk,
 )
 
 router = DefaultRouter()
@@ -86,5 +86,16 @@ urlpatterns = [
         "tasks/<uuid:task_id>/status/",
         task_status,
         name="task-status",
+    ),
+    # GRADE-MVP-04 — Décision de fin de trimestre/année
+    path(
+        "year-end-decisions/",
+        YearEndDecisionViewSet.as_view({"get": "list", "post": "create"}),
+        name="year-end-decisions",
+    ),
+    path(
+        "promotions/bulk/",
+        promotions_bulk,
+        name="promotions-bulk",
     ),
 ]

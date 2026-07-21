@@ -12,7 +12,7 @@ from core.pagination import StandardPagination
 from core.utils import success_response, created_response, error_response
 from apps.pedagogy.models import (
     Level, SchoolClass, SchoolYear, AcademicPeriod, Subject, ClassSubject,
-    Student, Guardian, Attendance, Evaluation, Grade,
+    Student, Guardian, Attendance, Evaluation, Grade, YearEndDecision,
 )
 from apps.pedagogy.serializers import (
     LevelSerializer,
@@ -41,6 +41,8 @@ from apps.pedagogy.serializers import (
     GradeItemSerializer,
     GradeSerializer,
     GradeModifySerializer,
+    YearEndDecisionSerializer,
+    PromotionsBulkSerializer,
 )
 from apps.pedagogy.services.school_year_service import (
     set_current_school_year,
@@ -1245,3 +1247,135 @@ def task_status(request, task_id):
         "date_done": result.date_done.isoformat() if result.date_done else None,
     }
     return success_response(data)
+
+
+class YearEndDecisionViewSet(
+    mixins.CreateModelMixin,
+    mixins.ListModelMixin,
+    viewsets.GenericViewSet,
+):
+    queryset = YearEndDecision.objects.all()
+    serializer_class = YearEndDecisionSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_permissions(self):
+        if self.action == "create":
+            return [IsAuthenticated(), HasPermission("notes:validate")]
+        return [IsAuthenticated(), HasPermission("notes:read")]
+
+    def get_serializer_class(self):
+        if self.action == "create":
+            return YearEndDecisionSerializer
+        return YearEndDecisionSerializer
+
+    def get_queryset(self):
+        qs = YearEndDecision.objects.filter(tenant=self.request.tenant)
+        school_year_id = self.request.query_params.get("school_year_id")
+        if school_year_id:
+            qs = qs.filter(school_year_id=school_year_id)
+        student_id = self.request.query_params.get("student_id")
+        if student_id:
+            qs = qs.filter(student_id=student_id)
+        return qs.select_related("student", "school_year", "classe_destination", "prise_par")
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        student = serializer.validated_data.get("student")
+        school_year = serializer.validated_data.get("school_year")
+        if student and student.tenant_id != request.tenant.pk:
+            return error_response(
+                "Élève non trouvé.",
+                status_code=status.HTTP_404_NOT_FOUND,
+            )
+        if school_year and school_year.tenant_id != request.tenant.pk:
+            return error_response(
+                "Année scolaire non trouvée.",
+                status_code=status.HTTP_404_NOT_FOUND,
+            )
+        self.perform_create(serializer)
+        return created_response(
+            YearEndDecisionSerializer(serializer.instance, context=self.get_serializer_context()).data
+        )
+
+    def perform_create(self, serializer):
+        serializer.save(tenant=self.request.tenant, prise_par=self.request.user)
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def promotions_bulk(request):
+    if not request.user.can("notes:validate"):
+        return error_response(
+            "Vous n'avez pas la permission de valider les notes.",
+            status_code=status.HTTP_403_FORBIDDEN,
+        )
+    serializer = PromotionsBulkSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+
+    classe_origine_id = serializer.validated_data["classe_origine_id"]
+    school_year_cible_id = serializer.validated_data["school_year_cible_id"]
+    decisions_filter = serializer.validated_data["decisions_filter"]
+
+    from apps.pedagogy.models import SchoolClass as SC, SchoolYear as SY
+
+    classe_origine = SC.objects.filter(
+        id=classe_origine_id, tenant=request.tenant
+    ).first()
+    if not classe_origine:
+        return error_response(
+            "Classe d'origine non trouvée.",
+            status_code=status.HTTP_404_NOT_FOUND,
+        )
+    school_year_cible = SY.objects.filter(
+        id=school_year_cible_id, tenant=request.tenant
+    ).first()
+    if not school_year_cible:
+        return error_response(
+            "Année scolaire cible non trouvée.",
+            status_code=status.HTTP_404_NOT_FOUND,
+        )
+
+    decisions_qs = YearEndDecision.objects.filter(
+        tenant=request.tenant,
+        student__classe_actuelle=classe_origine,
+        school_year=school_year_cible,
+    )
+    if decisions_filter == "ADMIS":
+        decisions_qs = decisions_qs.filter(decision=YearEndDecision.Decision.ADMIS)
+    else:
+        decisions_qs = decisions_qs.filter(
+            decision__in=[YearEndDecision.Decision.ADMIS, YearEndDecision.Decision.REDOUBLE]
+        )
+
+    processed_count = 0
+    skipped_reasons = []
+    for decision in decisions_qs.select_related("student", "classe_destination"):
+        student = decision.student
+        if decision.decision == YearEndDecision.Decision.ADMIS:
+            if not decision.classe_destination:
+                skipped_reasons.append({
+                    "student_id": str(student.id),
+                    "reason": "Pas de classe de destination définie.",
+                })
+                continue
+            student.classe_actuelle = decision.classe_destination
+            student.statut = Student.Status.ACTIF
+            student.save(update_fields=["classe_actuelle", "statut"])
+            processed_count += 1
+        elif decision.decision == YearEndDecision.Decision.REDOUBLE:
+            student.classe_actuelle = classe_origine
+            student.statut = Student.Status.ACTIF
+            student.save(update_fields=["classe_actuelle", "statut"])
+            processed_count += 1
+        else:
+            skipped_reasons.append({
+                "student_id": str(student.id),
+                "reason": f"Décision '{decision.decision}' non prise en charge pour la promotion automatique.",
+            })
+
+    return success_response({
+        "processed_count": processed_count,
+        "skipped_count": len(skipped_reasons),
+        "skipped_reasons": skipped_reasons,
+    })

@@ -446,3 +446,45 @@ class Grade(TenantScopedModel):
 
     def __str__(self):
         return f"{self.student.matricule} — {self.evaluation.title}"
+
+
+class YearEndDecision(TenantScopedModel):
+    class Decision(models.TextChoices):
+        ADMIS = "ADMIS", "Admis"
+        REDOUBLE = "REDOUBLE", "Redouble"
+        EXCLU = "EXCLU", "Exclu"
+
+    student = models.ForeignKey(
+        Student, on_delete=models.CASCADE, related_name="year_end_decisions"
+    )
+    school_year = models.ForeignKey(
+        SchoolYear, on_delete=models.PROTECT, related_name="year_end_decisions"
+    )
+    decision = models.CharField(max_length=20, choices=Decision.choices)
+    classe_destination = models.ForeignKey(
+        SchoolClass, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="year_end_decisions_destination",
+    )
+    moyenne_annuelle = models.DecimalField(
+        max_digits=5, decimal_places=2, null=True, blank=True
+    )
+    prise_par = models.ForeignKey(
+        "authentication.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name="year_end_decisions_made",
+    )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["student", "school_year"],
+                name="uniq_decision_per_student_per_year",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["tenant", "school_year", "decision"]),
+        ]
+
+    def __str__(self):
+        return f"{self.student.matricule} / {self.school_year.label} → {self.decision}"

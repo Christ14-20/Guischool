@@ -8,7 +8,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.pedagogy.models import (
     AcademicPeriod, ClassSubject, Evaluation, Grade, Level,
-    SchoolClass, SchoolYear, Student, Subject,
+    SchoolClass, SchoolYear, Student, Subject, YearEndDecision,
 )
 from apps.superadmin.models import Tenant, Plan
 from apps.authentication.models import User, Role, Permission
@@ -867,4 +867,265 @@ class TestTaskStatus:
             task_id="00000000-0000-0000-0000-000000000000"
         )
         response = client.get(url)
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+
+
+# ── YearEndDecision endpoint ────────────────────────────────────────────────────
+
+
+class TestYearEndDecisionCreate:
+    URL = "/api/v1/pedagogy/year-end-decisions/"
+
+    def test_create_decision_admis(
+        self, director, student, school_year, school_class
+    ):
+        client = jwt_client(director)
+        data = {
+            "student": str(student.id),
+            "school_year": str(school_year.id),
+            "decision": "ADMIS",
+            "classe_destination": str(school_class.id),
+        }
+        response = client.post(self.URL, data, format="json")
+        assert response.status_code == status.HTTP_201_CREATED, response.data
+        assert response.data["data"]["decision"] == "ADMIS"
+        assert response.data["data"]["moyenne_annuelle"] is None
+
+    def test_create_decision_redouble(
+        self, director, student, school_year
+    ):
+        client = jwt_client(director)
+        data = {
+            "student": str(student.id),
+            "school_year": str(school_year.id),
+            "decision": "REDOUBLE",
+        }
+        response = client.post(self.URL, data, format="json")
+        assert response.status_code == status.HTTP_201_CREATED, response.data
+        assert response.data["data"]["decision"] == "REDOUBLE"
+        # pas de classe_destination pour un redoublement
+        assert response.data["data"]["classe_destination"] is None
+
+    def test_admis_requires_classe_destination(
+        self, director, student, school_year
+    ):
+        client = jwt_client(director)
+        data = {
+            "student": str(student.id),
+            "school_year": str(school_year.id),
+            "decision": "ADMIS",
+        }
+        response = client.post(self.URL, data, format="json")
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+    def test_exclu_rejects_classe_destination(
+        self, director, student, school_year, school_class
+    ):
+        client = jwt_client(director)
+        data = {
+            "student": str(student.id),
+            "school_year": str(school_year.id),
+            "decision": "EXCLU",
+            "classe_destination": str(school_class.id),
+        }
+        response = client.post(self.URL, data, format="json")
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+    def test_unique_per_student_per_year(
+        self, director, student, school_year, school_class
+    ):
+        YearEndDecision.objects.create(
+            tenant=student.tenant,
+            student=student,
+            school_year=school_year,
+            decision=YearEndDecision.Decision.ADMIS,
+            classe_destination=school_class,
+            prise_par=director,
+        )
+        client = jwt_client(director)
+        data = {
+            "student": str(student.id),
+            "school_year": str(school_year.id),
+            "decision": "ADMIS",
+            "classe_destination": str(school_class.id),
+        }
+        response = client.post(self.URL, data, format="json")
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+    def test_forbidden_for_teacher(
+        self, teacher, student, school_year, school_class
+    ):
+        client = jwt_client(teacher)
+        data = {
+            "student": str(student.id),
+            "school_year": str(school_year.id),
+            "decision": "ADMIS",
+            "classe_destination": str(school_class.id),
+        }
+        response = client.post(self.URL, data, format="json")
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+
+    def test_tenant_isolation(
+        self, student, school_year, school_class, other_tenant, director_role
+    ):
+        other_user = User.objects.create_user(
+            email="autre@tenant-b.gn",
+            password="SecurePass123!",
+            tenant=other_tenant,
+            role=director_role,
+            username="autre_tenant_yd",
+        )
+        client = jwt_client(other_user)
+        data = {
+            "student": str(student.id),
+            "school_year": str(school_year.id),
+            "decision": "ADMIS",
+            "classe_destination": str(school_class.id),
+        }
+        response = client.post(self.URL, data, format="json")
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+
+
+class TestYearEndDecisionList:
+    URL = "/api/v1/pedagogy/year-end-decisions/"
+
+    def test_list_requires_auth(self):
+        client = APIClient()
+        response = client.get(self.URL)
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+    def test_list_filters_by_school_year(
+        self, director, student, school_year, school_class
+    ):
+        YearEndDecision.objects.create(
+            tenant=student.tenant,
+            student=student,
+            school_year=school_year,
+            decision=YearEndDecision.Decision.ADMIS,
+            classe_destination=school_class,
+            prise_par=director,
+        )
+        client = jwt_client(director)
+        response = client.get(self.URL, {"school_year_id": school_year.id})
+        assert response.status_code == status.HTTP_200_OK
+        data = response.data.get("data", response.data)
+        results = data.get("results", [data]) if isinstance(data, dict) else data
+        assert len(results) >= 1
+
+    def test_list_tenant_isolation(
+        self, student, school_year, school_class, other_tenant, director_role
+    ):
+        YearEndDecision.objects.create(
+            tenant=student.tenant,
+            student=student,
+            school_year=school_year,
+            decision=YearEndDecision.Decision.ADMIS,
+            classe_destination=school_class,
+            prise_par=None,
+        )
+        other_user = User.objects.create_user(
+            email="autre@tenant-b.gn",
+            password="SecurePass123!",
+            tenant=other_tenant,
+            role=director_role,
+            username="autre_tenant_ydl",
+        )
+        client = jwt_client(other_user)
+        response = client.get(self.URL, {"school_year_id": school_year.id})
+        assert response.status_code == status.HTTP_200_OK
+        data = response.data.get("data", response.data)
+        results = data.get("results", [data]) if isinstance(data, dict) else data
+        assert len(results) == 0
+
+
+# ── Promotions bulk endpoint ────────────────────────────────────────────────────
+
+
+class TestPromotionsBulk:
+    URL = "/api/v1/pedagogy/promotions/bulk/"
+
+    def test_bulk_promotes_admis(
+        self, director, student, student_b, school_year, school_class
+    ):
+        classe_dest = SchoolClass.objects.create(
+            tenant=student.tenant,
+            school_year=school_year,
+            level=school_class.level,
+            name="5ème A",
+            capacity=60,
+        )
+        YearEndDecision.objects.create(
+            tenant=student.tenant,
+            student=student,
+            school_year=school_year,
+            decision=YearEndDecision.Decision.ADMIS,
+            classe_destination=classe_dest,
+            prise_par=director,
+        )
+        YearEndDecision.objects.create(
+            tenant=student_b.tenant,
+            student=student_b,
+            school_year=school_year,
+            decision=YearEndDecision.Decision.ADMIS,
+            classe_destination=classe_dest,
+            prise_par=director,
+        )
+        client = jwt_client(director)
+        data = {
+            "classe_origine_id": str(school_class.id),
+            "school_year_cible_id": str(school_year.id),
+            "decisions_filter": "ADMIS",
+        }
+        response = client.post(self.URL, data, format="json")
+        assert response.status_code == status.HTTP_200_OK, response.data
+        result = response.data["data"]
+        assert result["processed_count"] == 2
+        assert result["skipped_count"] == 0
+        student.refresh_from_db()
+        assert student.classe_actuelle_id == classe_dest.id
+        assert student.statut == Student.Status.ACTIF
+
+    def test_bulk_requires_auth(self):
+        client = APIClient()
+        response = client.post(self.URL, {}, format="json")
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+    def test_bulk_forbidden_for_teacher(
+        self, teacher, school_class, school_year
+    ):
+        client = jwt_client(teacher)
+        data = {
+            "classe_origine_id": str(school_class.id),
+            "school_year_cible_id": str(school_year.id),
+        }
+        response = client.post(self.URL, data, format="json")
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+
+    def test_bulk_unknown_class_404(
+        self, director, school_class, school_year
+    ):
+        client = jwt_client(director)
+        data = {
+            "classe_origine_id": "00000000-0000-0000-0000-000000000000",
+            "school_year_cible_id": str(school_year.id),
+        }
+        response = client.post(self.URL, data, format="json")
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_bulk_tenant_isolation(
+        self, school_class, school_year, other_tenant, director_role
+    ):
+        other_user = User.objects.create_user(
+            email="autre@tenant-b.gn",
+            password="SecurePass123!",
+            tenant=other_tenant,
+            role=director_role,
+            username="autre_tenant_pb",
+        )
+        client = jwt_client(other_user)
+        data = {
+            "classe_origine_id": str(school_class.id),
+            "school_year_cible_id": str(school_year.id),
+        }
+        response = client.post(self.URL, data, format="json")
         assert response.status_code == status.HTTP_404_NOT_FOUND
