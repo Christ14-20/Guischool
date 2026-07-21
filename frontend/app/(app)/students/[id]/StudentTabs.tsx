@@ -18,6 +18,7 @@ import {
   CalendarCheck,
 } from "lucide-react";
 import StatutBadge from "../StatutBadge";
+import StudentGradesTab from "./StudentGradesTab";
 import {
   updateStudentAction,
   archiveStudentAction,
@@ -106,7 +107,7 @@ export default function StudentTabs({
         />
       )}
       {tab === "presences" && <PresencesTab attendances={attendances} />}
-      {tab === "notes" && <Placeholder label="Notes et bulletins" epic="Épic 6" />}
+      {tab === "notes" && <StudentGradesTab studentId={student.id} />}
       {tab === "finances" && <Placeholder label="Frais et paiements" epic="Épic 7" />}
       {tab === "historique" && <HistoriqueTab enrollments={student.enrollments ?? []} />}
     </div>
