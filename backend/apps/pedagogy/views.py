@@ -992,8 +992,8 @@ class GradeViewSet(
                     created_by=request.user,
                 )
                 created_count += 1
-                if grade.score is not None:
-                    scores.append(float(grade.score))
+                if grade.note_convertie is not None:
+                    scores.append(float(grade.note_convertie))
             except Exception as exc:
                 warnings.append({
                     "student_id": str(item["student_id"]),

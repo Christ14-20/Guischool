@@ -506,6 +506,37 @@ class TestGradeBulk:
         assert stats["mediane"] == 12.0
         assert isinstance(stats["ecart_type"], float)
 
+    def test_bulk_stats_non_20_scale(
+        self, director, tenant, school_class, subject, period, student, student_b
+    ):
+        """Barème 40 → stats calculées sur note_convertie (/20), pas sur le brut."""
+        ev40 = Evaluation.objects.create(
+            tenant=tenant,
+            class_obj=school_class,
+            subject=subject,
+            period=period,
+            type=Evaluation.Type.DS,
+            title="DS sur 40",
+            max_score=Decimal("40.00"),
+            date="2025-11-10",
+        )
+        client = jwt_client(director)
+        data = {
+            "evaluation_id": str(ev40.id),
+            "grades": [
+                {"student_id": str(student.id), "score": "14.00"},    # → note_convertie 7.00
+                {"student_id": str(student_b.id), "score": "10.00"},  # → note_convertie 5.00
+            ],
+        }
+        response = client.post(self.URL, data, format="json")
+        assert response.status_code == status.HTTP_201_CREATED, response.data
+        stats = response.data["data"]["stats"]
+        # note_convertie = score / max_score * 20
+        # 14/40*20 = 7.0 ; 10/40*20 = 5.0 → moyenne = 6.0
+        assert stats["moyenne"] == 6.0
+        grade_a = Grade.objects.get(evaluation=ev40, student=student)
+        assert grade_a.note_convertie == Decimal("7.00")
+
     def test_bulk_individual_rejection(
         self, director, evaluation, student, student_b
     ):

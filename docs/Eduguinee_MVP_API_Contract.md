@@ -858,7 +858,7 @@ Pour garder une expérience cohérente, le frontend doit afficher **exactement**
 | Année non ouverte | "L'inscription n'est possible que sur une année scolaire ouverte" |
 | Téléphone invalide | "Format attendu : +224XXXXXXXXX" |
 | Note hors barème | "Note {valeur} supérieure au barème ({barème}) — rejetée" |
-| Modification note validée refusée | "Seul le Directeur des études peut modifier une note déjà validée" |
+| Modification note validée refusée | "Seul le Directeur peut modifier une note déjà validée" |
 | Présence verrouillée | "Modification impossible : cet enregistrement est verrouillé (plus de 24h)" |
 | Idempotence paiement | "Ce paiement a déjà été enregistré (clé d'idempotence déjà utilisée)" |
 | Compte suspendu | "Compte suspendu" |
