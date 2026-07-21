@@ -1276,7 +1276,7 @@ class YearEndDecisionViewSet(
         student_id = self.request.query_params.get("student_id")
         if student_id:
             qs = qs.filter(student_id=student_id)
-        return qs.select_related("student", "school_year", "classe_destination", "prise_par")
+        return qs.select_related("student", "school_year", "classe_origine", "classe_destination", "prise_par")
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)

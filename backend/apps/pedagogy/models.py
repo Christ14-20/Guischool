@@ -460,13 +460,16 @@ class YearEndDecision(TenantScopedModel):
     school_year = models.ForeignKey(
         SchoolYear, on_delete=models.PROTECT, related_name="year_end_decisions"
     )
-    decision = models.CharField(max_length=20, choices=Decision.choices)
+    classe_origine = models.ForeignKey(
+        SchoolClass, on_delete=models.PROTECT, related_name="decisions_from",
+    )
     classe_destination = models.ForeignKey(
         SchoolClass, on_delete=models.SET_NULL, null=True, blank=True,
         related_name="year_end_decisions_destination",
     )
+    decision = models.CharField(max_length=20, choices=Decision.choices)
     moyenne_annuelle = models.DecimalField(
-        max_digits=5, decimal_places=2, null=True, blank=True
+        max_digits=5, decimal_places=2,
     )
     prise_par = models.ForeignKey(
         "authentication.User",
@@ -474,6 +477,7 @@ class YearEndDecision(TenantScopedModel):
         null=True,
         related_name="year_end_decisions_made",
     )
+    date_decision = models.DateField(auto_now_add=True)
 
     class Meta:
         constraints = [

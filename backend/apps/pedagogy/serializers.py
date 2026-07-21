@@ -564,10 +564,14 @@ class YearEndDecisionSerializer(serializers.ModelSerializer):
         model = YearEndDecision
         fields = [
             "id", "student", "school_year", "decision",
-            "classe_destination", "moyenne_annuelle", "prise_par",
+            "classe_origine", "classe_destination",
+            "moyenne_annuelle", "prise_par", "date_decision",
             "created_at", "updated_at",
         ]
-        read_only_fields = ["id", "moyenne_annuelle", "prise_par", "created_at", "updated_at"]
+        read_only_fields = [
+            "id", "classe_origine", "moyenne_annuelle",
+            "prise_par", "date_decision", "created_at", "updated_at",
+        ]
 
     def validate_decision(self, value):
         if value not in dict(YearEndDecision.Decision.choices):
@@ -599,6 +603,13 @@ class YearEndDecisionSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         validated_data["tenant"] = self.context["request"].tenant
         validated_data["prise_par"] = self.context["request"].user
+        student = validated_data["student"]
+        validated_data["classe_origine"] = student.classe_actuelle
+
+        from apps.pedagogy.services.grade_service import compute_moyenne_annuelle
+        school_year = validated_data["school_year"]
+        validated_data["moyenne_annuelle"] = compute_moyenne_annuelle(student, school_year)
+
         return super().create(validated_data)
 
 

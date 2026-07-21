@@ -391,10 +391,12 @@
 **Labels :** `notes` `bulletins` `backend` `priorité-haute`
 
 ### 🃏 [GRADE-MVP-04] Décision de fin de trimestre/année (simplifiée)
-**Priorité :** 🟡 Moyenne
-- [ ] Modèle `YearEndDecision` : eleve, annee_scolaire, decision (Admis/Redouble/Exclu), classe_destination, moyenne_annuelle (snapshot), prise_par
-- [ ] `POST /year-end-decisions/` (saisie manuelle par le Directeur, pas d'algorithme de suggestion automatique en V1)
-- [ ] `POST /promotions/bulk/` (traitement groupé simple : appliquer la classe destination à tous les élèves Admis d'une classe)
+**Priorité :** 🟡 Moyenne — ✅ Terminé (backend)
+- [x] Modèle `YearEndDecision` : eleve, annee_scolaire, classe_origine, classe_destination, decision (Admis/Redouble/Exclu), moyenne_annuelle (snapshot), prise_par, date_decision
+- [x] `POST /year-end-decisions/` (saisie manuelle par le Directeur, pas d'algorithme de suggestion automatique en V1)
+- [x] `POST /promotions/bulk/` (traitement groupé simple : appliquer la classe destination à tous les élèves Admis d'une classe)
+- [x] `GET /year-end-decisions/` (liste avec filtres school_year, student — permission notes:read)
+**Dette V2 explicite :** Règle de calcul de `moyenne_annuelle` (moyenne simple des moyennes générales par période) non confirmée par un expert pédagogique guinéen — à valider avec un directeur d'école.
 **Labels :** `notes` `fin-année` `backend`
 
 ### 🃏 [GRADE-MVP-05] Interface de saisie et consultation des notes

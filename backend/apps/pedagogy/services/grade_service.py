@@ -28,7 +28,7 @@ from django.db.models import Sum, Q, F, Avg
 from django.db.models.functions import Coalesce
 
 from apps.pedagogy.models import (
-    Evaluation, Grade, ClassSubject, Student,
+    AcademicPeriod, Evaluation, Grade, ClassSubject, Student,
 )
 
 
@@ -141,6 +141,37 @@ def compute_mention(moyenne: Decimal) -> Optional[str]:
     if moyenne >= Decimal("10"):
         return "Passable"
     return "Insuffisant"
+
+
+def compute_moyenne_annuelle(student, school_year):
+    """
+    Calcule la moyenne annuelle d'un élève sur une année scolaire.
+
+    Hypothèse MVP (non confirmée par le CDC, ni par un expert pédagogique guinéen) :
+    moyenne simple des `moyenne_generale` par période de l'année scolaire ayant
+    au moins une note (évaluation verrouillée avec score saisi).
+
+    À valider avec un directeur d'école avant la V2 — certaines écoles pourraient
+    utiliser une pondération différente (ex. trimestre 3 plus lourd, ou pondération
+    par nombre d'évaluations par période).
+
+    Retourne un Decimal ou None si aucune période n'a de notes.
+    """
+    periods = AcademicPeriod.objects.filter(
+        school_year=school_year,
+        tenant=student.tenant,
+    ).order_by("order")
+
+    moyennes = []
+    for period in periods:
+        result = compute_student_moyenne(student, period)
+        if result["moyenne_generale"] is not None:
+            moyennes.append(result["moyenne_generale"])
+
+    if not moyennes:
+        return Decimal("0.00")
+
+    return sum(moyennes) / len(moyennes)
 
 
 def compute_class_classement(school_class, period):

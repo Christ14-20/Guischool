@@ -703,6 +703,17 @@ Le frontend fait un polling sur `GET /pedagogy/tasks/{task_id}/status/`.
 ```
 **Réponse `201` :** objet `YearEndDecision` créé, avec `moyenne_annuelle` recalculée et gelée.
 
+Champs en lecture seule (auto-remplis) :
+- `classe_origine` (UUID) : snapshot de `student.classe_actuelle` au moment de la création
+- `moyenne_annuelle` (Decimal) : moyenne annuelle calculée (voir note ci-dessous)
+- `date_decision` (Date) : date de création, `auto_now_add`
+- `prise_par` (UUID) : utilisateur connecté
+
+> **Note — Règle de calcul de `moyenne_annuelle` (MVP, non confirmée par le CDC)**
+> Hypothèse MVP : moyenne simple des `moyenne_generale` par période de l'année scolaire ayant au moins une note (évaluation verrouillée avec score saisi).
+> À valider avec un directeur d'école avant la V2 — certaines écoles pourraient utiliser une pondération différente (ex. trimestre 3 plus lourd, ou pondération par nombre d'évaluations par période).
+> Cette dette technique est explicitement tracée dans la docstring du service (`grade_service.py:compute_moyenne_annuelle`).
+
 ### `POST /promotions/bulk/`
 **Requête :**
 ```json

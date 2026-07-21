@@ -877,8 +877,11 @@ class TestYearEndDecisionCreate:
     URL = "/api/v1/pedagogy/year-end-decisions/"
 
     def test_create_decision_admis(
-        self, director, student, school_year, school_class
+        self, director, student, school_year, school_class,
+        subject, period, teacher, evaluation, grade,
     ):
+        evaluation.is_locked = True
+        evaluation.save(update_fields=["is_locked"])
         client = jwt_client(director)
         data = {
             "student": str(student.id),
@@ -889,7 +892,10 @@ class TestYearEndDecisionCreate:
         response = client.post(self.URL, data, format="json")
         assert response.status_code == status.HTTP_201_CREATED, response.data
         assert response.data["data"]["decision"] == "ADMIS"
-        assert response.data["data"]["moyenne_annuelle"] is None
+        assert response.data["data"]["classe_origine"] == student.classe_actuelle_id
+        assert response.data["data"]["moyenne_annuelle"] is not None
+        assert Decimal(response.data["data"]["moyenne_annuelle"]) > 0
+        assert response.data["data"]["date_decision"] is not None
 
     def test_create_decision_redouble(
         self, director, student, school_year
@@ -903,8 +909,10 @@ class TestYearEndDecisionCreate:
         response = client.post(self.URL, data, format="json")
         assert response.status_code == status.HTTP_201_CREATED, response.data
         assert response.data["data"]["decision"] == "REDOUBLE"
-        # pas de classe_destination pour un redoublement
+        assert response.data["data"]["classe_origine"] == student.classe_actuelle_id
         assert response.data["data"]["classe_destination"] is None
+        assert response.data["data"]["moyenne_annuelle"] is not None
+        assert response.data["data"]["date_decision"] is not None
 
     def test_admis_requires_classe_destination(
         self, director, student, school_year
@@ -939,7 +947,9 @@ class TestYearEndDecisionCreate:
             student=student,
             school_year=school_year,
             decision=YearEndDecision.Decision.ADMIS,
+            classe_origine=student.classe_actuelle,
             classe_destination=school_class,
+            moyenne_annuelle=Decimal("12.00"),
             prise_par=director,
         )
         client = jwt_client(director)
@@ -1002,7 +1012,9 @@ class TestYearEndDecisionList:
             student=student,
             school_year=school_year,
             decision=YearEndDecision.Decision.ADMIS,
+            classe_origine=student.classe_actuelle,
             classe_destination=school_class,
+            moyenne_annuelle=Decimal("12.00"),
             prise_par=director,
         )
         client = jwt_client(director)
@@ -1020,7 +1032,9 @@ class TestYearEndDecisionList:
             student=student,
             school_year=school_year,
             decision=YearEndDecision.Decision.ADMIS,
+            classe_origine=student.classe_actuelle,
             classe_destination=school_class,
+            moyenne_annuelle=Decimal("12.00"),
             prise_par=None,
         )
         other_user = User.objects.create_user(
@@ -1059,7 +1073,9 @@ class TestPromotionsBulk:
             student=student,
             school_year=school_year,
             decision=YearEndDecision.Decision.ADMIS,
+            classe_origine=student.classe_actuelle,
             classe_destination=classe_dest,
+            moyenne_annuelle=Decimal("12.00"),
             prise_par=director,
         )
         YearEndDecision.objects.create(
@@ -1067,7 +1083,9 @@ class TestPromotionsBulk:
             student=student_b,
             school_year=school_year,
             decision=YearEndDecision.Decision.ADMIS,
+            classe_origine=student_b.classe_actuelle,
             classe_destination=classe_dest,
+            moyenne_annuelle=Decimal("14.00"),
             prise_par=director,
         )
         client = jwt_client(director)
