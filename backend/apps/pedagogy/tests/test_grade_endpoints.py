@@ -898,8 +898,11 @@ class TestYearEndDecisionCreate:
         assert response.data["data"]["date_decision"] is not None
 
     def test_create_decision_redouble(
-        self, director, student, school_year
+        self, director, student, school_year,
+        subject, period, teacher, evaluation, grade,
     ):
+        evaluation.is_locked = True
+        evaluation.save(update_fields=["is_locked"])
         client = jwt_client(director)
         data = {
             "student": str(student.id),
@@ -913,6 +916,20 @@ class TestYearEndDecisionCreate:
         assert response.data["data"]["classe_destination"] is None
         assert response.data["data"]["moyenne_annuelle"] is not None
         assert response.data["data"]["date_decision"] is not None
+
+    def test_create_decision_no_grades_422(
+        self, director, student, school_year
+    ):
+        client = jwt_client(director)
+        data = {
+            "student": str(student.id),
+            "school_year": str(school_year.id),
+            "decision": "ADMIS",
+            "classe_destination": str(student.classe_actuelle_id),
+        }
+        response = client.post(self.URL, data, format="json")
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY, response.data
+        assert "aucune note" in response.data["message"].lower()
 
     def test_admis_requires_classe_destination(
         self, director, student, school_year

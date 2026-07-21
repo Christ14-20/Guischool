@@ -1,4 +1,4 @@
-from rest_framework import viewsets, mixins, status
+from rest_framework import serializers, viewsets, mixins, status
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.filters import SearchFilter, OrderingFilter
 from rest_framework.permissions import IsAuthenticated
@@ -1293,7 +1293,11 @@ class YearEndDecisionViewSet(
                 "Année scolaire non trouvée.",
                 status_code=status.HTTP_404_NOT_FOUND,
             )
-        self.perform_create(serializer)
+        try:
+            self.perform_create(serializer)
+        except serializers.ValidationError as exc:
+            detail = exc.detail[0] if isinstance(exc.detail, list) else str(exc.detail)
+            return error_response(detail, status_code=status.HTTP_422_UNPROCESSABLE_ENTITY)
         return created_response(
             YearEndDecisionSerializer(serializer.instance, context=self.get_serializer_context()).data
         )

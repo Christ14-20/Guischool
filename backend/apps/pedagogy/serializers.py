@@ -608,7 +608,13 @@ class YearEndDecisionSerializer(serializers.ModelSerializer):
 
         from apps.pedagogy.services.grade_service import compute_moyenne_annuelle
         school_year = validated_data["school_year"]
-        validated_data["moyenne_annuelle"] = compute_moyenne_annuelle(student, school_year)
+        moyenne = compute_moyenne_annuelle(student, school_year)
+        if moyenne is None:
+            raise serializers.ValidationError(
+                "Impossible de calculer une moyenne annuelle : aucune note saisie "
+                "sur cette année scolaire pour cet élève."
+            )
+        validated_data["moyenne_annuelle"] = moyenne
 
         return super().create(validated_data)
 

@@ -169,7 +169,7 @@ def compute_moyenne_annuelle(student, school_year):
             moyennes.append(result["moyenne_generale"])
 
     if not moyennes:
-        return Decimal("0.00")
+        return None
 
     return sum(moyennes) / len(moyennes)
 
