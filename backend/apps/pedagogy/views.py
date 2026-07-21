@@ -5,13 +5,14 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Q
+from django.utils import timezone
 
 from core.permissions import HasPermission
 from core.pagination import StandardPagination
 from core.utils import success_response, created_response, error_response
 from apps.pedagogy.models import (
     Level, SchoolClass, SchoolYear, AcademicPeriod, Subject, ClassSubject,
-    Student, Guardian, Attendance,
+    Student, Guardian, Attendance, Evaluation, Grade,
 )
 from apps.pedagogy.serializers import (
     LevelSerializer,
@@ -34,6 +35,12 @@ from apps.pedagogy.serializers import (
     AttendanceSerializer,
     AttendanceUpdateSerializer,
     AttendanceJustifySerializer,
+    EvaluationSerializer,
+    EvaluationCreateSerializer,
+    BulkGradeSerializer,
+    GradeItemSerializer,
+    GradeSerializer,
+    GradeModifySerializer,
 )
 from apps.pedagogy.services.school_year_service import (
     set_current_school_year,
@@ -811,3 +818,286 @@ class AttendanceViewSet(
         return success_response(
             {"id": str(attendance.id), "status": attendance.status}
         )
+
+
+class EvaluationViewSet(
+    mixins.CreateModelMixin,
+    mixins.ListModelMixin,
+    mixins.RetrieveModelMixin,
+    viewsets.GenericViewSet,
+):
+    """
+    /pedagogy/evaluations/ — gestion des évaluations (Épic 6).
+
+    - POST   /pedagogy/evaluations/                         créer une évaluation
+    - GET    /pedagogy/evaluations/                         lister les évaluations (filtrable par classe/période)
+    - GET    /pedagogy/evaluations/{id}/                    détail d'une évaluation
+    - PATCH  /pedagogy/evaluations/{id}/lock/               verrouiller (notes:lock)
+    """
+
+    queryset = Evaluation.objects.all()
+    permission_classes = [IsAuthenticated]
+
+    def get_permissions(self):
+        if self.action == "create":
+            return [IsAuthenticated(), HasPermission("notes:create:evaluation")]
+        if self.action == "lock":
+            return [IsAuthenticated(), HasPermission("notes:lock")]
+        return [IsAuthenticated()]
+
+    def get_serializer_class(self):
+        if self.action == "create":
+            return EvaluationCreateSerializer
+        return EvaluationSerializer
+
+    def get_queryset(self):
+        qs = Evaluation.objects.filter(tenant=self.request.tenant).order_by("-date", "-created_at")
+        params = self.request.query_params
+        classe_id = params.get("classe_id")
+        if classe_id:
+            qs = qs.filter(class_obj_id=classe_id)
+        period_id = params.get("period_id")
+        if period_id:
+            qs = qs.filter(period_id=period_id)
+        return qs.select_related("class_obj", "subject", "period", "teacher")
+
+    def perform_create(self, serializer):
+        self._check_teacher_scope(serializer)
+        serializer.save(tenant=self.request.tenant, teacher=self.request.user)
+
+    def _check_teacher_scope(self, serializer):
+        user = self.request.user
+        if user.role.name != "TEACHER":
+            return
+        class_id = serializer.validated_data.get("class_obj").id
+        subject_id = serializer.validated_data.get("subject").id
+        assigned = ClassSubject.objects.filter(
+            class_obj_id=class_id,
+            subject_id=subject_id,
+            teacher=user,
+        ).exists()
+        if not assigned:
+            raise PermissionError("Vous ne pouvez créer une évaluation que pour vos propres matières.")
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            self.perform_create(serializer)
+        except PermissionError as e:
+            return error_response(str(e), status_code=status.HTTP_403_FORBIDDEN)
+        return created_response(EvaluationSerializer(serializer.instance, context=self.get_serializer_context()).data)
+
+    @action(detail=True, methods=["patch"])
+    def lock(self, request, pk=None):
+        evaluation = self.get_object()
+        if evaluation.is_locked:
+            return error_response(
+                "L'évaluation est déjà verrouillée.",
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            )
+        missing_count = self._count_students_without_grades(evaluation)
+        if missing_count > 0:
+            return error_response(
+                f"Impossible de verrouiller : {missing_count} élève(s) n'ont pas encore de note saisie",
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            )
+        evaluation.is_locked = True
+        evaluation.save(update_fields=["is_locked"])
+        return success_response(
+            {"id": str(evaluation.id), "is_locked": True}
+        )
+
+    def _count_students_without_grades(self, evaluation) -> int:
+        enrolled = (
+            Student.objects.filter(
+                classe_actuelle=evaluation.class_obj,
+                tenant=self.request.tenant,
+                statut=Student.Status.ACTIF,
+            ).count()
+        )
+        graded = Grade.objects.filter(evaluation=evaluation).count()
+        return max(0, enrolled - graded)
+
+
+class GradeViewSet(
+    mixins.ListModelMixin,
+    mixins.RetrieveModelMixin,
+    viewsets.GenericViewSet,
+):
+    """
+    Endpoints pour les notes (Épic 6).
+
+    - POST   /pedagogy/grades/bulk/                           saisie en masse
+    - GET    /pedagogy/grades/                                lister les notes (filtrable par évaluation)
+    - GET    /pedagogy/grades/{id}/                           détail d'une note
+    - POST   /pedagogy/grades/{id}/valider/                   valider une note (notes:validate — DIRECTOR)
+    - PATCH  /pedagogy/grades/{id}/modifier-apres-validation/ corriger (DIRECTOR + justification)
+    """
+
+    queryset = Grade.objects.all()
+    permission_classes = [IsAuthenticated]
+
+    def get_permissions(self):
+        if self.action in ("valider", "modifier_apres_validation"):
+            return [IsAuthenticated(), HasPermission("notes:validate")]
+        if self.action == "bulk":
+            return [IsAuthenticated(), HasPermission("notes:create:evaluation")]
+        return [IsAuthenticated()]
+
+    def get_serializer_class(self):
+        if self.action == "bulk":
+            return BulkGradeSerializer
+        if self.action in ("validate", "modifier_apres_validation"):
+            return GradeModifySerializer
+        return GradeSerializer
+
+    def get_queryset(self):
+        qs = Grade.objects.filter(tenant=self.request.tenant).order_by(
+            "student__nom", "student__prenom"
+        )
+        params = self.request.query_params
+        evaluation_id = params.get("evaluation_id")
+        if evaluation_id:
+            qs = qs.filter(evaluation_id=evaluation_id)
+        student_id = params.get("student_id")
+        if student_id:
+            qs = qs.filter(student_id=student_id)
+        return qs.select_related("student", "evaluation", "validated_by", "created_by")
+
+    @action(detail=False, methods=["post"])
+    def bulk(self, request, *args, **kwargs):
+        serializer = BulkGradeSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+
+        evaluation = self._get_evaluation_or_404(data["evaluation_id"])
+        if evaluation.is_locked:
+            return error_response(
+                "L'évaluation est verrouillée : impossible d'ajouter ou de modifier des notes.",
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            )
+
+        created_count = 0
+        warnings = []
+        for item in data["grades"]:
+            try:
+                Grade.objects.create(
+                    tenant=self.request.tenant,
+                    evaluation=evaluation,
+                    student_id=item["student_id"],
+                    score=item.get("score"),
+                    is_absent=item.get("is_absent", False),
+                    created_by=request.user,
+                )
+                created_count += 1
+            except Exception as exc:
+                warnings.append({
+                    "student_id": str(item["student_id"]),
+                    "message": str(exc),
+                })
+
+        return created_response({
+            "created_count": created_count,
+            "warnings": warnings,
+        })
+
+    @action(detail=True, methods=["post"])
+    def valider(self, request, pk=None):
+        grade = self.get_object()
+        if not grade.evaluation.is_locked:
+            return error_response(
+                "L'évaluation doit être verrouillée avant de pouvoir valider les notes.",
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+        if grade.is_validated:
+            return error_response(
+                "Cette note est déjà validée.",
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+        grade.is_validated = True
+        grade.validated_by = request.user
+        grade.validated_at = timezone.now()
+        grade.save(update_fields=["is_validated", "validated_by", "validated_at"])
+
+        self._update_evaluation_published_status(grade.evaluation)
+
+        audit_log(
+            user=request.user,
+            tenant=request.tenant,
+            action="notes:validate",
+            target_model="Grade",
+            target_id=grade.id,
+            ip_address=get_client_ip(request),
+        )
+        return success_response({
+            "id": str(grade.id),
+            "is_validated": True,
+            "validated_at": grade.validated_at.isoformat(),
+        })
+
+    @action(detail=True, methods=["patch"])
+    def modifier_apres_validation(self, request, pk=None):
+        grade = self.get_object()
+        if not grade.is_validated:
+            return error_response(
+                "Cette note n'est pas encore validée. Utilisez PATCH /pedagogy/grades/{id}/ pour la modifier.",
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+        serializer = GradeModifySerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        justification = serializer.validated_data.get("justification")
+
+        old_score = grade.score
+        old_is_absent = grade.is_absent
+        old_comment = grade.comment
+
+        if "score" in serializer.validated_data:
+            grade.score = serializer.validated_data["score"]
+        if "is_absent" in serializer.validated_data:
+            grade.is_absent = serializer.validated_data["is_absent"]
+        if "comment" in serializer.validated_data:
+            grade.comment = serializer.validated_data["comment"]
+
+        grade.is_validated = False
+        grade.validated_by = None
+        grade.validated_at = None
+        grade.save()
+
+        self._update_evaluation_published_status(grade.evaluation)
+
+        audit_log(
+            user=request.user,
+            tenant=request.tenant,
+            action="notes:modify-after-validation",
+            target_model="Grade",
+            target_id=grade.id,
+            extra={
+                "justification": justification,
+                "old_score": str(old_score) if old_score else None,
+                "new_score": str(grade.score) if grade.score else None,
+                "old_is_absent": old_is_absent,
+                "new_is_absent": grade.is_absent,
+            },
+            ip_address=get_client_ip(request),
+        )
+        return success_response(GradeSerializer(grade, context=self.get_serializer_context()).data)
+
+    def _get_evaluation_or_404(self, evaluation_id):
+        evaluation = Evaluation.objects.filter(
+            id=evaluation_id, tenant=self.request.tenant
+        ).first()
+        if evaluation is None:
+            from rest_framework.exceptions import NotFound
+            raise NotFound("Évaluation non trouvée.")
+        return evaluation
+
+    @staticmethod
+    def _update_evaluation_published_status(evaluation):
+        all_validated = not Grade.objects.filter(
+            evaluation=evaluation,
+            is_validated=False,
+        ).exists()
+        if evaluation.is_published != all_validated:
+            evaluation.is_published = all_validated
+            evaluation.save(update_fields=["is_published"])

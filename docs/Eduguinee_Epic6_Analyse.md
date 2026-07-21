@@ -127,7 +127,7 @@ sur **toutes les matières ayant au moins une évaluation notée** dans la péri
 | Ticket | Statut | Commit |
 |---|---|---|
 | **GRADE-MVP-01** | ✅ **Livré** | `GRADE-MVP-01` — modèles `Evaluation`+`Grade` (schéma §3.4), migration `0015`, 12 tests modèle |
-| GRADE-MVP-02 | ⏳ En attente | — |
+| **GRADE-MVP-02** | ✅ **Livré** | `GRADE-MVP-02` — endpoints saisie/validation, permissions, 21 tests endpoint |
 | GRADE-MVP-03 | ⏳ En attente | — |
 | GRADE-MVP-04 | ⏳ En attente | — |
 | GRADE-MVP-05 | ⏳ En attente | — |

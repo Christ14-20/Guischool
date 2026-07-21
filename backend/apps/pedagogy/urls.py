@@ -4,6 +4,7 @@ from rest_framework.routers import DefaultRouter
 from apps.pedagogy.views import (
     SchoolYearViewSet, PeriodViewSet, LevelViewSet, ClassViewSet,
     SubjectViewSet, ClassSubjectViewSet, AttendanceViewSet,
+    EvaluationViewSet, GradeViewSet,
 )
 
 router = DefaultRouter()
@@ -43,5 +44,36 @@ urlpatterns = [
         "attendances/<uuid:pk>/justify/",
         AttendanceViewSet.as_view({"patch": "justify"}),
         name="attendance-justify",
+    ),
+    # Épic 6 — Notes, Évaluations, Bulletins
+    path(
+        "evaluations/",
+        EvaluationViewSet.as_view({"get": "list", "post": "create"}),
+        name="evaluation-list",
+    ),
+    path(
+        "evaluations/<uuid:pk>/",
+        EvaluationViewSet.as_view({"get": "retrieve"}),
+        name="evaluation-detail",
+    ),
+    path(
+        "evaluations/<uuid:pk>/lock/",
+        EvaluationViewSet.as_view({"patch": "lock"}),
+        name="evaluation-lock",
+    ),
+    path(
+        "grades/bulk/",
+        GradeViewSet.as_view({"post": "bulk"}),
+        name="grades-bulk",
+    ),
+    path(
+        "grades/",
+        GradeViewSet.as_view({"get": "list"}),
+        name="grades-list",
+    ),
+    path(
+        "grades/<uuid:pk>/",
+        GradeViewSet.as_view({"get": "retrieve"}),
+        name="grade-detail",
     ),
 ]

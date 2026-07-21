@@ -66,8 +66,8 @@ def make_user(email="test@school.gn", role_name="DIRECTOR", tenant=None):
 class TestPermission:
     def test_codename_format_module_action(self):
         """Le module est auto-dérivé du codename au format module:action."""
-        perm = Permission.objects.create(codename="notes:create:evaluation")
-        assert perm.module == "notes"
+        perm = Permission.objects.create(codename="testperm:auto:module")
+        assert perm.module == "testperm"
 
     def test_codename_unique(self):
         """Deux permissions ne peuvent pas avoir le même codename."""

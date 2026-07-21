@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from apps.pedagogy.models import (
     Level, SchoolClass, SchoolYear, AcademicPeriod, Subject, ClassSubject,
-    Student, Guardian, Enrollment, Attendance,
+    Student, Guardian, Enrollment, Attendance, Evaluation, Grade,
 )
 from apps.pedagogy.services.school_year_service import (
     validate_no_period_overlap,
@@ -447,3 +447,112 @@ class AttendanceUpdateSerializer(serializers.Serializer):
 
 class AttendanceJustifySerializer(serializers.Serializer):
     justification_text = serializers.CharField()
+
+
+# ── Épic 6 — Notes, Évaluations, Bulletins ────────────────────────────────────
+
+
+class EvaluationSerializer(serializers.ModelSerializer):
+    class_obj = serializers.PrimaryKeyRelatedField(
+        queryset=SchoolClass.objects.all()
+    )
+    subject = serializers.PrimaryKeyRelatedField(queryset=Subject.objects.all())
+    period = serializers.PrimaryKeyRelatedField(
+        queryset=AcademicPeriod.objects.all()
+    )
+    student_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Evaluation
+        fields = [
+            "id", "class_obj", "subject", "period", "teacher",
+            "type", "title", "max_score", "coefficient", "date",
+            "is_locked", "is_published", "student_count",
+        ]
+        read_only_fields = ["id", "teacher", "is_locked", "is_published", "student_count"]
+
+    def get_student_count(self, obj) -> int:
+        return obj.class_obj.current_headcount
+
+
+class EvaluationCreateSerializer(serializers.ModelSerializer):
+    class_id = serializers.PrimaryKeyRelatedField(
+        queryset=SchoolClass.objects.all(), source="class_obj", write_only=True
+    )
+    subject_id = serializers.PrimaryKeyRelatedField(
+        queryset=Subject.objects.all(), source="subject", write_only=True
+    )
+    period_id = serializers.PrimaryKeyRelatedField(
+        queryset=AcademicPeriod.objects.all(), source="period", write_only=True
+    )
+
+    class Meta:
+        model = Evaluation
+        fields = [
+            "class_id", "subject_id", "period_id", "type", "title",
+            "max_score", "coefficient", "date",
+        ]
+
+    def validate(self, attrs):
+        class_obj = attrs.get("class_obj")
+        subject = attrs.get("subject")
+        period = attrs.get("period")
+        if period and class_obj and period.school_year_id != class_obj.school_year_id:
+            raise serializers.ValidationError(
+                {"period_id": "La période n'appartient pas à l'année de la classe."}
+            )
+        return attrs
+
+
+class GradeItemSerializer(serializers.Serializer):
+    student_id = serializers.UUIDField()
+    score = serializers.DecimalField(
+        max_digits=5, decimal_places=2, required=False, allow_null=True
+    )
+    is_absent = serializers.BooleanField(required=False, default=False)
+
+
+class BulkGradeSerializer(serializers.Serializer):
+    evaluation_id = serializers.UUIDField()
+    grades = GradeItemSerializer(many=True, min_length=1)
+
+    def validate_grades(self, value):
+        if not value:
+            raise serializers.ValidationError("Au moins une note est requise.")
+        return value
+
+
+class GradeSerializer(serializers.ModelSerializer):
+    student = serializers.SerializerMethodField()
+    validated_by = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Grade
+        fields = [
+            "id", "student", "evaluation", "score", "is_absent", "note_convertie",
+            "comment", "is_validated", "validated_by", "validated_at",
+        ]
+        read_only_fields = fields
+
+    def get_student(self, obj):
+        return {
+            "id": obj.student.id,
+            "nom_complet": f"{obj.student.prenom} {obj.student.nom}",
+        }
+
+    def get_validated_by(self, obj):
+        if obj.validated_by is None:
+            return None
+        return {
+            "id": obj.validated_by.id,
+            "nom_complet": f"{obj.validated_by.prenom} {obj.validated_by.nom}",
+        }
+
+
+class GradeModifySerializer(serializers.Serializer):
+    score = serializers.DecimalField(
+        max_digits=5, decimal_places=2, required=False, allow_null=True
+    )
+    is_absent = serializers.BooleanField(required=False)
+    comment = serializers.CharField(required=False, allow_blank=True)
+    justification = serializers.CharField(required=True)

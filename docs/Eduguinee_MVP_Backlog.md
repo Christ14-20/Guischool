@@ -12,10 +12,10 @@
 > | 3 — Structure Pédagogique | ✅ **TERMINÉ** | `STRUCT-01..06` |
 > | 4 — Élèves (inscription, réinscription) | ✅ **TERMINÉ** | `STUDENT-MVP-01..05` |
 > | 5 — Présences | ✅ **TERMINÉ** | `ATT-01..03` |
-> | 6 — Notes, Évaluations, Bulletins | 🔜 **EN COURS** | `GRADE-MVP-01` (modèles) |
+> | 6 — Notes, Évaluations, Bulletins | 🔜 **EN COURS** | `GRADE-MVP-01` (modèles), `GRADE-MVP-02` (endpoints) |
 > | 7..11 — Modules métier | ⏳ En attente | — |
 > >
-> **Couverture de tests :** 259 tests backend · **Build frontend :** ✅ 0 erreur · **`python manage.py check` :** ✅ 0 issue
+> **Couverture de tests :** 280 tests backend · **Build frontend :** ✅ 0 erreur · **`python manage.py check` :** ✅ 0 issue
 
 **Basé sur :** Cahier des Charges Complet v2.0 + arbitrages MVP (offline reporté, App Parent en React Native, Orange Money seul en V1)
 **Usage :** Chaque épic est un bloc de valeur livrable. Chaque ticket est copiable tel quel dans Trello/Jira/Linear. Ne pas démarrer un épic tant que ses dépendances ne sont pas closes — l'ordre proposé n'est pas arbitraire, chaque étape a besoin de la précédente pour être testable de bout en bout.
@@ -365,13 +365,15 @@
 - [x] Tests modèle (12) : conversion barèmes 20/40/10, borne [0,20], unicité, ABS → note_convertie null
 **Labels :** `notes` `backend` `priorité-haute`
 
-### 🃏 [GRADE-MVP-02] Saisie et validation
-**Priorité :** 🔴 Bloquant
-- [ ] `POST /pedagogy/evaluations/` (création par l'enseignant)
-- [ ] `POST /pedagogy/grades/bulk/` (saisie en masse, une ligne par élève)
-- [ ] `PATCH /pedagogy/evaluations/{id}/lock/` (verrouillage par l'enseignant)
-- [ ] `POST /grades/{id}/valider/` (validation par le Directeur — passage `valide=True`, verrouillage de la modification)
-- [ ] Modification d'une note déjà validée réservée au Directeur avec justification obligatoire (log simple, pas de versioning complet en V1)
+### 🃏 [GRADE-MVP-02] Saisie et validation ✅
+**Priorité :** 🔴 Bloquant · **Commit :** `GRADE-MVP-02`
+- [x] `POST /pedagogy/evaluations/` — création (TEACHER scoped, DIRECTOR, STUDENT_STUDIES)
+- [x] `POST /pedagogy/grades/bulk/` — saisie en masse, rejet individuel avec `warnings`, ABS→score null, 422 si verrouillé
+- [x] `PATCH /pedagogy/evaluations/{id}/lock/` — hard-block 422 si notes manquantes, 422 si déjà verrouillé
+- [x] `POST /grades/{id}/valider/` — DIRECTOR seul, verrouillage requis, audit_log ; `is_published` auto quand toutes validées
+- [x] `PATCH /grades/{id}/modifier-apres-validation/` — DIRECTOR + justification obligatoire, reset validation + is_published
+- [x] Permissions seedées (`notes:create:evaluation`, `notes:read`, `notes:lock`, `notes:validate`) + mapping rôles (DIRECTOR, STUDENT_STUDIES, TEACHER, PARENT)
+- [x] Tests endpoint (21) : création, scope TEACHER, tenant isolation, verrouillage, bulk, validation, modification
 **Labels :** `notes` `backend` `priorité-haute`
 
 ### 🃏 [GRADE-MVP-03] Calcul des moyennes et bulletin
