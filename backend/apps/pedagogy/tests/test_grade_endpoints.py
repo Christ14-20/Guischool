@@ -468,9 +468,12 @@ class TestGradeBulk:
         assert response.status_code == status.HTTP_201_CREATED, response.data
         assert response.data["data"]["created_count"] == 2
         assert response.data["data"]["warnings"] == []
+        assert response.data["data"]["stats"]["moyenne"] == 13.25
+        assert response.data["data"]["stats"]["mediane"] == 13.25
         assert Grade.objects.filter(evaluation=evaluation).count() == 2
 
     def test_bulk_absent(self, director, evaluation, student):
+        """Score null pour ABS → stats vides."""
         client = jwt_client(director)
         data = {
             "evaluation_id": str(evaluation.id),
@@ -484,6 +487,24 @@ class TestGradeBulk:
         assert grade.is_absent is True
         assert grade.score is None
         assert grade.note_convertie is None
+        assert response.data["data"]["stats"] == {}
+
+    def test_bulk_stats(self, director, evaluation, student, student_b):
+        """Vérifie le calcul des stats."""
+        client = jwt_client(director)
+        data = {
+            "evaluation_id": str(evaluation.id),
+            "grades": [
+                {"student_id": str(student.id), "score": "14.00"},
+                {"student_id": str(student_b.id), "score": "10.00"},
+            ],
+        }
+        response = client.post(self.URL, data, format="json")
+        assert response.status_code == status.HTTP_201_CREATED, response.data
+        stats = response.data["data"]["stats"]
+        assert stats["moyenne"] == 12.0
+        assert stats["mediane"] == 12.0
+        assert isinstance(stats["ecart_type"], float)
 
     def test_bulk_individual_rejection(
         self, director, evaluation, student, student_b

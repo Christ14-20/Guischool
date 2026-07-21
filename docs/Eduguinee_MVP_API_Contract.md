@@ -610,6 +610,7 @@ Convention uniforme sur toutes les listes : `?champ=valeur` pour un filtre exact
 ### `POST /grades/{id}/valider/`
 **Auth :** permission `notes:validate` (`DIRECTOR` uniquement en MVP)
 **Requête :** `{}` — **Réponse `200` :** `{"data": {"id": "...", "is_validated": true, "validated_at": "2025-10-22T09:00:00Z"}}`
+**Erreur `400` :** si l'évaluation n'est pas verrouillée → `{"message": "L'évaluation doit être verrouillée avant de pouvoir valider les notes."}`
 
 ### `PATCH /grades/{id}/modifier-apres-validation/`
 **Requête (justification obligatoire) :**
@@ -617,7 +618,7 @@ Convention uniforme sur toutes les listes : `?champ=valeur` pour un filtre exact
 {"score": "15.00", "justification": "Erreur de saisie initiale, correction demandée par l'enseignant le 23/10"}
 ```
 **Réponse `200` :** note mise à jour + entrée créée dans `AuditLog`.
-**Erreur `403` :** si l'appelant n'est pas `DIRECTOR` → `{"message": "Seul le Directeur des études peut modifier une note déjà validée"}`
+**Erreur `403` :** si l'appelant n'est pas `DIRECTOR` → `{"message": "Seul le Directeur peut modifier une note déjà validée"}`
 
 ### `GET /students/{id}/moyenne/`
 **Query params :** `?period_id=...`

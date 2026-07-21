@@ -948,7 +948,7 @@ class GradeViewSet(
     def get_serializer_class(self):
         if self.action == "bulk":
             return BulkGradeSerializer
-        if self.action in ("validate", "modifier_apres_validation"):
+        if self.action in ("valider", "modifier_apres_validation"):
             return GradeModifySerializer
         return GradeSerializer
 
@@ -980,9 +980,10 @@ class GradeViewSet(
 
         created_count = 0
         warnings = []
+        scores = []
         for item in data["grades"]:
             try:
-                Grade.objects.create(
+                grade = Grade.objects.create(
                     tenant=self.request.tenant,
                     evaluation=evaluation,
                     student_id=item["student_id"],
@@ -991,15 +992,32 @@ class GradeViewSet(
                     created_by=request.user,
                 )
                 created_count += 1
+                if grade.score is not None:
+                    scores.append(float(grade.score))
             except Exception as exc:
                 warnings.append({
                     "student_id": str(item["student_id"]),
                     "message": str(exc),
                 })
 
+        stats = {}
+        if scores:
+            n = len(scores)
+            sorted_scores = sorted(scores)
+            stats["moyenne"] = round(sum(scores) / n, 2)
+            if n % 2 == 1:
+                stats["mediane"] = float(sorted_scores[n // 2])
+            else:
+                mid = n // 2
+                stats["mediane"] = round((sorted_scores[mid - 1] + sorted_scores[mid]) / 2, 2)
+            mean = sum(scores) / n
+            variance = sum((s - mean) ** 2 for s in scores) / n
+            stats["ecart_type"] = round(variance ** 0.5, 2)
+
         return created_response({
             "created_count": created_count,
             "warnings": warnings,
+            "stats": stats,
         })
 
     @action(detail=True, methods=["post"])
