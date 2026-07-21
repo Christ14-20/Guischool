@@ -5,6 +5,7 @@ from apps.pedagogy.views import (
     SchoolYearViewSet, PeriodViewSet, LevelViewSet, ClassViewSet,
     SubjectViewSet, ClassSubjectViewSet, AttendanceViewSet,
     EvaluationViewSet, GradeViewSet,
+    task_status,
 )
 
 router = DefaultRouter()
@@ -75,5 +76,15 @@ urlpatterns = [
         "grades/<uuid:pk>/",
         GradeViewSet.as_view({"get": "retrieve"}),
         name="grade-detail",
+    ),
+    path(
+        "classes/<uuid:pk>/classement/",
+        ClassViewSet.as_view({"get": "classement"}),
+        name="class-classement",
+    ),
+    path(
+        "tasks/<uuid:task_id>/status/",
+        task_status,
+        name="task-status",
     ),
 ]

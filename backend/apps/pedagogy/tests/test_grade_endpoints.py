@@ -668,3 +668,203 @@ class TestGradeModifyAfterValidation:
             format="json",
         )
         assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+# ── Moyenne endpoint ──────────────────────────────────────────────────────────
+
+
+class TestStudentMoyenne:
+    URL_TEMPLATE = "/api/v1/students/{student_id}/moyenne/"
+
+    def _url(self, student):
+        return self.URL_TEMPLATE.format(student_id=student.id)
+
+    def test_moyenne_requires_period(
+        self, director, student
+    ):
+        client = jwt_client(director)
+        response = client.get(self._url(student))
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+    def test_moyenne_unknown_period(
+        self, director, student
+    ):
+        client = jwt_client(director)
+        response = client.get(
+            self._url(student),
+            {"period_id": "00000000-0000-0000-0000-000000000000"},
+        )
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_moyenne_returns_moyenne(
+        self, director, student, evaluation, class_subject, period
+    ):
+        evaluation.is_locked = True
+        evaluation.save(update_fields=["is_locked"])
+        Grade.objects.create(
+            tenant=student.tenant,
+            student=student,
+            evaluation=evaluation,
+            score=Decimal("14.00"),
+        )
+        client = jwt_client(director)
+        response = client.get(
+            self._url(student),
+            {"period_id": period.id},
+        )
+        assert response.status_code == status.HTTP_200_OK, response.data
+        data = response.data["data"]
+        assert data["moyenne_generale"] is not None
+        assert data["mention"] is not None
+        assert len(data["par_matiere"]) >= 1
+
+    def test_moyenne_no_grades(
+        self, director, student, period
+    ):
+        client = jwt_client(director)
+        response = client.get(
+            self._url(student),
+            {"period_id": period.id},
+        )
+        assert response.status_code == status.HTTP_200_OK
+        data = response.data["data"]
+        assert data["moyenne_generale"] is None
+
+    def test_moyenne_tenant_isolation(
+        self, student, other_tenant, director_role, period
+    ):
+        other_user = User.objects.create_user(
+            email="autre@tenant-b.gn",
+            password=PASSWORD,
+            tenant=other_tenant,
+            role=director_role,
+            username="autre_tenant_moy",
+        )
+        client = jwt_client(other_user)
+        response = client.get(
+            self.URL_TEMPLATE.format(student_id=student.id),
+            {"period_id": period.id},
+        )
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+
+
+# ── Classement endpoint ───────────────────────────────────────────────────────
+
+
+class TestClassClassement:
+    URL = "/api/v1/pedagogy/classes/{class_id}/classement/"
+
+    def test_classement_requires_period(self, director, school_class):
+        client = jwt_client(director)
+        response = client.get(self.URL.format(class_id=school_class.id))
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+    def test_classement_returns_ordered_list(
+        self, director, student, student_b, school_class,
+        evaluation, class_subject, period,
+    ):
+        evaluation.is_locked = True
+        evaluation.save(update_fields=["is_locked"])
+        Grade.objects.create(
+            tenant=student.tenant,
+            student=student,
+            evaluation=evaluation,
+            score=Decimal("18.00"),
+            is_validated=True,
+        )
+        Grade.objects.create(
+            tenant=student_b.tenant,
+            student=student_b,
+            evaluation=evaluation,
+            score=Decimal("12.00"),
+            is_validated=True,
+        )
+        client = jwt_client(director)
+        response = client.get(
+            self.URL.format(class_id=school_class.id),
+            {"period_id": period.id},
+        )
+        assert response.status_code == status.HTTP_200_OK, response.data
+        data = response.data["data"]
+        assert "classement" in data
+        assert len(data["classement"]) >= 2
+
+    def test_classement_tenant_isolation(
+        self, school_class, other_tenant, director_role, period
+    ):
+        other_user = User.objects.create_user(
+            email="autre@tenant-b.gn",
+            password=PASSWORD,
+            tenant=other_tenant,
+            role=director_role,
+            username="autre_tenant_cls",
+        )
+        client = jwt_client(other_user)
+        response = client.get(
+            self.URL.format(class_id=school_class.id),
+            {"period_id": period.id},
+        )
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+
+
+# ── Bulletin endpoint ─────────────────────────────────────────────────────────
+
+
+class TestStudentBulletin:
+    URL_TEMPLATE = "/api/v1/students/{student_id}/bulletin/"
+
+    def _url(self, student):
+        return self.URL_TEMPLATE.format(student_id=student.id)
+
+    def test_bulletin_requires_period(self, director, student):
+        client = jwt_client(director)
+        response = client.post(self._url(student))
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+    def test_bulletin_returns_202(
+        self, director, student, period
+    ):
+        client = jwt_client(director)
+        response = client.post(
+            self._url(student),
+            {"period_id": period.id},
+            format="json",
+        )
+        assert response.status_code == status.HTTP_202_ACCEPTED, response.data
+        data = response.data["data"]
+        assert "task_id" in data
+        assert data["status"] == "processing"
+
+    def test_bulletin_unknown_student_404(
+        self, director, period
+    ):
+        client = jwt_client(director)
+        url = self.URL_TEMPLATE.format(student_id="00000000-0000-0000-0000-000000000000")
+        response = client.post(url, {"period_id": period.id}, format="json")
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_bulletin_unknown_period(
+        self, director, student
+    ):
+        client = jwt_client(director)
+        response = client.post(
+            self._url(student),
+            {"period_id": "00000000-0000-0000-0000-000000000000"},
+            format="json",
+        )
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+
+
+# ── Task Status endpoint ──────────────────────────────────────────────────────
+
+
+class TestTaskStatus:
+    URL_TEMPLATE = "/api/v1/pedagogy/tasks/{task_id}/status/"
+
+    def test_unknown_task_404(self, director):
+        client = jwt_client(director)
+        url = self.URL_TEMPLATE.format(
+            task_id="00000000-0000-0000-0000-000000000000"
+        )
+        response = client.get(url)
+        assert response.status_code == status.HTTP_404_NOT_FOUND

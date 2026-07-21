@@ -24,6 +24,16 @@ urlpatterns = [
         name="student-archiver",
     ),
     path(
+        "<uuid:pk>/moyenne/",
+        StudentViewSet.as_view({"get": "moyenne"}),
+        name="student-moyenne",
+    ),
+    path(
+        "<uuid:pk>/bulletin/",
+        StudentViewSet.as_view({"post": "bulletin"}),
+        name="student-bulletin",
+    ),
+    path(
         "<uuid:student_pk>/guardians/",
         GuardianViewSet.as_view({"get": "list", "post": "create"}),
         name="student-guardians",

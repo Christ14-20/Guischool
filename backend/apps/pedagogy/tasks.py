@@ -67,3 +67,35 @@ def lock_stale_attendances():
 
     logger.info("lock_stale_attendances — %s présence(s) verrouillée(s)", locked_count)
     return locked_count
+
+
+@shared_task(
+    name="apps.pedagogy.tasks.generate_bulletin_pdf",
+    bind=True,
+)
+def generate_bulletin_pdf(self, student_id: str, period_id: str):
+    """
+    STUB — Génération du bulletin PDF (GRADE-MVP-03).
+
+    L'intégration WeasyPrint (HTML→PDF) nécessite des dépendances système
+    (libpango, libcairo, libffi) qui ne sont pas garanties sur tous les
+    environnements de développement. Cette tâche journalise l'intention et
+    retourne une URL factice ; la génération réelle du PDF (template HTML,
+    upload S3) sera livrée lors de la mise en place de l'infrastructure
+    de stockage.
+
+    Conforme à la convention §8 du contrat d'API :
+    - 202 Accepted avec task_id déclenché par la view.
+    - Le frontend pollue GET /tasks/{task_id}/status/.
+    """
+    logger.info(
+        "STUB génération bulletin — élève %s, période %s "
+        "(intégration WeasyPrint réelle à venir avec le setup S3)",
+        student_id,
+        period_id,
+    )
+    return {
+        "pdf_url": f"https://storage.eduguinee.gn/bulletins/{student_id}/{period_id}.pdf",
+        "generated_at": None,
+        "status": "done",
+    }

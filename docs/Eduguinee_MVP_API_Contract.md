@@ -623,6 +623,15 @@ Convention uniforme sur toutes les listes : `?champ=valeur` pour un filtre exact
 ### `GET /students/{id}/moyenne/`
 **Query params :** `?period_id=...`
 
+**Formule de calcul (deux niveaux, arbitrage CDC §749 + glossaire §1479) :**
+
+- **Niveau 1 — Moyenne par matière :** Pour chaque matière, Σ(note_convertie × coefficient de l'évaluation) / Σ(coefficient de l'évaluation). Les `note_convertie` sont normalisées sur 20 par `Grade.note_convertie = (score / max_score) × 20`. Les matières sans aucune note validée sont exclues. Seules les notes `is_validated=True` sont comptées.
+- **Niveau 2 — Moyenne générale :** Σ(moyenne_matière × coefficient de la matière dans la classe) / Σ(coefficient de la matière dans la classe).
+- **Arrondi :** L'arrondi académique (CDC §751) est appliqué uniquement à la sérialisation (jamais aux calculs intermédiaires).
+- **Mention :** Attribuée automatiquement selon les seuils CDC §755.
+
+**Permission requise :** `notes:read`
+
 **Réponse `200` :**
 ```json
 {
@@ -639,6 +648,8 @@ Convention uniforme sur toutes les listes : `?champ=valeur` pour un filtre exact
   }
 }
 ```
+**Erreur `400` :** si `period_id` manquant → `{"message": "Le paramètre period_id est requis."}`
+**Erreur `404` :** si l'étudiant ou la période n'existe pas → `{"message": "Ressource non trouvée"}`
 
 ### `GET /classes/{id}/classement/`
 **Query params :** `?period_id=...`
@@ -658,21 +669,27 @@ Convention uniforme sur toutes les listes : `?champ=valeur` pour un filtre exact
 }
 ```
 
-### `GET /students/{id}/bulletin/{period_id}/`
-**Réponse `200` :**
+### `POST /students/{id}/bulletin/`
+**Body (JSON) :** `{"period_id": "..."}`
+
+**Réponse `202` :** la génération du PDF est asynchrone (tâche Celery) :
 ```json
 {
   "status": "success",
   "data": {
-    "pdf_url": "https://storage.eduguinee.gn/bulletins/4d5e6f7a-.../trimestre-1.pdf",
-    "generated_at": "2025-12-21T14:00:00Z",
-    "moyenne_generale": "13.45",
-    "rang": "2/48",
-    "mention": "Assez Bien"
+    "task_id": "a1b2c3d4-...",
+    "status": "processing"
   }
 }
 ```
-Si le PDF n'est pas encore généré : `202 Accepted` avec `{"data": {"task_id": "a1b2c3d4-...", "status": "processing"}}` — le frontend fait un polling sur `GET /tasks/{task_id}/status/`.
+Le frontend fait un polling sur `GET /pedagogy/tasks/{task_id}/status/`.
+
+**Réponse `200`** (quand le PDF est déjà disponible via le résultat de tâche) : voir §8.
+
+**Permission requise :** `notes:read`
+
+**Erreur `400` :** si `period_id` manquant → `{"message": "Le paramètre period_id est requis."}`
+**Erreur `404` :** si l'étudiant ou la période n'existe pas → `{"message": "Ressource non trouvée"}`
 
 ### `POST /year-end-decisions/`
 **Requête :**
@@ -830,7 +847,7 @@ Plusieurs endpoints (génération de bulletin, génération de facture PDF, prom
 
 **Déclenchement :** réponse `202 Accepted` avec `{"data": {"task_id": "...", "status": "processing"}}`
 
-**Polling :** `GET /tasks/{task_id}/status/`
+**Polling :** `GET /pedagogy/tasks/{task_id}/status/` (cf. endpoint `task_status` dans `views.py`)
 ```json
 {"status": "success", "data": {"task_id": "...", "status": "processing"}}
 ```
@@ -900,7 +917,7 @@ Pour garder une expérience cohérente, le frontend doit afficher **exactement**
 | Notes | `/grades/{id}/modifier-apres-validation/` | PATCH |
 | Notes | `/students/{id}/moyenne/` | GET |
 | Notes | `/classes/{id}/classement/` | GET |
-| Notes | `/students/{id}/bulletin/{period_id}/` | GET |
+| Notes | `/students/{id}/bulletin/` | POST |
 | Notes | `/year-end-decisions/` | POST |
 | Notes | `/promotions/bulk/` | POST |
 | Finance | `/finance/feecategories/` | GET, POST |
@@ -911,7 +928,7 @@ Pour garder une expérience cohérente, le frontend doit afficher **exactement**
 | Finance | `/webhooks/orange-money/` | POST |
 | Finance | `/finance/invoices/` | GET |
 | Finance | `/finance/invoices/{id}/generate-pdf/` | POST |
-| Commun | `/tasks/{task_id}/status/` | GET |
+| Commun | `/pedagogy/tasks/{task_id}/status/` | GET |
 
 ---
 

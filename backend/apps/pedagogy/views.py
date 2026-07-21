@@ -1,5 +1,5 @@
 from rest_framework import viewsets, mixins, status
-from rest_framework.decorators import action
+from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.filters import SearchFilter, OrderingFilter
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -61,8 +61,15 @@ from apps.pedagogy.services.attendance_service import (
 from apps.pedagogy.tasks import (
     send_enrollment_confirmation_sms,
     send_absence_notification_sms,
+    generate_bulletin_pdf,
+)
+from apps.pedagogy.services.grade_service import (
+    compute_student_moyenne,
+    compute_class_classement,
+    arrondi_academique,
 )
 from apps.monitoring.services import audit_log, get_client_ip
+from django_celery_results.models import TaskResult
 
 
 class SchoolYearViewSet(
@@ -236,6 +243,32 @@ class ClassViewSet(
         self.perform_create(serializer)
         return created_response(serializer.data)
 
+    @action(detail=True, methods=["get"])
+    def classement(self, request, pk=None):
+        school_class = self.get_object()
+        period_id = request.query_params.get("period_id")
+        if not period_id:
+            return error_response(
+                "Le paramètre period_id est requis.",
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+        from apps.pedagogy.models import AcademicPeriod
+        period = AcademicPeriod.objects.filter(
+            id=period_id, tenant=request.tenant
+        ).first()
+        if period is None:
+            return error_response(
+                "Période non trouvée.", status_code=status.HTTP_404_NOT_FOUND
+            )
+
+        classement = compute_class_classement(school_class, period)
+        data = {
+            "classe_id": str(school_class.id),
+            "period_id": str(period.id),
+            "classement": classement,
+        }
+        return success_response(data)
+
 
 class LevelViewSet(
     mixins.ListModelMixin,
@@ -380,6 +413,8 @@ class StudentViewSet(
             return [IsAuthenticated(), HasPermission("eleves:create")]
         if self.action in ("list", "retrieve"):
             return [IsAuthenticated(), HasPermission("eleves:read")]
+        if self.action in ("moyenne", "bulletin"):
+            return [IsAuthenticated(), HasPermission("notes:read")]
         return [IsAuthenticated(), HasPermission("eleves:update")]
 
     def get_serializer_class(self):
@@ -532,6 +567,78 @@ class StudentViewSet(
         )
 
         return success_response({"id": str(student.id), "statut": student.statut})
+
+    @action(detail=True, methods=["get"])
+    def moyenne(self, request, pk=None):
+        student = self._get_object_or_404()
+        if student is None:
+            return error_response(
+                "Ressource non trouvée", status_code=status.HTTP_404_NOT_FOUND
+            )
+        period_id = request.query_params.get("period_id")
+        if not period_id:
+            return error_response(
+                "Le paramètre period_id est requis.",
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+        from apps.pedagogy.models import AcademicPeriod
+        period = AcademicPeriod.objects.filter(
+            id=period_id, tenant=request.tenant
+        ).first()
+        if period is None:
+            return error_response(
+                "Période non trouvée.", status_code=status.HTTP_404_NOT_FOUND
+            )
+
+        result = compute_student_moyenne(student, period)
+
+        par_matiere = []
+        for item in result["par_matiere"]:
+            par_matiere.append({
+                "subject": item["subject_name"],
+                "moyenne": str(arrondi_academique(item["moyenne"])),
+                "coefficient": str(item["coefficient"]),
+            })
+
+        data = {
+            "student_id": str(student.id),
+            "period_id": str(period.id),
+            "moyenne_generale": (
+                str(arrondi_academique(result["moyenne_generale"]))
+                if result["moyenne_generale"] is not None else None
+            ),
+            "mention": result["mention"],
+            "par_matiere": par_matiere,
+        }
+        return success_response(data)
+
+    @action(detail=True, methods=["post"])
+    def bulletin(self, request, pk=None):
+        student = self._get_object_or_404()
+        if student is None:
+            return error_response(
+                "Ressource non trouvée", status_code=status.HTTP_404_NOT_FOUND
+            )
+        period_id = request.data.get("period_id") or request.query_params.get("period_id")
+        if not period_id:
+            return error_response(
+                "Le paramètre period_id est requis.",
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+        from apps.pedagogy.models import AcademicPeriod
+        period = AcademicPeriod.objects.filter(
+            id=period_id, tenant=request.tenant
+        ).first()
+        if period is None:
+            return error_response(
+                "Période non trouvée.", status_code=status.HTTP_404_NOT_FOUND
+            )
+
+        task = generate_bulletin_pdf.delay(str(student.id), str(period.id))
+        return success_response(
+            {"task_id": task.id, "status": "processing"},
+            status_code=status.HTTP_202_ACCEPTED,
+        )
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
@@ -1119,3 +1226,22 @@ class GradeViewSet(
         if evaluation.is_published != all_validated:
             evaluation.is_published = all_validated
             evaluation.save(update_fields=["is_published"])
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def task_status(request, task_id):
+    try:
+        result = TaskResult.objects.get(task_id=task_id)
+    except TaskResult.DoesNotExist:
+        return error_response(
+            "Tâche non trouvée.",
+            status_code=status.HTTP_404_NOT_FOUND,
+        )
+    data = {
+        "task_id": result.task_id,
+        "status": result.status,
+        "result": result.result,
+        "date_done": result.date_done.isoformat() if result.date_done else None,
+    }
+    return success_response(data)
