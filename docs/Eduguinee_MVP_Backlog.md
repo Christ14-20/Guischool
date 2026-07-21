@@ -401,10 +401,16 @@
 
 ### 🃏 [GRADE-MVP-05] Interface de saisie et consultation des notes
 **Priorité :** 🟠 Haute
-- [ ] Page `/app/grades` : sélecteurs en cascade (année → classe → matière → période → type), tableau de saisie avec note convertie calculée en temps réel
-- [ ] Boutons "Enregistrer en brouillon" et "Enregistrer et valider" (selon permission)
-- [ ] Page `/app/students/[id]/grades` : moyennes par matière, moyenne générale, mention
-- [ ] Bouton de téléchargement du bulletin PDF depuis la fiche élève
+- [x] Page `/app/grades` : sélecteurs en cascade (année → classe → matière → période → type), tableau de saisie avec note convertie calculée en temps réel
+- [x] Boutons "Enregistrer" et "Verrouiller" (selon permission : TEACHER/DIRECTOR/STUDENT_STUDIES)
+- [x] Création inline d'évaluation si aucune n'existe pour la combinaison
+- [x] Distinction visuelle note provisoire vs validée (badge)
+- [x] Affichage des warnings de notes rejetées par l'API
+- [x] Filtrage matière par enseignant (TEACHER) ou complet (DIRECTOR/STUDENT_STUDIES)
+- [ ] Page `/app/students/[id]/notes` : moyennes par matière, moyenne générale, mention
+- [ ] Bouton de téléchargement du bulletin PDF depuis la fiche élève (async + polling)
+- [ ] Page `/app/year-end-decisions` : promotion groupée
+- [ ] Décision individuelle dans l'onglet Notes de la fiche élève
 **Labels :** `notes` `frontend` `priorité-haute`
 
 ---

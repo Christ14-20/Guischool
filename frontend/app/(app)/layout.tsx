@@ -1,12 +1,24 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React from "react";
 import Link from "next/link";
-import { signOut } from "@/auth";
+import { signOut, auth } from "@/auth";
+import {
+  FileSpreadsheet,
+  ClipboardCheck,
+} from "lucide-react";
 
-export default function TenantAppLayout({
+export default async function TenantAppLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const session = await auth();
+  const role = (session as any)?.user?.role;
+
+  const canGrade =
+    role === "DIRECTOR" || role === "TEACHER" || role === "STUDENT_STUDIES";
+  const canDecide = role === "DIRECTOR" || role === "STUDENT_STUDIES";
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex">
       {/* Sidebar principale de l'école */}
@@ -51,6 +63,24 @@ export default function TenantAppLayout({
           >
             Présences
           </Link>
+          {canGrade && (
+            <Link
+              href="/grades"
+              className="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/50 transitions-all"
+            >
+              <FileSpreadsheet className="size-4" />
+              Notes
+            </Link>
+          )}
+          {canDecide && (
+            <Link
+              href="/year-end-decisions"
+              className="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/50 transitions-all"
+            >
+              <ClipboardCheck className="size-4" />
+              Décisions
+            </Link>
+          )}
         </nav>
         <div className="border-t border-slate-800 pt-4 mt-auto">
           <form
