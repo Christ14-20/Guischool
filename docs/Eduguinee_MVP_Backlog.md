@@ -2,7 +2,7 @@
 ## Découpage en épics et tickets, ordonné par dépendance technique
 
 > **🗓 Dernière mise à jour :** 2026-07-20
-> **📍 Avancement global :** Épics 0, 1, 2, 3, 4 & 5 ✅ terminés
+> **📍 Avancement global :** Épics 0, 1, 2, 3, 4 & 5 ✅ terminés · Épic 6 🔜 en cours
 > >
 > | Épic | Statut | Commit(s) |
 > |------|--------|-----------|
@@ -12,9 +12,10 @@
 > | 3 — Structure Pédagogique | ✅ **TERMINÉ** | `STRUCT-01..06` |
 > | 4 — Élèves (inscription, réinscription) | ✅ **TERMINÉ** | `STUDENT-MVP-01..05` |
 > | 5 — Présences | ✅ **TERMINÉ** | `ATT-01..03` |
-> | 6..11 — Modules métier | ⏳ En attente | — |
+> | 6 — Notes, Évaluations, Bulletins | 🔜 **EN COURS** | `GRADE-MVP-01` (modèles) |
+> | 7..11 — Modules métier | ⏳ En attente | — |
 > >
-> **Couverture de tests :** 247 tests backend · **Build frontend :** ✅ 0 erreur · **`python manage.py check` :** ✅ 0 issue
+> **Couverture de tests :** 259 tests backend · **Build frontend :** ✅ 0 erreur · **`python manage.py check` :** ✅ 0 issue
 
 **Basé sur :** Cahier des Charges Complet v2.0 + arbitrages MVP (offline reporté, App Parent en React Native, Orange Money seul en V1)
 **Usage :** Chaque épic est un bloc de valeur livrable. Chaque ticket est copiable tel quel dans Trello/Jira/Linear. Ne pas démarrer un épic tant que ses dépendances ne sont pas closes — l'ordre proposé n'est pas arbitraire, chaque étape a besoin de la précédente pour être testable de bout en bout.
@@ -354,12 +355,14 @@
 **Objectif :** l'enseignant saisit des notes, le directeur valide, un bulletin PDF est généré.
 **Dépend de :** Épic 4 (élèves rattachés à une classe et des matières).
 
-### 🃏 [GRADE-MVP-01] Modèle Evaluation et Grade
-**Priorité :** 🔴 Bloquant
-- [ ] Modèle `Evaluation` : tenant, class, subject, teacher, type (CC/DS), title, max_score, coefficient, date, is_published
-- [ ] Modèle `Grade` : tenant, student, evaluation, score, note_sur, note_convertie (calculée), comment, created_by, valide (bool)
-- [ ] Conversion automatique : `note_convertie = (score / note_sur) × 20`
-- [ ] Rejet de toute note convertie hors de l'intervalle [0, 20]
+### 🃏 [GRADE-MVP-01] Modèle Evaluation et Grade ✅
+**Priorité :** 🔴 Bloquant · **Commit :** `GRADE-MVP-01`
+- [x] Modèle `Evaluation` : tenant, class_obj, subject, period, teacher, type (CC/DS), title, max_score, coefficient, date, is_locked, is_published *(schéma §3.4 — noms réels : `class_obj`/`max_score`, + `period`/`is_locked` ; pas de `school_year`, dérivé via period)*
+- [x] Modèle `Grade` : tenant, student, evaluation, score, is_absent, note_convertie (calculée), comment, created_by, is_validated (bool), validated_by, validated_at *(schéma §3.4 — diviseur = `Evaluation.max_score`, pas de champ `note_sur` ; `is_validated` et non `valide`)*
+- [x] Conversion automatique : `note_convertie = (score / max_score) × 20` (dans `Grade.save()`)
+- [x] Rejet de toute note convertie hors de l'intervalle [0, 20] (`CheckConstraint` + `unique(student, evaluation)`)
+- [x] Isolation multi-tenant + index `(tenant, created_at)` (table à forte croissance, schéma §perf)
+- [x] Tests modèle (12) : conversion barèmes 20/40/10, borne [0,20], unicité, ABS → note_convertie null
 **Labels :** `notes` `backend` `priorité-haute`
 
 ### 🃏 [GRADE-MVP-02] Saisie et validation
@@ -373,9 +376,14 @@
 
 ### 🃏 [GRADE-MVP-03] Calcul des moyennes et bulletin
 **Priorité :** 🔴 Bloquant
-- [ ] `GET /students/{id}/moyenne/` : `Σ(note_convertie × coefficient) / Σ(coefficients)`, jamais stocké, toujours recalculé
+- [ ] `GET /students/{id}/moyenne/` : **formule à deux niveaux** (arbitrage CDC §749 + glossaire §1479, cf. `docs/Eduguinee_Epic6_Analyse.md` §6), jamais stockée, toujours recalculée :
+  - Niveau 1 (par matière) : `Σ(note_convertie × Evaluation.coefficient) / Σ(Evaluation.coefficient)`
+  - Niveau 2 (générale) : `Σ(moyenne_matière × ClassSubject.coefficient) / Σ(ClassSubject.coefficient)`
+  - **Arrondi académique (CDC §751)** appliqué **uniquement à l'affichage final** (sérialisation JSON), jamais sur les valeurs intermédiaires (voir note ⚠️ ci-dessous)
 - [ ] Matières sans note saisie exclues du calcul
 - [ ] `GET /classes/{id}/classement/` : classement de classe (règle de départage simplifiée en V1 : moyenne générale puis ordre alphabétique)
+  - **⚠️ Dette V2 explicite** — départage complet CDC §752 (moyenne générale → nb mentions Très Bien → nb mentions Bien → moyenne Français → moyenne Maths → ordre alphabétique) reporté en V2 ; le MVP s'arrête à « moyenne générale → ordre alphabétique »
+  - **⚠️ Précision de calcul (arbitrage 2026-07-20)** — la moyenne par matière est calculée en pleine précision décimale et réutilisée telle quelle (non arrondie) au niveau 2 ; l'arrondi CDC §751 n'intervient qu'à la sérialisation des valeurs `moyenne` renvoyées. Redonner la formule complète avec arrondi au PO **avant** de coder le service (calcul le plus sensible du MVP, impact passage/redoublement)
 - [ ] Génération PDF du bulletin trimestriel (template HTML → PDF, tâche Celery asynchrone) : identité élève/école, tableau matières/notes/coefficients, moyenne générale, rang, mentions automatiques (Excellent/TB/Bien/AB/Passable/Insuffisant)
 - [ ] `GET /students/{id}/bulletin/{period_id}/`
 **Labels :** `notes` `bulletins` `backend` `priorité-haute`

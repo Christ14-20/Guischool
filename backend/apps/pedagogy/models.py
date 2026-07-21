@@ -356,3 +356,93 @@ class Attendance(TenantScopedModel):
 
     def __str__(self):
         return f"{self.student.matricule} — {self.date} ({self.status})"
+
+
+class Evaluation(TenantScopedModel):
+    class Type(models.TextChoices):
+        CC = "CC", "Contrôle Continu"
+        DS = "DS", "Devoir Surveillé"
+
+    class_obj = models.ForeignKey(
+        SchoolClass, on_delete=models.CASCADE, related_name="evaluations"
+    )
+    subject = models.ForeignKey(
+        Subject, on_delete=models.PROTECT, related_name="evaluations"
+    )
+    period = models.ForeignKey(
+        AcademicPeriod, on_delete=models.PROTECT, related_name="evaluations"
+    )
+    teacher = models.ForeignKey(
+        "authentication.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name="evaluations_created",
+    )
+    type = models.CharField(max_length=10, choices=Type.choices)
+    title = models.CharField(max_length=150)
+    max_score = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal("20"))
+    coefficient = models.DecimalField(
+        max_digits=3, decimal_places=1, default=Decimal("1")
+    )
+    date = models.DateField()
+    is_locked = models.BooleanField(default=False)  # verrouillé par l'enseignant
+    is_published = models.BooleanField(default=False)  # validé par le Directeur
+
+    def __str__(self):
+        return f"{self.title} — {self.class_obj.name} ({self.subject.code})"
+
+
+class Grade(TenantScopedModel):
+    student = models.ForeignKey(
+        Student, on_delete=models.CASCADE, related_name="grades"
+    )
+    evaluation = models.ForeignKey(
+        Evaluation, on_delete=models.CASCADE, related_name="grades"
+    )
+    score = models.DecimalField(
+        max_digits=5, decimal_places=2, null=True, blank=True
+    )  # null si "ABS"
+    is_absent = models.BooleanField(default=False)
+    note_convertie = models.DecimalField(
+        max_digits=5, decimal_places=2, null=True, blank=True
+    )  # calculée à la sauvegarde
+    comment = models.CharField(max_length=255, blank=True)
+    created_by = models.ForeignKey(
+        "authentication.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name="grades_entered",
+    )
+    is_validated = models.BooleanField(default=False)
+    validated_by = models.ForeignKey(
+        "authentication.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="grades_validated",
+    )
+    validated_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["student", "evaluation"],
+                name="uniq_grade_per_student_evaluation",
+            ),
+            models.CheckConstraint(
+                check=models.Q(note_convertie__gte=0) & models.Q(note_convertie__lte=20),
+                name="grade_note_convertie_range",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["student", "evaluation"]),
+            models.Index(fields=["tenant", "created_at"]),
+        ]
+
+    def save(self, *args, **kwargs):
+        if self.score is not None and self.evaluation.max_score:
+            self.note_convertie = (self.score / self.evaluation.max_score) * 20
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.student.matricule} — {self.evaluation.title}"
