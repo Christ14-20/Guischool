@@ -119,6 +119,9 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
             mustChangePassword: u.mustChangePassword,
             tenant: u.tenant,
           },
+          mustChangePassword: u.mustChangePassword,
+          role: u.role,
+          tenant: u.tenant,
         };
       }
 
@@ -137,6 +140,7 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
         session.refreshToken = token.refreshToken;
         session.error = token.error;
         session.user = token.user;
+        session.mustChangePassword = token.mustChangePassword;
       }
       return session;
     },

@@ -5,7 +5,6 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { signIn } from "next-auth/react";
-import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 
 const loginSchema = z.object({
@@ -22,7 +21,6 @@ const loginSchema = z.object({
 type LoginSchemaType = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
-  const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -57,8 +55,18 @@ export default function LoginPage() {
         }
         setIsLoading(false);
       } else {
-        router.push("/dashboard");
-        router.refresh();
+        // Vérifier si le changement de mot de passe est requis
+        try {
+          const sessionResp = await fetch("/api/auth/session");
+          const session = await sessionResp.json();
+          if (session?.user?.mustChangePassword) {
+            window.location.href = "/change-password";
+          } else {
+            window.location.href = "/dashboard";
+          }
+        } catch {
+          window.location.href = "/dashboard";
+        }
       }
     } catch {
       setErrorMessage("Une erreur inattendue est survenue.");
