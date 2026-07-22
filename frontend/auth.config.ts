@@ -13,7 +13,7 @@ export const authConfig: NextAuthConfig = {
       const isSuperAdminRoute = nextUrl.pathname.startsWith("/superadmin");
       
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const mustChangePassword = (auth?.user as any)?.must_change_password;
+      const mustChangePassword = (auth?.user as any)?.mustChangePassword;
 
       // Laisser passer les API routes (NextAuth gère lui-même ses routes,
       // et d'autres APIs peuvent être appelées librement)
