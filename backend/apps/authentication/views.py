@@ -299,7 +299,11 @@ class StaffViewSet(viewsets.ModelViewSet):
         return perms
 
     def get_queryset(self):
-        return User.objects.filter(tenant=self.request.tenant).select_related("role")
+        return User.objects.filter(
+            tenant=self.request.tenant,
+        ).exclude(
+            role__name__in=["DIRECTOR", "SUPER_ADMIN"],
+        ).select_related("role")
 
     def retrieve(self, request, *args, **kwargs):
         instance = self.get_object()
@@ -319,15 +323,6 @@ class StaffViewSet(viewsets.ModelViewSet):
             role_name=serializer.validated_data["role"],
             phone=serializer.validated_data.get("phone", ""),
             subjects_taught=serializer.validated_data.get("subjects_taught", []),
-            ip_address=get_client_ip(request),
-        )
-
-        audit_log(
-            user=request.user,
-            tenant=request.tenant,
-            action="staff:create",
-            target_model="User",
-            target_id=str(user.id),
             ip_address=get_client_ip(request),
         )
 

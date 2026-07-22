@@ -352,7 +352,7 @@ class TestStaffEndpoints:
     # ── Liste (GET /auth/staff/) ─────────────────────────────────────────
 
     def test_list_staff(self, api_client, tenant, director_user, director_role, teacher_role):
-        """GET /auth/staff/ retourne la liste paginée du personnel du tenant."""
+        """GET /auth/staff/ retourne la liste paginée du personnel (hors DIRECTOR)."""
         _ensure_director_permissions(director_role)
         User.objects.create_user(
             username="ens1", email="ens1@ecole-test.gn", password="P@ss123!",
@@ -366,17 +366,20 @@ class TestStaffEndpoints:
         results = data["results"]
         emails = [u["email"] for u in results]
         assert "ens1@ecole-test.gn" in emails
-        assert "directeur@ecole-test.gn" in emails
+        assert "directeur@ecole-test.gn" not in emails  # DIRECTOR exclu
 
-    def test_list_staff_tenant_isolation(self, api_client, tenant, tenant2, director_user, director_role):
+    def test_list_staff_tenant_isolation(self, api_client, tenant, tenant2, director_user, director_role, teacher_role):
         """La liste ne contient que les users du tenant courant."""
         _ensure_director_permissions(director_role)
+        User.objects.create_user(
+            username="other", email="other@autre-ecole.gn", password="P@ss123!",
+            role=teacher_role, tenant=tenant2,
+        )
         _auth(api_client, director_user)
 
         response = api_client.get(reverse("staff-list"))
-        data = response.json()["data"]
-        for user in data["results"]:
-            assert user["id"] != str(tenant2.id)  # Aucun user de tenant2
+        emails = [u["email"] for u in response.json()["data"]["results"]]
+        assert "other@autre-ecole.gn" not in emails  # aucun user du tenant2
 
     # ── Détail (GET /auth/staff/{id}/) ───────────────────────────────────
 
@@ -489,3 +492,31 @@ class TestStaffEndpoints:
 
         response = api_client.patch(reverse("staff-disable", args=[staff.id]))
         assert response.status_code == 400
+
+    # ── Exclusion DIRECTOR ──────────────────────────────────────────────
+
+    def test_director_not_in_list(self, api_client, tenant, director_user, director_role):
+        """Le DIRECTOR n'apparaît pas dans GET /auth/staff/."""
+        _ensure_director_permissions(director_role)
+        _auth(api_client, director_user)
+        response = api_client.get(reverse("staff-list"))
+        emails = [u["email"] for u in response.json()["data"]["results"]]
+        assert "directeur@ecole-test.gn" not in emails
+
+    def test_disable_director_returns_404(self, api_client, tenant, director_user, director_role):
+        """Tenter de désactiver un DIRECTOR → 404 (hors périmètre du queryset)."""
+        autre_director = User.objects.create_user(
+            username="autre-dir", email="autre-dir@ecole-test.gn", password="SecurePass123!",
+            role=director_role, tenant=tenant,
+        )
+        _ensure_director_permissions(director_role)
+        _auth(api_client, director_user)
+        response = api_client.patch(reverse("staff-disable", args=[autre_director.id]))
+        assert response.status_code == 404
+
+    def test_retrieve_director_returns_404(self, api_client, tenant, director_user, director_role):
+        """GET /auth/staff/{id}/ sur un DIRECTOR → 404."""
+        _ensure_director_permissions(director_role)
+        _auth(api_client, director_user)
+        response = api_client.get(reverse("staff-detail", args=[director_user.id]))
+        assert response.status_code == 404
