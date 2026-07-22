@@ -105,6 +105,7 @@ DATABASES = {
 
 # ── Modèle utilisateur personnalisé ────────────────────────────────────────────
 AUTH_USER_MODEL = "authentication.User"
+AUTHENTICATION_BACKENDS = ["core.backends.EmailModelBackend"]
 
 # ── Mots de passe — Argon2id (§5.1 CDC) ───────────────────────────────────────
 PASSWORD_HASHERS = [
@@ -172,6 +173,8 @@ SIMPLE_JWT = {
     "AUTH_TOKEN_CLASSES": ("rest_framework_simplejwt.tokens.AccessToken",),
     # Claims personnalisés injectés dans le token (AUTH-03)
     "TOKEN_OBTAIN_SERIALIZER": "apps.authentication.serializers.CustomTokenObtainPairSerializer",
+    # STAFF-MVP-01 : ne pas filtrer par is_active ici (délégué au serializer pour msg 403)
+    "USER_AUTHENTICATION_RULE": "apps.authentication.utils.allow_authenticated_user",
 }
 
 # ── CORS ────────────────────────────────────────────────────────────────────────

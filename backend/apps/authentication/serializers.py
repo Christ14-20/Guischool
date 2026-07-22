@@ -40,6 +40,11 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         data = super().validate(attrs)
         user = self.user
 
+        # Vérification compte désactivé — STAFF-MVP-01
+        if not user.is_active:
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("Compte désactivé")
+
         # Vérification tenant suspendu — message exact du contrat d'API §9
         if user.tenant and user.tenant.status == "SUSPENDED":
             from rest_framework.exceptions import PermissionDenied
