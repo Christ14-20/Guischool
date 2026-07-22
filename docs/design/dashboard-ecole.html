@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Eduguinée 3.0 — Espace Scolaire</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-deep: #0B0F19;
+      --bg-surface: #111827;
+      --bg-raised: #151B2B;
+      --bg-muted: rgba(255,255,255,0.03);
+      --border-subtle: rgba(255, 255, 255, 0.06);
+      --border-hover: rgba(255, 255, 255, 0.12);
+      --text-primary: #F8FAFC;
+      --text-secondary: #94A3B8;
+      --text-tertiary: #64748B;
+      --text-quaternary: #475569;
+      --accent-violet: #6366f1;
+      --accent-violet-light: #818cf8;
+      --accent-gold: #F59E0B;
+      --accent-green: #10B981;
+      --accent-blue: #0EA5E9;
+      --accent-red: #EF4444;
+      --font-sans: 'Inter', system-ui, sans-serif;
+      --font-display: 'Playfair Display', Georgia, serif;
+      --shadow-sm: 0 1px 2px rgba(0,0,0,0.3);
+      --shadow-md: 0 4px 12px rgba(0,0,0,0.3);
+      --shadow-lg: 0 8px 32px rgba(0,0,0,0.4);
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-lg: 12px;
+      --radius-xl: 16px;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: var(--font-sans);
+      background: var(--bg-deep);
+      color: var(--text-primary);
+      min-height: 100vh;
+    }
+
+    .app-layout { display: flex; min-height: 100vh; }
+
+    /* Sidebar */
+    .sidebar {
+      width: 260px;
+      background: var(--bg-surface);
+      border-right: 1px solid var(--border-subtle);
+      display: flex;
+      flex-direction: column;
+      padding: 20px 0;
+      position: fixed;
+      height: 100vh;
+      z-index: 50;
+    }
+
+    .sidebar-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 0 20px 24px;
+      margin-bottom: 8px;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .brand-icon {
+      width: 36px;
+      height: 36px;
+      background: linear-gradient(135deg, var(--accent-green), #059669);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 14px;
+      font-weight: 700;
+      font-family: var(--font-display);
+    }
+
+    .brand-text {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .sidebar-section-label {
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      color: var(--text-quaternary);
+      letter-spacing: 0.08em;
+      padding: 16px 20px 8px;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 16px;
+      margin: 0 8px 2px;
+      border-radius: var(--radius-md);
+      color: var(--text-tertiary);
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      position: relative;
+      text-decoration: none;
+    }
+
+    .nav-item:hover {
+      background: var(--bg-muted);
+      color: var(--text-secondary);
+    }
+
+    .nav-item.active {
+      background: rgba(99, 102, 241, 0.08);
+      color: var(--accent-violet-light);
+    }
+
+    .nav-item.active::before {
+      content: '';
+      position: absolute;
+      left: -8px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 3px;
+      height: 20px;
+      background: var(--accent-violet);
+      border-radius: 0 3px 3px 0;
+    }
+
+    .nav-icon {
+      width: 18px;
+      height: 18px;
+      opacity: 0.6;
+      flex-shrink: 0;
+    }
+    .nav-item.active .nav-icon { opacity: 1; }
+
+    .nav-badge {
+      margin-left: auto;
+      padding: 2px 8px;
+      background: rgba(239, 68, 68, 0.15);
+      color: var(--accent-red);
+      font-size: 11px;
+      font-weight: 600;
+      border-radius: 10px;
+    }
+
+    .sidebar-footer {
+      margin-top: auto;
+      padding: 16px 20px 0;
+      border-top: 1px solid var(--border-subtle);
+    }
+
+    .user-profile {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      cursor: pointer;
+      padding: 8px;
+      border-radius: var(--radius-md);
+      transition: background 0.15s;
+    }
+    .user-profile:hover { background: var(--bg-muted); }
+
+    .user-avatar {
+      width: 36px;
+      height: 36px;
+      background: linear-gradient(135deg, var(--accent-gold), #d97706);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .user-info { line-height: 1.3; }
+    .user-name { font-size: 13px; font-weight: 500; color: var(--text-primary); }
+    .user-role { font-size: 11px; color: var(--text-quaternary); }
+
+    /* Main */
+    .main-content {
+      flex: 1;
+      margin-left: 260px;
+      padding: 28px 32px;
+      min-height: 100vh;
+    }
+
+    .page-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 28px;
+    }
+
+    .page-title-group h1 {
+      font-family: var(--font-display);
+      font-size: 26px;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 6px;
+    }
+
+    .page-title-group p {
+      font-size: 14px;
+      color: var(--text-tertiary);
+    }
+
+    .header-badge {
+      font-size: 14px;
+      color: var(--text-tertiary);
+      padding: 8px 16px;
+      background: var(--bg-muted);
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-subtle);
+    }
+
+    /* KPI Grid */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .kpi-card {
+      background: var(--bg-raised);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      position: relative;
+      overflow: hidden;
+      transition: all 0.2s ease;
+    }
+
+    .kpi-card:hover {
+      border-color: var(--border-hover);
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+    }
+
+    .kpi-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    }
+
+    .kpi-card.kpi-eleves::before { background: linear-gradient(90deg, var(--accent-violet), var(--accent-violet-light)); }
+    .kpi-card.kpi-classes::before { background: linear-gradient(90deg, var(--accent-green), #34d399); }
+    .kpi-card.kpi-presence::before { background: linear-gradient(90deg, var(--accent-blue), #38bdf8); }
+
+    .kpi-icon-wrap {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      width: 36px;
+      height: 36px;
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .kpi-eleves .kpi-icon-wrap { background: rgba(99, 102, 241, 0.1); color: var(--accent-violet-light); }
+    .kpi-classes .kpi-icon-wrap { background: rgba(16, 185, 129, 0.1); color: var(--accent-green); }
+    .kpi-presence .kpi-icon-wrap { background: rgba(14, 165, 233, 0.1); color: var(--accent-blue); }
+
+    .kpi-label {
+      font-size: 12px;
+      color: var(--text-tertiary);
+      margin-bottom: 8px;
+    }
+
+    .kpi-value {
+      font-size: 32px;
+      font-weight: 600;
+      color: var(--text-primary);
+      font-variant-numeric: tabular-nums;
+      line-height: 1;
+    }
+
+    .kpi-trend {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      margin-top: 8px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+    .kpi-trend.up { color: var(--accent-green); }
+    .kpi-trend.down { color: var(--accent-red); }
+    .kpi-trend.flat { color: var(--text-quaternary); }
+
+    /* Quick Actions */
+    .section-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 16px;
+    }
+
+    .actions-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-bottom: 28px;
+    }
+
+    .action-card {
+      background: var(--bg-raised);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .action-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 3px;
+      height: 100%;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+
+    .action-card:hover {
+      border-color: var(--border-hover);
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+    }
+
+    .action-card:hover::before { opacity: 1; }
+
+    .action-card.action-eleves::before { background: var(--accent-violet); }
+    .action-card.action-presence::before { background: var(--accent-green); }
+    .action-card.action-notes::before { background: var(--accent-gold); }
+
+    .action-card.action-eleves:hover { border-color: rgba(99, 102, 241, 0.3); }
+    .action-card.action-presence:hover { border-color: rgba(16, 185, 129, 0.3); }
+    .action-card.action-notes:hover { border-color: rgba(245, 158, 11, 0.3); }
+
+    .action-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: var(--radius-md);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 14px;
+    }
+
+    .action-eleves .action-icon { background: rgba(99, 102, 241, 0.1); color: var(--accent-violet-light); }
+    .action-presence .action-icon { background: rgba(16, 185, 129, 0.1); color: var(--accent-green); }
+    .action-notes .action-icon { background: rgba(245, 158, 11, 0.1); color: var(--accent-gold); }
+
+    .action-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 6px;
+    }
+
+    .action-desc {
+      font-size: 13px;
+      color: var(--text-tertiary);
+      line-height: 1.4;
+    }
+
+    .action-arrow {
+      position: absolute;
+      top: 24px;
+      right: 24px;
+      color: var(--text-quaternary);
+      opacity: 0;
+      transition: all 0.2s;
+      transform: translateX(-4px);
+    }
+
+    .action-card:hover .action-arrow {
+      opacity: 1;
+      transform: translateX(0);
+      color: var(--text-secondary);
+    }
+
+    /* Recent Activity */
+    .activity-card {
+      background: var(--bg-raised);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+    }
+
+    .activity-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .activity-header h3 {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .activity-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+
+    .activity-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      padding: 14px 0;
+      border-bottom: 1px solid var(--border-subtle);
+      transition: background 0.1s;
+    }
+
+    .activity-item:last-child { border-bottom: none; }
+
+    .activity-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+
+    .activity-avatar.inscription { background: rgba(99, 102, 241, 0.12); color: var(--accent-violet-light); }
+    .activity-avatar.payment { background: rgba(16, 185, 129, 0.12); color: var(--accent-green); }
+    .activity-avatar.note { background: rgba(245, 158, 11, 0.12); color: var(--accent-gold); }
+
+    .activity-content {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .activity-text {
+      font-size: 14px;
+      color: var(--text-secondary);
+      line-height: 1.4;
+      margin-bottom: 2px;
+    }
+
+    .activity-text strong {
+      color: var(--text-primary);
+      font-weight: 600;
+    }
+
+    .activity-time {
+      font-size: 12px;
+      color: var(--text-quaternary);
+    }
+
+    .activity-badge {
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+
+    .activity-badge.new {
+      background: rgba(99, 102, 241, 0.12);
+      color: var(--accent-violet-light);
+    }
+
+    /* Two column layout */
+    .two-col {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 16px;
+    }
+
+    @media (max-width: 1200px) {
+      .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+      .actions-grid { grid-template-columns: repeat(2, 1fr); }
+      .two-col { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 768px) {
+      .sidebar { transform: translateX(-100%); }
+      .main-content { margin-left: 0; padding: 20px; }
+      .kpi-grid { grid-template-columns: 1fr; }
+      .actions-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-layout">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <div class="brand-icon">EG</div>
+        <div class="brand-text">Mon École</div>
+      </div>
+
+      <div class="sidebar-section-label">Menu principal</div>
+
+      <a href="#" class="nav-item active">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+          <rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/>
+        </svg>
+        Tableau de bord
+      </a>
+
+      <a href="#" class="nav-item">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/>
+        </svg>
+        Pédagogie
+      </a>
+
+      <a href="#" class="nav-item">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/>
+        </svg>
+        Élèves
+      </a>
+
+      <a href="#" class="nav-item">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/>
+        </svg>
+        Classes
+      </a>
+
+      <a href="#" class="nav-item">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+        </svg>
+        Présences
+      </a>
+
+      <a href="#" class="nav-item">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>
+        </svg>
+        Notes
+      </a>
+
+      <a href="#" class="nav-item">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>
+        </svg>
+        Décisions
+      </a>
+
+      <div class="sidebar-footer">
+        <div class="user-profile">
+          <div class="user-avatar">D</div>
+          <div class="user-info">
+            <div class="user-name">Directeur</div>
+            <div class="user-role">Lycée Donka</div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <div class="page-header">
+        <div class="page-title-group">
+          <h1>Espace Scolaire</h1>
+          <p>Vue d'ensemble de l'établissement</p>
+        </div>
+        <span class="header-badge">Année scolaire : 2025-2026</span>
+      </div>
+
+      <!-- KPI Cards -->
+      <div class="kpi-grid">
+        <div class="kpi-card kpi-eleves">
+          <div class="kpi-icon-wrap">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/>
+            </svg>
+          </div>
+          <div class="kpi-label">Total Élèves</div>
+          <div class="kpi-value">1</div>
+          <div class="kpi-trend up">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="18 15 12 9 6 15"/></svg>
+            +1 cette année
+          </div>
+        </div>
+
+        <div class="kpi-card kpi-classes">
+          <div class="kpi-icon-wrap">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/>
+            </svg>
+          </div>
+          <div class="kpi-label">Classes</div>
+          <div class="kpi-value">0</div>
+          <div class="kpi-trend flat">— à configurer</div>
+        </div>
+
+        <div class="kpi-card kpi-presence">
+          <div class="kpi-icon-wrap">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+            </svg>
+          </div>
+          <div class="kpi-label">Taux de présence</div>
+          <div class="kpi-value">—</div>
+          <div class="kpi-trend flat">Aucune donnée</div>
+        </div>
+      </div>
+
+      <!-- Quick Actions -->
+      <h2 class="section-title">Actions rapides</h2>
+      <div class="actions-grid">
+        <div class="action-card action-eleves">
+          <div class="action-arrow">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+          </div>
+          <div class="action-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/>
+            </svg>
+          </div>
+          <div class="action-title">Inscrire un élève</div>
+          <div class="action-desc">Nouvelle inscription ou réinscription dans l'établissement</div>
+        </div>
+
+        <div class="action-card action-presence">
+          <div class="action-arrow">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+          </div>
+          <div class="action-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+            </svg>
+          </div>
+          <div class="action-title">Faire l'appel</div>
+          <div class="action-desc">Saisie des présences du jour par classe</div>
+        </div>
+
+        <div class="action-card action-notes">
+          <div class="action-arrow">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+          </div>
+          <div class="action-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/>
+            </svg>
+          </div>
+          <div class="action-title">Saisir des notes</div>
+          <div class="action-desc">Évaluations, bulletins et moyennes</div>
+        </div>
+      </div>
+
+      <!-- Two column: Activity + Stats -->
+      <div class="two-col">
+        <div class="activity-card">
+          <div class="activity-header">
+            <h3>Activité récente</h3>
+          </div>
+          <div class="activity-list">
+            <div class="activity-item">
+              <div class="activity-avatar inscription">E</div>
+              <div class="activity-content">
+                <div class="activity-text">Nouvel élève inscrit : <strong>Amadou Diallo</strong></div>
+                <div class="activity-time">Il y a 2 heures</div>
+              </div>
+              <span class="activity-badge new">Nouveau</span>
+            </div>
+            <div class="activity-item">
+              <div class="activity-avatar payment">P</div>
+              <div class="activity-content">
+                <div class="activity-text">Paiement reçu : <strong>450 000 GNF</strong> — Inscription</div>
+                <div class="activity-time">Il y a 5 heures</div>
+              </div>
+            </div>
+            <div class="activity-item">
+              <div class="activity-avatar note">N</div>
+              <div class="activity-content">
+                <div class="activity-text">Année scolaire <strong>2026-2027</strong> créée</div>
+                <div class="activity-time">Hier à 14:30</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="activity-card">
+          <div class="activity-header">
+            <h3>À venir</h3>
+          </div>
+          <div class="activity-list">
+            <div class="activity-item">
+              <div class="activity-avatar" style="background: rgba(99,102,241,0.12); color: var(--accent-violet-light);">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              </div>
+              <div class="activity-content">
+                <div class="activity-text"><strong>Début 1er trimestre</strong> 2026-2027</div>
+                <div class="activity-time">Dans 8 jours</div>
+              </div>
+            </div>
+            <div class="activity-item">
+              <div class="activity-avatar" style="background: rgba(245,158,11,0.12); color: var(--accent-gold);">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+              </div>
+              <div class="activity-content">
+                <div class="activity-text"><strong>Configuration</strong> des classes requise</div>
+                <div class="activity-time">Avant le 20 juillet</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</body>
+</html>
