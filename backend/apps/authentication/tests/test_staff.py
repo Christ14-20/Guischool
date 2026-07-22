@@ -260,3 +260,232 @@ class TestStaffPermissions:
         assert "staff:read" in codenames
         for c in ("staff:create", "staff:update", "staff:disable"):
             assert c not in codenames
+
+
+# ─── Tests endpoints CRUD staff (STAFF-MVP-02) ──────────────────────────────
+
+def _ensure_ss_permissions(ss_role):
+    from apps.authentication.models import Permission
+    perm, _ = Permission.objects.get_or_create(codename="staff:read", defaults={"module": "staff"})
+    ss_role.permissions.add(perm)
+
+
+def _ensure_director_permissions(director_role):
+    from apps.authentication.models import Permission
+    for c in ("staff:create", "staff:read", "staff:update", "staff:disable"):
+        perm, _ = Permission.objects.get_or_create(codename=c, defaults={"module": "staff"})
+        director_role.permissions.add(perm)
+
+
+@pytest.mark.django_db
+class TestStaffEndpoints:
+
+    # ── Création (POST /auth/staff/) ─────────────────────────────────────
+
+    def test_create_teacher_via_api(self, api_client, tenant, director_user, director_role, teacher_role):
+        """POST /auth/staff/ crée un enseignant et retourne le mot de passe temporaire."""
+        _ensure_director_permissions(director_role)
+        _auth(api_client, director_user)
+
+        response = api_client.post(
+            reverse("staff-list"),
+            {
+                "email": "nouvel-ens@ecole-test.gn",
+                "first_name": "Nouvel",
+                "last_name": "Enseignant",
+                "role": "TEACHER",
+                "phone": "+224620000020",
+            },
+            format="json",
+        )
+        assert response.status_code == 201
+        data = response.json()["data"]
+        assert data["email"] == "nouvel-ens@ecole-test.gn"
+        assert data["role"]["name"] == "TEACHER"
+        assert "temporary_password" in data
+        assert len(data["temporary_password"]) == 12
+
+        # Vérification en base
+        assert User.objects.filter(email="nouvel-ens@ecole-test.gn", tenant=tenant).exists()
+
+    def test_create_staff_without_permission(self, api_client, tenant, teacher_role, ss_role):
+        """Un utilisateur sans staff:create reçoit 403."""
+        user = User.objects.create_user(
+            username="ssuser",
+            email="ss@ecole-test.gn",
+            password="SecurePass123!",
+            role=ss_role,
+            tenant=tenant,
+        )
+        _ensure_ss_permissions(ss_role)
+        _auth(api_client, user)
+
+        response = api_client.post(
+            reverse("staff-list"),
+            {
+                "email": "test@ecole-test.gn",
+                "first_name": "Test",
+                "last_name": "User",
+                "role": "TEACHER",
+            },
+            format="json",
+        )
+        assert response.status_code == 403
+
+    def test_create_staff_invalid_role_via_api(self, api_client, tenant, director_user, director_role):
+        """POST avec rôle DIRECTOR → 400."""
+        _ensure_director_permissions(director_role)
+        _auth(api_client, director_user)
+
+        response = api_client.post(
+            reverse("staff-list"),
+            {
+                "email": "dir2@ecole-test.gn",
+                "first_name": "Faux",
+                "last_name": "Directeur",
+                "role": "DIRECTOR",
+            },
+            format="json",
+        )
+        assert response.status_code == 400
+
+    # ── Liste (GET /auth/staff/) ─────────────────────────────────────────
+
+    def test_list_staff(self, api_client, tenant, director_user, director_role, teacher_role):
+        """GET /auth/staff/ retourne la liste paginée du personnel du tenant."""
+        _ensure_director_permissions(director_role)
+        User.objects.create_user(
+            username="ens1", email="ens1@ecole-test.gn", password="P@ss123!",
+            role=teacher_role, tenant=tenant, first_name="Ens", last_name="Un",
+        )
+        _auth(api_client, director_user)
+
+        response = api_client.get(reverse("staff-list"))
+        assert response.status_code == 200
+        data = response.json()["data"]
+        results = data["results"]
+        emails = [u["email"] for u in results]
+        assert "ens1@ecole-test.gn" in emails
+        assert "directeur@ecole-test.gn" in emails
+
+    def test_list_staff_tenant_isolation(self, api_client, tenant, tenant2, director_user, director_role):
+        """La liste ne contient que les users du tenant courant."""
+        _ensure_director_permissions(director_role)
+        _auth(api_client, director_user)
+
+        response = api_client.get(reverse("staff-list"))
+        data = response.json()["data"]
+        for user in data["results"]:
+            assert user["id"] != str(tenant2.id)  # Aucun user de tenant2
+
+    # ── Détail (GET /auth/staff/{id}/) ───────────────────────────────────
+
+    def test_retrieve_staff(self, api_client, tenant, director_user, director_role, teacher_role):
+        """GET /auth/staff/{id}/ retourne le détail complet."""
+        _ensure_director_permissions(director_role)
+        staff = User.objects.create_user(
+            username="ens2", email="ens2@ecole-test.gn", password="P@ss123!",
+            role=teacher_role, tenant=tenant, first_name="Ens", last_name="Deux",
+        )
+        _auth(api_client, director_user)
+
+        response = api_client.get(reverse("staff-detail", args=[staff.id]))
+        assert response.status_code == 200
+        data = response.json()["data"]
+        assert data["email"] == "ens2@ecole-test.gn"
+        assert data["role"]["name"] == "TEACHER"
+
+    def test_retrieve_staff_cross_tenant_404(self, api_client, tenant, tenant2, director_user, director_role, teacher_role):
+        """Un user d'un autre tenant → 404."""
+        _ensure_director_permissions(director_role)
+        other = User.objects.create_user(
+            username="other", email="other@autre-ecole.gn", password="P@ss123!",
+            role=teacher_role, tenant=tenant2,
+        )
+        _auth(api_client, director_user)
+
+        response = api_client.get(reverse("staff-detail", args=[other.id]))
+        assert response.status_code == 404
+
+    # ── Modification (PATCH /auth/staff/{id}/) ───────────────────────────
+
+    def test_update_staff(self, api_client, tenant, director_user, director_role, teacher_role):
+        """PATCH /auth/staff/{id}/ modifie les champs autorisés."""
+        _ensure_director_permissions(director_role)
+        staff = User.objects.create_user(
+            username="ens3", email="ens3@ecole-test.gn", password="P@ss123!",
+            role=teacher_role, tenant=tenant, first_name="Avant",
+        )
+        _auth(api_client, director_user)
+
+        response = api_client.patch(
+            reverse("staff-detail", args=[staff.id]),
+            {"first_name": "Après", "phone": "+224620000030"},
+            format="json",
+        )
+        assert response.status_code == 200
+        staff.refresh_from_db()
+        assert staff.first_name == "Après"
+        assert staff.phone == "+224620000030"
+        # Vérification que l'email n'a pas changé
+        assert staff.email == "ens3@ecole-test.gn"
+
+    def test_update_staff_no_email_change(self, api_client, tenant, director_user, director_role, teacher_role):
+        """PATCH ne peut pas modifier l'email (champ non accepté par le serializer)."""
+        _ensure_director_permissions(director_role)
+        staff = User.objects.create_user(
+            username="ens4", email="ens4@ecole-test.gn", password="P@ss123!",
+            role=teacher_role, tenant=tenant,
+        )
+        _auth(api_client, director_user)
+
+        response = api_client.patch(
+            reverse("staff-detail", args=[staff.id]),
+            {"email": "nouveau@email.gn"},
+            format="json",
+        )
+        # L'email n'étant pas dans les champs du serializer, il est ignoré
+        staff.refresh_from_db()
+        assert staff.email == "ens4@ecole-test.gn"
+
+    # ── Désactivation / Réactivation ─────────────────────────────────────
+
+    def test_disable_staff(self, api_client, tenant, director_user, director_role, teacher_role):
+        """PATCH /auth/staff/{id}/disable/ met is_active=False."""
+        _ensure_director_permissions(director_role)
+        staff = User.objects.create_user(
+            username="ens5", email="ens5@ecole-test.gn", password="P@ss123!",
+            role=teacher_role, tenant=tenant, is_active=True,
+        )
+        _auth(api_client, director_user)
+
+        response = api_client.patch(reverse("staff-disable", args=[staff.id]))
+        assert response.status_code == 200
+        staff.refresh_from_db()
+        assert staff.is_active is False
+
+    def test_enable_staff(self, api_client, tenant, director_user, director_role, teacher_role):
+        """PATCH /auth/staff/{id}/enable/ met is_active=True."""
+        _ensure_director_permissions(director_role)
+        staff = User.objects.create_user(
+            username="ens6", email="ens6@ecole-test.gn", password="P@ss123!",
+            role=teacher_role, tenant=tenant, is_active=False,
+        )
+        _auth(api_client, director_user)
+
+        response = api_client.patch(reverse("staff-enable", args=[staff.id]))
+        assert response.status_code == 200
+        staff.refresh_from_db()
+        assert staff.is_active is True
+
+    def test_disable_already_disabled(self, api_client, tenant, director_user, director_role, teacher_role):
+        """Désactiver un compte déjà inactif → 400."""
+        _ensure_director_permissions(director_role)
+        staff = User.objects.create_user(
+            username="ens7", email="ens7@ecole-test.gn", password="P@ss123!",
+            role=teacher_role, tenant=tenant, is_active=False,
+        )
+        _auth(api_client, director_user)
+
+        response = api_client.patch(reverse("staff-disable", args=[staff.id]))
+        assert response.status_code == 400

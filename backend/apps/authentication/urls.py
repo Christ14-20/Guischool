@@ -4,11 +4,16 @@ apps/authentication/urls.py — AUTH-02
 Routes de l'app authentication montées sous /api/v1/ dans config/urls.py.
 """
 
-from django.urls import path
+from django.urls import path, include
+from rest_framework.routers import DefaultRouter
 from .views import (
     LoginView, RefreshView, LogoutView, MeView,
     PermissionsMeView, TeachersListView, ChangePasswordView,
+    StaffViewSet,
 )
+
+router = DefaultRouter()
+router.register(r"auth/staff", StaffViewSet, basename="staff")
 
 urlpatterns = [
     # Auth endpoints
@@ -21,4 +26,7 @@ urlpatterns = [
     # User endpoints
     path("users/me/", MeView.as_view(), name="users-me"),
     path("auth/teachers/", TeachersListView.as_view(), name="auth-teachers"),
+
+    # Staff endpoints (STAFF-MVP-02)
+    path("", include(router.urls)),
 ]

@@ -150,3 +150,97 @@ class ChangePasswordSerializer(serializers.Serializer):
         from django.contrib.auth.password_validation import validate_password
         validate_password(value)
         return value
+
+
+class RoleNestedSerializer(serializers.Serializer):
+    """Sérialisation minimale du rôle pour les réponses staff."""
+    name = serializers.CharField()
+    label = serializers.CharField()
+
+
+class StaffListSerializer(serializers.ModelSerializer):
+    """Serializer pour GET /auth/staff/ — vue liste."""
+    role = RoleNestedSerializer(read_only=True)
+
+    class Meta:
+        model = User
+        fields = [
+            "id",
+            "email",
+            "first_name",
+            "last_name",
+            "phone",
+            "role",
+            "is_active",
+            "subjects_taught",
+            "date_joined",
+        ]
+
+
+class StaffDetailSerializer(serializers.ModelSerializer):
+    """Serializer pour GET /auth/staff/{id}/ — vue détail."""
+    role = RoleNestedSerializer(read_only=True)
+
+    class Meta:
+        model = User
+        fields = [
+            "id",
+            "email",
+            "first_name",
+            "last_name",
+            "phone",
+            "role",
+            "is_active",
+            "must_change_password",
+            "subjects_taught",
+            "is_email_verified",
+            "is_phone_verified",
+            "date_joined",
+        ]
+
+
+class StaffCreateSerializer(serializers.Serializer):
+    """
+    Serializer pour POST /auth/staff/ — création d'un compte personnel.
+
+    Champs acceptés :
+    - email, first_name, last_name, role (TEACHER|STUDENT_STUDIES), phone, subjects_taught
+    """
+    email = serializers.EmailField()
+    first_name = serializers.CharField(max_length=150)
+    last_name = serializers.CharField(max_length=150)
+    role = serializers.ChoiceField(choices=["TEACHER", "STUDENT_STUDIES"])
+    phone = serializers.CharField(max_length=20, required=False, default="")
+    subjects_taught = serializers.ListField(
+        child=serializers.CharField(max_length=20),
+        required=False,
+        default=list,
+    )
+
+    def validate_phone(self, value):
+        from core.utils import is_valid_guinea_phone
+        if value and not is_valid_guinea_phone(value):
+            raise serializers.ValidationError("Format attendu : +224XXXXXXXXX")
+        return value
+
+
+class StaffUpdateSerializer(serializers.Serializer):
+    """
+    Serializer pour PATCH /auth/staff/{id}/ — modification.
+
+    Champs modifiables en V1 : first_name, last_name, phone, subjects_taught.
+    Pas l'email, pas le rôle (dette V2 explicite).
+    """
+    first_name = serializers.CharField(max_length=150, required=False)
+    last_name = serializers.CharField(max_length=150, required=False)
+    phone = serializers.CharField(max_length=20, required=False)
+    subjects_taught = serializers.ListField(
+        child=serializers.CharField(max_length=20),
+        required=False,
+    )
+
+    def validate_phone(self, value):
+        from core.utils import is_valid_guinea_phone
+        if value and not is_valid_guinea_phone(value):
+            raise serializers.ValidationError("Format attendu : +224XXXXXXXXX")
+        return value

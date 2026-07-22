@@ -6,26 +6,36 @@ Endpoints JWT : login, refresh, logout, /users/me/, /auth/permissions/me/.
 Rate-limiting sur /auth/login/ via django-ratelimit (protection anti-brute-force).
 """
 
-from rest_framework import status
+from rest_framework import status, viewsets
+from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework.filters import SearchFilter, OrderingFilter
+from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenRefreshView
+
+from .models import User
 
 from django_ratelimit.decorators import ratelimit
 from django.utils.decorators import method_decorator
 
 from core.permissions import HasPermission
-from core.utils import success_response, error_response
+from core.utils import success_response, error_response, created_response
 from apps.monitoring.services import audit_log, get_client_ip
 
 from .serializers import (
     CustomTokenObtainPairSerializer,
     UserMeSerializer,
     ChangePasswordSerializer,
+    StaffListSerializer,
+    StaffDetailSerializer,
+    StaffCreateSerializer,
+    StaffUpdateSerializer,
 )
+from .services.staff_service import create_staff_account
 
 
 class LoginView(APIView):
@@ -194,7 +204,6 @@ class TeachersListView(APIView):
     permission_classes = [IsAuthenticated, HasPermission("authentication:read:teachers")]
 
     def get(self, request):
-        from apps.authentication.models import User
         teachers = User.objects.filter(
             tenant=request.tenant,
             role__name="TEACHER",
@@ -244,3 +253,148 @@ class ChangePasswordView(APIView):
         )
 
         return success_response({"message": "Mot de passe modifié avec succès."})
+
+
+class StaffViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet pour la gestion du personnel de l'établissement — STAFF-MVP-02.
+
+    Endpoints :
+    - GET    /auth/staff/          → liste paginée (staff:read)
+    - POST   /auth/staff/          → création (staff:create)
+    - GET    /auth/staff/{id}/     → détail (staff:read)
+    - PATCH  /auth/staff/{id}/     → modification (staff:update)
+    - PATCH  /auth/staff/{id}/disable/     → désactivation (staff:disable)
+    - PATCH  /auth/staff/{id}/enable/      → réactivation (staff:disable)
+
+    Isolation multi-tenant : filtré sur request.tenant.
+    """
+
+    permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
+    filterset_fields = ["role__name", "is_active"]
+    search_fields = ["first_name", "last_name", "email"]
+    ordering_fields = ["first_name", "last_name", "created_at"]
+    ordering = ["first_name"]
+
+    def get_serializer_class(self):
+        if self.action == "create":
+            return StaffCreateSerializer
+        elif self.action in ("partial_update", "update"):
+            return StaffUpdateSerializer
+        elif self.action == "retrieve":
+            return StaffDetailSerializer
+        return StaffListSerializer
+
+    def get_permissions(self):
+        perms = super().get_permissions()
+        if self.action in ("list", "retrieve"):
+            perms.append(HasPermission("staff:read"))
+        elif self.action == "create":
+            perms.append(HasPermission("staff:create"))
+        elif self.action in ("partial_update", "update"):
+            perms.append(HasPermission("staff:update"))
+        elif self.action in ("disable", "enable"):
+            perms.append(HasPermission("staff:disable"))
+        return perms
+
+    def get_queryset(self):
+        return User.objects.filter(tenant=self.request.tenant).select_related("role")
+
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        return success_response(serializer.data)
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        user, temp_pass = create_staff_account(
+            tenant=request.tenant,
+            created_by=request.user,
+            email=serializer.validated_data["email"],
+            first_name=serializer.validated_data["first_name"],
+            last_name=serializer.validated_data["last_name"],
+            role_name=serializer.validated_data["role"],
+            phone=serializer.validated_data.get("phone", ""),
+            subjects_taught=serializer.validated_data.get("subjects_taught", []),
+            ip_address=get_client_ip(request),
+        )
+
+        audit_log(
+            user=request.user,
+            tenant=request.tenant,
+            action="staff:create",
+            target_model="User",
+            target_id=str(user.id),
+            ip_address=get_client_ip(request),
+        )
+
+        response_data = StaffDetailSerializer(user).data
+        response_data["temporary_password"] = temp_pass
+        return created_response(response_data)
+
+    def partial_update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+
+        for field, value in serializer.validated_data.items():
+            setattr(instance, field, value)
+        instance.save(update_fields=list(serializer.validated_data.keys()))
+
+        audit_log(
+            user=request.user,
+            tenant=request.tenant,
+            action="staff:update",
+            target_model="User",
+            target_id=str(instance.id),
+            ip_address=get_client_ip(request),
+        )
+
+        return success_response(StaffDetailSerializer(instance).data)
+
+    @action(detail=True, methods=["patch"])
+    def disable(self, request, pk=None):
+        """Désactive un compte (is_active=False)."""
+        user = self.get_object()
+        if not user.is_active:
+            return error_response(
+                "Ce compte est déjà désactivé.",
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+        user.is_active = False
+        user.save(update_fields=["is_active"])
+
+        audit_log(
+            user=request.user,
+            tenant=request.tenant,
+            action="staff:disable",
+            target_model="User",
+            target_id=str(user.id),
+            ip_address=get_client_ip(request),
+        )
+        return success_response({"id": user.id, "is_active": False})
+
+    @action(detail=True, methods=["patch"])
+    def enable(self, request, pk=None):
+        """Réactive un compte (is_active=True)."""
+        user = self.get_object()
+        if user.is_active:
+            return error_response(
+                "Ce compte est déjà actif.",
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+        user.is_active = True
+        user.save(update_fields=["is_active"])
+
+        audit_log(
+            user=request.user,
+            tenant=request.tenant,
+            action="staff:enable",
+            target_model="User",
+            target_id=str(user.id),
+            ip_address=get_client_ip(request),
+        )
+        return success_response({"id": user.id, "is_active": True})
