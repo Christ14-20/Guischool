@@ -222,6 +222,97 @@ Convention uniforme sur toutes les listes : `?champ=valeur` pour un filtre exact
 
 ---
 
+## 1b. Gestion du personnel (STAFF-MVP-01/02) ⚠️ *(ajout post-contrat — Épic 6.1)*
+
+### `GET /auth/staff/`
+**Auth :** JWT, permission `staff:read` (`DIRECTOR`/`STUDENT_STUDIES`).
+
+**Query params :** `?role__name=TEACHER&is_active=true&search=Diallo&ordering=-first_name`
+
+**Réponse `200` :** liste paginée (cf. §0.4), chaque élément :
+```json
+{
+  "id": "3f1a2b4c-...",
+  "email": "enseignant@ecole.gn",
+  "first_name": "Aissatou",
+  "last_name": "Bah",
+  "phone": "+224620000010",
+  "role": {"name": "TEACHER", "label": "Enseignant"},
+  "is_active": true,
+  "subjects_taught": ["MATH", "PC"],
+  "date_joined": "2026-07-22T10:00:00Z"
+}
+```
+
+### `POST /auth/staff/`
+**Auth :** JWT, permission `staff:create` (`DIRECTOR` uniquement).
+
+**Requête :**
+```json
+{
+  "email": "enseignant@ecole.gn",
+  "first_name": "Aissatou",
+  "last_name": "Bah",
+  "role": "TEACHER",
+  "phone": "+224620000010",
+  "subjects_taught": ["MATH"]
+}
+```
+`role` accepte `TEACHER` ou `STUDENT_STUDIES`. `DIRECTOR` est refusé par ce service (réservé au Super Admin via TENANT-03).
+
+**Réponse `201` :**
+```json
+{
+  "status": "success",
+  "data": {
+    "id": "3f1a2b4c-...",
+    "email": "enseignant@ecole.gn",
+    "first_name": "Aissatou",
+    "last_name": "Bah",
+    "role": {"name": "TEACHER", "label": "Enseignant"},
+    "is_active": true,
+    "must_change_password": true,
+    "subjects_taught": ["MATH"],
+    "temporary_password": "Xk9$mP2q@F3!",
+    "date_joined": "2026-07-22T10:00:00Z"
+  }
+}
+```
+
+> Le `temporary_password` n'est renvoyé qu'une seule fois, dans cette réponse (comme TENANT-03).
+
+**Erreur `400` :** email déjà utilisé, téléphone invalide, rôle non autorisé.
+
+### `GET /auth/staff/{id}/`
+**Auth :** JWT, permission `staff:read`.
+**Réponse `200` :** même forme que la création sans `temporary_password`.
+
+### `PATCH /auth/staff/{id}/`
+**Auth :** JWT, permission `staff:update` (`DIRECTOR` uniquement).
+
+**Champs modifiables en V1 :**
+- `first_name`, `last_name`, `phone`, `subjects_taught`
+- **Pas l'email** (identifiant de connexion, dette V2 avec reverification)
+- **Pas le rôle** (fixé à la création, dette V2)
+
+**Requête :**
+```json
+{"first_name": "NouveauPrenom", "phone": "+224620000011"}
+```
+**Réponse `200` :** objet complet mis à jour.
+
+### `PATCH /auth/staff/{id}/disable/`
+**Auth :** JWT, permission `staff:disable` (`DIRECTOR` uniquement).
+**Réponse `200` :** `{"status": "success", "data": {"id": "...", "is_active": false}}`
+**Erreur `400` :** si déjà désactivé.
+
+### `PATCH /auth/staff/{id}/enable/`
+**Auth :** JWT, permission `staff:disable` (`DIRECTOR` uniquement).
+**Réponse `200` :** `{"status": "success", "data": {"id": "...", "is_active": true}}`
+**Erreur `400` :** si déjà actif.
+
+---
+
 ## 2. Super Administration (Épic 2)
 
 ### `POST /superadmin/schools/`
@@ -921,6 +1012,9 @@ Pour garder une expérience cohérente, le frontend doit afficher **exactement**
 | Auth | `/auth/login/`, `/auth/refresh/`, `/auth/logout/`, `/auth/change-password/` | POST |
 | Auth | `/users/me/` | GET, PATCH |
 | Auth | `/auth/permissions/me/` | GET |
+| Auth (staff) | `/auth/staff/` | GET, POST |
+| Auth (staff) | `/auth/staff/{id}/` | GET, PATCH |
+| Auth (staff) | `/auth/staff/{id}/disable/`, `/auth/staff/{id}/enable/` | PATCH |
 | Super Admin | `/superadmin/schools/` | GET, POST |
 | Super Admin | `/superadmin/schools/{id}/` | GET |
 | Super Admin | `/superadmin/schools/{id}/suspend/`, `/reactivate/` | PATCH |

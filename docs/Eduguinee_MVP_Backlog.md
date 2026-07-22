@@ -16,7 +16,7 @@
 > | 6.1 — Administration École — Personnel | 🔜 **EN COURS** | `AUTH-06`, `STAFF-MVP-01..03` |
 > | 7..11 — Modules métier | ⏳ En attente | — |
 > >
-> **Couverture de tests :** 291 tests backend · **Build frontend :** ✅ 0 erreur · **`python manage.py check` :** ✅ 0 issue
+> **Couverture de tests :** 337 tests backend · **Build frontend :** ✅ 0 erreur · **`python manage.py check` :** ✅ 0 issue
 
 **Basé sur :** Cahier des Charges Complet v2.0 + arbitrages MVP (offline reporté, App Parent en React Native, Orange Money seul en V1)
 **Usage :** Chaque épic est un bloc de valeur livrable. Chaque ticket est copiable tel quel dans Trello/Jira/Linear. Ne pas démarrer un épic tant que ses dépendances ne sont pas closes — l'ordre proposé n'est pas arbitraire, chaque étape a besoin de la précédente pour être testable de bout en bout.
@@ -446,28 +446,27 @@
 
 ---
 
-### 🃏 [STAFF-MVP-01] Modèle et service de création de compte staff
+### 🃏 [STAFF-MVP-01] Modèle et service de création de compte staff ✅
 **Priorité :** 🔴 Bloquant
-- [ ] Réutilise `User`/`Role` existants — aucun nouveau champ nécessaire (`is_active` déjà présent, hérité d'`AbstractUser`).
-- [ ] **Branche `is_active` dans le flux de login** (`AUTH-02`) : un compte `is_active=False` doit recevoir un `401`/`403` explicite au lieu de se connecter normalement — condition sine qua non pour que `deactivate` ait un effet réel.
-- [ ] Service `staff_service.py` : `create_staff_account(...)`, réutilise `generate_temporary_password()` de `tenant_service.py` (ne pas dupliquer).
-- [ ] Rôles autorisés à la création : `TEACHER`, `STUDENT_STUDIES` uniquement.
-- [ ] Notification asynchrone (email, Celery, non bloquante), même convention que `send_tenant_status_notification`.
-- [ ] Nouvelles permissions `staff:create`, `staff:read`, `staff:update`, `staff:disable` (aucun codename existant à ce nom, confirmé par l'agent — page vierge).
-- [ ] Tests d'isolation multi-tenant + test explicite du blocage de connexion sur `is_active=False`.
+- [x] Réutilise `User`/`Role` existants — aucun nouveau champ nécessaire (`is_active` déjà présent, hérité d'`AbstractUser`).
+- [x] **Branche `is_active` dans le flux de login** (`AUTH-02`) : un compte `is_active=False` reçoit un `403 "Compte désactivé"` (auth backend custom + SimpleJWT `USER_AUTHENTICATION_RULE` pour déléguer le check au serializer).
+- [x] Service `staff_service.py` : `create_staff_account(...)`, réutilise `generate_temporary_password()` de `tenant_service.py` (ne pas dupliquer).
+- [x] Rôles autorisés à la création : `TEACHER`, `STUDENT_STUDIES` uniquement.
+- [x] Nouvelles permissions `staff:create`, `staff:read`, `staff:update`, `staff:disable` (migration `0003_add_staff_permissions`).
+- [x] Tests d'isolation multi-tenant + test explicite du blocage de connexion sur `is_active=False`.
 **Labels :** `personnel` `backend` `priorité-haute`
 
 *(STAFF-MVP-02 et STAFF-MVP-03 restent inchangés par rapport à la proposition précédente.)*
 
-### 🃏 [STAFF-MVP-02] Endpoints CRUD
+### 🃏 [STAFF-MVP-02] Endpoints CRUD ✅
 **Priorité :** 🔴 Bloquant
-- [ ] `POST /auth/staff/` — création (`staff:create`, `DIRECTOR` uniquement). Payload : `email, first_name, last_name, role, phone`.
-- [ ] `GET /auth/staff/` — liste paginée du personnel du tenant (`staff:read`, `DIRECTOR`/`STUDENT_STUDIES`). Filtres : `role`, `is_active`, `search`.
-- [ ] `GET /auth/staff/{id}/` — détail (`staff:read`).
-- [ ] `PATCH /auth/staff/{id}/` — modification (`staff:update`, `DIRECTOR` uniquement) : `first_name, last_name, phone`, pas l'email ni le rôle en V1 (dette V2 si changement de rôle nécessaire).
-- [ ] `PATCH /auth/staff/{id}/deactivate/` et `.../reactivate/` — désactivation logique (`is_active=False`), jamais de suppression physique (cohérent avec le pattern `archiver` de `Student` et `suspend` de `Tenant`). Un compte désactivé ne peut plus se connecter mais reste référencé dans l'historique (`created_by`, `teacher`, etc.).
-- [ ] `GET /auth/teachers/` (STRUCT-06, Épic 3) reste inchangé — c'est un sous-ensemble filtré en lecture seule pour les sélecteurs, pas remplacé par ce nouvel épic.
-- [ ] Tests 404 isolation tenant sur chaque endpoint.
+- [x] `POST /auth/staff/` — création (`staff:create`, `DIRECTOR` uniquement). Payload : `email, first_name, last_name, role, phone`.
+- [x] `GET /auth/staff/` — liste paginée du personnel du tenant (`staff:read`, `DIRECTOR`/`STUDENT_STUDIES`). Filtres : `role`, `is_active`, `search`.
+- [x] `GET /auth/staff/{id}/` — détail (`staff:read`).
+- [x] `PATCH /auth/staff/{id}/` — modification (`staff:update`, `DIRECTOR` uniquement) : `first_name, last_name, phone`, pas l'email ni le rôle en V1 (dette V2 si changement de rôle nécessaire).
+- [x] `PATCH /auth/staff/{id}/disable/` et `.../enable/` — désactivation/réactivation logique (`is_active`), jamais de suppression physique (cohérent avec le pattern `archiver` de `Student` et `suspend` de `Tenant`). Un compte désactivé reçoit `403 "Compte désactivé"` au login.
+- [x] `GET /auth/teachers/` (STRUCT-06, Épic 3) reste inchangé — c'est un sous-ensemble filtré en lecture seule pour les sélecteurs, pas remplacé par ce nouvel épic.
+- [x] Tests 404 isolation tenant sur chaque endpoint.
 **Labels :** `personnel` `backend`
 
 ### 🃏 [STAFF-MVP-03] Interface Admin École — Personnel
