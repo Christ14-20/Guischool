@@ -18,6 +18,7 @@ export interface User {
   role: UserRole;
   permissions: string[];
   tenant_id: string | null;
+  must_change_password?: boolean;
 }
 
 export interface Session {

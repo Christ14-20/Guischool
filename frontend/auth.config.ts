@@ -9,17 +9,23 @@ export const authConfig: NextAuthConfig = {
       const isLoggedIn = !!auth?.user;
       const isApiRoute = nextUrl.pathname.startsWith("/api");
       const isAuthRoute = nextUrl.pathname.startsWith("/login");
+      const isChangePasswordRoute = nextUrl.pathname.startsWith("/change-password");
       const isSuperAdminRoute = nextUrl.pathname.startsWith("/superadmin");
       
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const mustChangePassword = (auth?.user as any)?.must_change_password;
+
       // Laisser passer les API routes (NextAuth gère lui-même ses routes,
       // et d'autres APIs peuvent être appelées librement)
       if (isApiRoute) return true;
 
       if (isAuthRoute) {
         if (isLoggedIn) {
-          // Rediriger l'utilisateur connecté vers son dashboard respectif
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const role = (auth as any)?.user?.role;
+          if (mustChangePassword) {
+            return Response.redirect(new URL("/change-password", nextUrl));
+          }
           if (role === "SUPER_ADMIN") {
             return Response.redirect(new URL("/superadmin/dashboard", nextUrl));
           } else {
@@ -31,6 +37,11 @@ export const authConfig: NextAuthConfig = {
 
       if (!isLoggedIn) {
         return false; // Redirige vers /login
+      }
+
+      // Forcer le changement de mot de passe avant tout accès
+      if (mustChangePassword && !isChangePasswordRoute) {
+        return Response.redirect(new URL("/change-password", nextUrl));
       }
 
       // Protection par rôle
