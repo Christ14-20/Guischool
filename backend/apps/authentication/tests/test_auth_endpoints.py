@@ -336,6 +336,25 @@ def user_must_change(tenant, director_role):
     )
 
 
+@pytest.fixture
+def super_admin_role():
+    return Role.objects.get_or_create(name="SUPER_ADMIN", defaults={"label": "Super Admin"})[0]
+
+
+@pytest.fixture
+def super_admin_must_change(super_admin_role):
+    return User.objects.create_user(
+        username="sa_mustchange",
+        email="sa_mustchange@guischool.gn",
+        password="SecurePass123!",
+        first_name="Super",
+        last_name="Admin",
+        role=super_admin_role,
+        tenant=None,
+        must_change_password=True,
+    )
+
+
 @pytest.mark.django_db
 class TestMustChangePassword:
 
@@ -392,6 +411,13 @@ class TestMustChangePassword:
         """Une requête sans token n'est pas bloquée par ce middleware (DRF renverra 401)."""
         response = api_client.get(reverse("users-me"))
         assert response.status_code == 401  # IsAuthenticated, pas 403
+
+    def test_super_admin_exempt_from_must_change(self, api_client, super_admin_must_change):
+        """SUPER_ADMIN avec must_change_password=True n'est PAS bloqué."""
+        # On l'authentifie via le helper interne (login + set credentials)
+        self._auth(api_client, email="sa_mustchange@guischool.gn", password="SecurePass123!")
+        response = api_client.get(reverse("users-me"))
+        assert response.status_code == 200
 
     # ── Change password ──────────────────────────────────────────────────
 
