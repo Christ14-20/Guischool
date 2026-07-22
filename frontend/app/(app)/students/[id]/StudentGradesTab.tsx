@@ -2,6 +2,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import {
   Loader2,
   Download,
@@ -9,6 +10,9 @@ import {
   AlertTriangle,
   CheckCircle2,
   Clock,
+  X,
+  Plus,
+  GraduationCap,
 } from "lucide-react";
 import { getBackendClient } from "@/lib/api/client";
 
@@ -17,13 +21,17 @@ interface Props {
 }
 
 export default function StudentGradesTab({ studentId }: Props) {
-  const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
   const [, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
 
   const [periods, setPeriods] = useState<any[]>([]);
   const [periodId, setPeriodId] = useState("");
   const [moyenneData, setMoyenneData] = useState<any>(null);
   const [loadingMoyenne, setLoadingMoyenne] = useState(false);
+
+  // Role-based permission
+  const [canDecide, setCanDecide] = useState(false);
 
   // Bulletin async state
   const [bulletinStatus, setBulletinStatus] = useState<
@@ -31,15 +39,41 @@ export default function StudentGradesTab({ studentId }: Props) {
   >("idle");
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
 
-  // Load periods on mount
+  // Year-end decision state
+  const [decisionModalOpen, setDecisionModalOpen] = useState(false);
+  const [decisionLoading, setDecisionLoading] = useState(false);
+  const [decisionError, setDecisionError] = useState<string | null>(null);
+  const [decisionForm, setDecisionForm] = useState({
+    school_year_id: "",
+    decision: "ADMIS",
+    classe_destination_id: "",
+  });
+  const [schoolYears, setSchoolYears] = useState<any[]>([]);
+  const [classes, setClasses] = useState<any[]>([]);
+
+  // Load periods, school years, classes, and role on mount
   useEffect(() => {
     async function load() {
       try {
         const client = await getBackendClient();
-        const syResp = await client.get("/pedagogy/schoolyears/");
-        const schoolYears =
+        const [syResp, clsResp] = await Promise.all([
+          client.get("/pedagogy/schoolyears/"),
+          client.get("/pedagogy/classes/"),
+        ]);
+        const schoolYearsData =
           syResp.data?.data?.results ?? syResp.data?.data ?? [];
-        const currentSy = schoolYears.find((sy: any) => sy.is_current) || schoolYears[0];
+        const classesData = clsResp.data?.data?.results ?? clsResp.data?.data ?? [];
+        setSchoolYears(schoolYearsData);
+        setClasses(classesData);
+
+        // Check if user is DIRECTOR or STUDENT_STUDIES for decision permission
+        const authResp = await client.get("/auth/permissions/me/");
+        const perms = authResp.data?.data?.permissions ?? [];
+        setCanDecide(
+          perms.includes("notes:validate") || perms.includes("eleves:update")
+        );
+
+        const currentSy = schoolYearsData.find((sy: any) => sy.is_current) || schoolYearsData[0];
         if (!currentSy) return;
         const perResp = await client.get(
           `/pedagogy/school-years/${currentSy.id}/periods/`
@@ -48,7 +82,7 @@ export default function StudentGradesTab({ studentId }: Props) {
         setPeriods(loaded);
         if (loaded.length > 0) setPeriodId(loaded[0].id);
       } catch {
-        setError("Impossible de charger les périodes.");
+        setError("Impossible de charger les données.");
       }
     }
     load();
@@ -78,6 +112,55 @@ export default function StudentGradesTab({ studentId }: Props) {
     }
     loadMoyenne();
   }, [periodId, studentId]);
+
+  const openDecisionModal = useCallback(async () => {
+    setDecisionError(null);
+    try {
+      const client = await getBackendClient();
+      const [syResp, clsResp] = await Promise.all([
+        client.get("/pedagogy/schoolyears/"),
+        client.get("/pedagogy/classes/"),
+      ]);
+      const syData = syResp.data?.data?.results ?? syResp.data?.data ?? [];
+      const clsData = clsResp.data?.data?.results ?? clsResp.data?.data ?? [];
+      setSchoolYears(syData);
+      setClasses(clsData);
+      setDecisionForm({ school_year_id: "", decision: "ADMIS", classe_destination_id: "" });
+      setDecisionModalOpen(true);
+    } catch {
+      setDecisionError("Impossible de charger les données pour la décision.");
+    }
+  }, []);
+
+const handleDecisionSubmit = useCallback(async () => {
+    if (!decisionForm.school_year_id || (decisionForm.decision === "ADMIS" && !decisionForm.classe_destination_id)) {
+      setDecisionError("Année scolaire et classe de destination (si ADMIS) sont obligatoires.");
+      return;
+    }
+    setDecisionLoading(true);
+    setDecisionError(null);
+    startTransition(async () => {
+      try {
+        const client = await getBackendClient();
+        const resp = await client.post("/pedagogy/year-end-decisions/", {
+          student: studentId,
+          school_year: decisionForm.school_year_id,
+          decision: decisionForm.decision,
+          classe_destination: decisionForm.classe_destination_id || undefined,
+        });
+        if (resp.data?.status === "success") {
+          setDecisionModalOpen(false);
+          router.refresh();
+        } else {
+          setDecisionError(resp.data?.message || "Erreur lors de la création de la décision.");
+        }
+      } catch (err: any) {
+        setDecisionError(err.response?.data?.message || "Erreur lors de la création de la décision.");
+      } finally {
+        setDecisionLoading(false);
+      }
+    });
+  }, [decisionForm, studentId, router]);
 
   const generateBulletin = useCallback(() => {
     if (!periodId) return;
@@ -143,9 +226,9 @@ export default function StudentGradesTab({ studentId }: Props) {
 
   return (
     <div className="space-y-6">
-      {/* Period selector */}
+      {/* Period selector + Bulletin + Decision buttons */}
       <div className="bg-slate-900/40 border border-slate-800/80 rounded-xl p-5 shadow-xl backdrop-blur-md">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
           <div className="space-y-1.5">
             <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider">
               Période
@@ -194,6 +277,19 @@ export default function StudentGradesTab({ studentId }: Props) {
               )}
             </button>
           </div>
+
+          {/* Year-end decision button */}
+          {canDecide && (
+            <div className="flex items-end">
+              <button
+                onClick={openDecisionModal}
+                className="inline-flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded-xl shadow-lg shadow-emerald-600/25 transition-all cursor-pointer"
+              >
+                <GraduationCap className="size-4" />
+                D&apos;écision de fin d&apos;année
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -283,10 +379,7 @@ export default function StudentGradesTab({ studentId }: Props) {
                 <tbody className="divide-y divide-slate-800/30 text-sm text-slate-300">
                   {(moyenneData.par_matiere ?? []).length === 0 ? (
                     <tr>
-                      <td
-                        colSpan={3}
-                        className="px-6 py-8 text-center text-slate-500"
-                      >
+                      <td colSpan={3} className="px-6 py-8 text-center text-slate-500">
                         <div className="flex flex-col items-center gap-2">
                           <BookOpen className="size-5 text-slate-600" />
                           Aucune note disponible pour cette période.
@@ -295,10 +388,7 @@ export default function StudentGradesTab({ studentId }: Props) {
                     </tr>
                   ) : (
                     moyenneData.par_matiere.map((item: any, i: number) => (
-                      <tr
-                        key={i}
-                        className="hover:bg-slate-900/35 transition-colors"
-                      >
+                      <tr key={i} className="hover:bg-slate-900/35 transition-colors">
                         <td className="px-6 py-4 font-medium text-white">
                           {item.subject ?? item.subject_name ?? "—"}
                         </td>
@@ -322,6 +412,117 @@ export default function StudentGradesTab({ studentId }: Props) {
           {periodId
             ? "Aucune moyenne calculée pour cette période."
             : "Sélectionnez une période pour afficher les notes."}
+        </div>
+      )}
+
+      {/* Year-end decision modal */}
+      {decisionModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+            <div className="p-6 space-y-6">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-bold text-white">
+                  D&apos;écision de fin d&apos;année
+                </h2>
+                <button
+                  onClick={() => setDecisionModalOpen(false)}
+                  className="text-slate-400 hover:text-white cursor-pointer"
+                >
+                  <X className="size-5" />
+                </button>
+              </div>
+
+              {decisionError && (
+                <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-lg text-rose-400 text-sm">
+                  {decisionError}
+                </div>
+              )}
+
+              <div className="space-y-4">
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                    Année scolaire
+                  </label>
+                  <select
+                    value={decisionForm.school_year_id}
+                    onChange={(e) =>
+                      setDecisionForm((p) => ({ ...p, school_year_id: e.target.value }))
+                    }
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors"
+                  >
+                    {schoolYears.map((sy: any) => (
+                      <option key={sy.id} value={sy.id}>
+                        {sy.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                    Décision
+                  </label>
+                  <select
+                    value={decisionForm.decision}
+                    onChange={(e) =>
+                      setDecisionForm((p) => ({ ...p, decision: e.target.value }))
+                    }
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors"
+                  >
+                    <option value="ADMIS">Admis</option>
+                    <option value="REDOUBLE">Redouble</option>
+                    <option value="EXCLU">Exclu</option>
+                  </select>
+                </div>
+
+                {(decisionForm.decision === "ADMIS" || decisionForm.decision === "REDOUBLE") && (
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                      Classe de destination
+                    </label>
+                    <select
+                      value={decisionForm.classe_destination_id}
+                      onChange={(e) =>
+                        setDecisionForm((p) => ({
+                          ...p,
+                          classe_destination_id: e.target.value,
+                        }))
+                      }
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors"
+                    >
+                      <option value="">Sélectionner...</option>
+                      {classes.map((c: any) => (
+                        <option key={c.id} value={c.id}>
+                          {c.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                <div className="flex justify-end gap-3 pt-4 border-t border-slate-800">
+                  <button
+                    onClick={() => setDecisionModalOpen(false)}
+                    className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-sm font-medium transition-colors"
+                  >
+                    Annuler
+                  </button>
+                  <button
+                    onClick={handleDecisionSubmit}
+                    disabled={decisionLoading}
+                    className="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-medium rounded-xl shadow-lg shadow-indigo-600/25 transition-all disabled:opacity-50 cursor-pointer"
+                  >
+                    {decisionLoading ? (
+                      <Loader2 className="size-4 animate-spin" />
+                    ) : (
+                      <Plus className="size-4" />
+                    )}
+                    Créer la décision
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>
