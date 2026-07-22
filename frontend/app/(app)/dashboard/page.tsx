@@ -34,21 +34,30 @@ const ACTIONS = [
     title: "Inscrire un élève",
     desc: "Nouvelle inscription ou réinscription dans l'établissement",
     icon: UserPlus,
-    color: "eleves",
+    borderColor: "hover:border-[rgba(99,102,241,0.3)]",
+    iconBg: "rgba(99, 102, 241, 0.1)",
+    iconColor: "#818cf8",
+    barColor: "#6366f1",
   },
   {
     href: "/attendance",
     title: "Faire l'appel",
     desc: "Saisie des présences du jour par classe",
     icon: CalendarCheck,
-    color: "presence",
+    borderColor: "hover:border-[rgba(16,185,129,0.3)]",
+    iconBg: "rgba(16, 185, 129, 0.1)",
+    iconColor: "#10B981",
+    barColor: "#10B981",
   },
   {
     href: "/grades",
     title: "Saisir des notes",
     desc: "Évaluations, bulletins et moyennes",
     icon: FileSpreadsheet,
-    color: "notes",
+    borderColor: "hover:border-[rgba(245,158,11,0.3)]",
+    iconBg: "rgba(245, 158, 11, 0.1)",
+    iconColor: "#F59E0B",
+    barColor: "#F59E0B",
   },
 ];
 
@@ -159,29 +168,16 @@ export default async function TenantAppDashboard() {
           <a
             key={action.href}
             href={action.href}
-            className="block p-6 rounded-[12px] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_4px_12px_rgba(0,0,0,0.3)] relative overflow-hidden group"
+            className={`block p-6 rounded-[12px] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_4px_12px_rgba(0,0,0,0.3)] relative overflow-hidden group ${action.borderColor}`}
             style={{
               ...RAISED_CARD_STYLE,
               textDecoration: "none",
-            }}
-            onMouseEnter={(e) => {
-              const colors: Record<string, string> = {
-                eleves: "rgba(99, 102, 241, 0.3)",
-                presence: "rgba(16, 185, 129, 0.3)",
-                notes: "rgba(245, 158, 11, 0.3)",
-              };
-              e.currentTarget.style.borderColor = colors[action.color];
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.06)";
             }}
           >
             {/* Left accent bar on hover */}
             <div
               className="absolute top-0 left-0 w-[3px] h-full opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-              style={{
-                background: action.color === "eleves" ? "#6366f1" : action.color === "presence" ? "#10B981" : "#F59E0B",
-              }}
+              style={{ background: action.barColor }}
             />
             {/* Arrow */}
             <div className="absolute top-6 right-6 text-[#475569] opacity-0 group-hover:opacity-100 group-hover:translate-x-0 -translate-x-1 transition-all duration-200">
@@ -189,10 +185,7 @@ export default async function TenantAppDashboard() {
             </div>
             <div
               className="w-11 h-11 rounded-[10px] flex items-center justify-center mb-3.5"
-              style={{
-                background: action.color === "eleves" ? "rgba(99, 102, 241, 0.1)" : action.color === "presence" ? "rgba(16, 185, 129, 0.1)" : "rgba(245, 158, 11, 0.1)",
-                color: action.color === "eleves" ? "#818cf8" : action.color === "presence" ? "#10B981" : "#F59E0B",
-              }}
+              style={{ background: action.iconBg, color: action.iconColor }}
             >
               <action.icon className="w-[22px] h-[22px]" />
             </div>

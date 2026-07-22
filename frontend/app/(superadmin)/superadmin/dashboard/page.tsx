@@ -210,14 +210,8 @@ export default async function SuperAdminDashboard() {
                   return (
                     <tr
                       key={school.id}
-                      className="group transition-colors"
+                      className="group transition-colors hover:bg-white/[0.03]"
                       style={{ borderBottom: "1px solid rgba(255, 255, 255, 0.06)" }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.background = "rgba(255, 255, 255, 0.03)";
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.background = "transparent";
-                      }}
                     >
                       <td className="px-3.5 py-3.5 text-sm text-white font-medium">{school.name}</td>
                       <td className="px-3.5 py-3.5 text-sm text-[#94A3B8] font-mono text-xs">{school.slug}.eduguinee.gn</td>
