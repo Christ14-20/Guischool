@@ -407,10 +407,10 @@
 - [x] Distinction visuelle note provisoire vs validée (badge)
 - [x] Affichage des warnings de notes rejetées par l'API
 - [x] Filtrage matière par enseignant (TEACHER) ou complet (DIRECTOR/STUDENT_STUDIES)
-- [ ] Page `/app/students/[id]/notes` : moyennes par matière, moyenne générale, mention
-- [ ] Bouton de téléchargement du bulletin PDF depuis la fiche élève (async + polling)
-- [ ] Page `/app/year-end-decisions` : promotion groupée
-- [ ] Décision individuelle dans l'onglet Notes de la fiche élève
+- [x] Page `/app/students/[id]/notes` : moyennes par matière, moyenne générale, mention
+- [x] Bouton de téléchargement du bulletin PDF depuis la fiche élève (async + polling)
+- [x] Page `/app/year-end-decisions` : promotion groupée
+- [x] Décision individuelle dans l'onglet Notes de la fiche élève
 **Labels :** `notes` `frontend` `priorité-haute`
 
 ---
