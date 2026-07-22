@@ -62,6 +62,7 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "core.middleware.TenantMiddleware",             # AUTH-03 — après auth Django
+    "core.middleware.MustChangePasswordMiddleware", # AUTH-06 — après TenantMiddleware
 ]
 
 ROOT_URLCONF = "config.urls"

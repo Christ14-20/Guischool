@@ -21,7 +21,11 @@ from core.permissions import HasPermission
 from core.utils import success_response, error_response
 from apps.monitoring.services import audit_log, get_client_ip
 
-from .serializers import CustomTokenObtainPairSerializer, UserMeSerializer
+from .serializers import (
+    CustomTokenObtainPairSerializer,
+    UserMeSerializer,
+    ChangePasswordSerializer,
+)
 
 
 class LoginView(APIView):
@@ -196,3 +200,47 @@ class TeachersListView(APIView):
             role__name="TEACHER",
         ).values("id", "first_name", "last_name", "email").order_by("first_name")
         return success_response(list(teachers))
+
+
+class ChangePasswordView(APIView):
+    """
+    POST /auth/change-password/ — AUTH-06.
+
+    Permet à un utilisateur connecté de changer son mot de passe.
+    Disponible même lorsque must_change_password=True (whitelisté dans
+    MustChangePasswordMiddleware).
+
+    Body :
+        {"old_password": "...", "new_password": "...", "new_password_confirm": "..."}
+
+    Réponse 200 : {"status": "success", "data": {"message": "Mot de passe modifié avec succès."}}
+    Erreurs :
+        400 — validation échouée (ancien incorrect, confirm différent, trop court…)
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        serializer = ChangePasswordSerializer(
+            data=request.data,
+            context={"request": request},
+        )
+        if not serializer.is_valid():
+            return error_response(
+                "Données invalides",
+                errors=serializer.errors,
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+
+        user = request.user
+        user.set_password(serializer.validated_data["new_password"])
+        user.must_change_password = False
+        user.save(update_fields=["password", "must_change_password"])
+
+        audit_log(
+            user=user,
+            tenant=getattr(user, "tenant", None),
+            action="auth:change-password",
+            ip_address=get_client_ip(request),
+        )
+
+        return success_response({"message": "Mot de passe modifié avec succès."})

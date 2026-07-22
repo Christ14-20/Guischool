@@ -1,21 +1,22 @@
 # BACKLOG MVP — EDUGUINÉE 3.0
 ## Découpage en épics et tickets, ordonné par dépendance technique
 
-> **🗓 Dernière mise à jour :** 2026-07-20
-> **📍 Avancement global :** Épics 0, 1, 2, 3, 4 & 5 ✅ terminés · Épic 6 🔜 en cours
+> **🗓 Dernière mise à jour :** 2026-07-22
+> **📍 Avancement global :** Épics 0, 1, 2, 3, 4 & 5 ✅ terminés · Épic 6 🔜 en cours · Épic 6.1 🔜 en cours
 > >
 > | Épic | Statut | Commit(s) |
 > |------|--------|-----------|
 > | 0 — Setup & Infrastructure | ✅ **TERMINÉ** | `SETUP-01..05` |
-> | 1 — Authentification & RBAC | ✅ **TERMINÉ** | `AUTH-01..04` |
+> | 1 — Authentification & RBAC | ✅ **TERMINÉ** | `AUTH-01..06` |
 > | 2 — Multi-tenant & Super Admin | ✅ **TERMINÉ** | `TENANT-01..05` |
 > | 3 — Structure Pédagogique | ✅ **TERMINÉ** | `STRUCT-01..06` |
 > | 4 — Élèves (inscription, réinscription) | ✅ **TERMINÉ** | `STUDENT-MVP-01..05` |
 > | 5 — Présences | ✅ **TERMINÉ** | `ATT-01..03` |
 > | 6 — Notes, Évaluations, Bulletins | 🔜 **EN COURS** | `GRADE-MVP-01` (modèles), `GRADE-MVP-02` (endpoints) |
+> | 6.1 — Administration École — Personnel | 🔜 **EN COURS** | `AUTH-06`, `STAFF-MVP-01..03` |
 > | 7..11 — Modules métier | ⏳ En attente | — |
 > >
-> **Couverture de tests :** 280 tests backend · **Build frontend :** ✅ 0 erreur · **`python manage.py check` :** ✅ 0 issue
+> **Couverture de tests :** 291 tests backend · **Build frontend :** ✅ 0 erreur · **`python manage.py check` :** ✅ 0 issue
 
 **Basé sur :** Cahier des Charges Complet v2.0 + arbitrages MVP (offline reporté, App Parent en React Native, Orange Money seul en V1)
 **Usage :** Chaque épic est un bloc de valeur livrable. Chaque ticket est copiable tel quel dans Trello/Jira/Linear. Ne pas démarrer un épic tant que ses dépendances ne sont pas closes — l'ordre proposé n'est pas arbitraire, chaque étape a besoin de la précédente pour être testable de bout en bout.
@@ -36,6 +37,7 @@
 | 4 | Élèves — fiche, inscription, réinscription | 3 | 🔴 |
 | 5 | Présences | 4 | 🟠 |
 | 6 | Notes, Évaluations, Bulletins | 4 | 🔴 |
+| 6.1 | Administration École — Personnel | 0, 1, 3 | 🟠 |
 | 7 | Finance — frais, paiements, Orange Money | 4 | 🔴 |
 | 8 | Communication SMS | 5, 6, 7 | 🟠 |
 | 9 | Application Parent (React Native) | 4, 6, 7, 8 | 🟠 |
@@ -145,6 +147,15 @@
 - [x] Refresh automatique du token JWT dans le callback `jwt()` d'Auth.js (30s de marge)
 **Labels :** `auth` `frontend`
 
+### 🃏 [AUTH-06] Forcer le changement de mot de passe ✅
+**Priorité :** 🟡 Moyenne
+- [x] Middleware `MustChangePasswordMiddleware` : blocage 403 de toute requête (hors `/auth/change-password/` et `/auth/logout/`) quand `must_change_password=True`
+- [x] `POST /auth/change-password/` : validation ancien/nouveau/confirm + Django validators, met `must_change_password=False`
+- [x] SUPER_ADMIN exempté (pas de mot de passe temporaire)
+- [x] 11 tests d'intégration
+**Labels :** `auth` `backend` `sécurité`
+> **Note :** dette Épic 1 — `must_change_password` était posé sur le modèle depuis AUTH-01, mais jamais vérifié. Maintenant effectif.
+
 ### 🃏 [AUTH-05] Authentification mobile (Parent) ⏳
 **Priorité :** 🟠 Haute
 > ⏳ **Reporté à l'Épic 9** — dépend de SETUP-03 et des modules Élèves/Notes
@@ -153,6 +164,17 @@
 - [ ] Gestion du refresh automatique côté mobile
 - [ ] Écran d'onboarding : association à un enfant via code fourni par l'école
 **Labels :** `auth` `mobile`
+
+---
+
+### 🃏 [AUTH-06] Forcer le changement de mot de passe à la première connexion
+**Priorité :** 🔴 Bloquant (dette Épic 1, à régler maintenant puisqu'on recrée des comptes temporaires dans cet épic)
+- [ ] `POST /auth/login/` : la réponse inclut `must_change_password` (déjà un champ `User`, juste à l'exposer dans le payload de login).
+- [ ] **Nouvel endpoint `POST /auth/change-password/`** : `{"new_password": "..."}`, requiert d'être authentifié (le token temporaire obtenu au login suffit). Passe `must_change_password=False` en cas de succès. Validation de robustesse du nouveau mot de passe (réutilise les règles déjà en place pour `generate_temporary_password`, si elles existent côté validation, sinon règles standard : 8+ caractères, au moins 1 majuscule/chiffre).
+- [ ] **Enforcement backend, pas seulement frontend** : tant que `must_change_password=True`, tout endpoint **autre que** `/auth/change-password/` et `/auth/logout/` renvoie `403` avec un message explicite ("Vous devez changer votre mot de passe avant de continuer"). Sans ça, un utilisateur pourrait ignorer la redirection frontend et continuer à utiliser l'API avec le mot de passe temporaire indéfiniment — l'enforcement doit vivre au niveau du middleware/permission, pas juste comme un aiguillage d'écran.
+- [ ] Frontend : redirection automatique vers un écran "Changer mon mot de passe" si `must_change_password=true` à la connexion, avant tout accès au reste de l'application.
+- [ ] Tests : login avec `must_change_password=True` puis tentative d'appel à un endpoint quelconque → `403` ; changement de mot de passe réussi → `must_change_password=False` et accès normal restauré.
+**Labels :** `auth` `sécurité` `backend` `frontend`
 
 ---
 
@@ -412,6 +434,58 @@
 - [x] Page `/app/year-end-decisions` : promotion groupée
 - [x] Décision individuelle dans l'onglet Notes de la fiche élève
 **Labels :** `notes` `frontend` `priorité-haute`
+
+---
+
+## ÉPIC 6.1 — Administration École — Personnel (staff)
+
+**Objectif :** permettre au Directeur de créer, consulter, modifier et désactiver les comptes du personnel de son établissement (enseignants, secrétaires/STUDENT_STUDIES), condition minimale pour que les Épics 5 et 6 soient utilisables en conditions réelles.
+
+**Dépend de :** Épic 1 (Auth/RBAC), Épic 2 (Tenant).
+**Hors périmètre MVP** (dette V2 explicite, cf. CDC §10) : `TeacherContext` multi-établissement pour vacataires, tableau de bord effectifs/ancienneté, historique complet des affectations, fiche personnel enrichie (diplômes, contrats).
+
+---
+
+### 🃏 [STAFF-MVP-01] Modèle et service de création de compte staff
+**Priorité :** 🔴 Bloquant
+- [ ] Réutilise `User`/`Role` existants — aucun nouveau champ nécessaire (`is_active` déjà présent, hérité d'`AbstractUser`).
+- [ ] **Branche `is_active` dans le flux de login** (`AUTH-02`) : un compte `is_active=False` doit recevoir un `401`/`403` explicite au lieu de se connecter normalement — condition sine qua non pour que `deactivate` ait un effet réel.
+- [ ] Service `staff_service.py` : `create_staff_account(...)`, réutilise `generate_temporary_password()` de `tenant_service.py` (ne pas dupliquer).
+- [ ] Rôles autorisés à la création : `TEACHER`, `STUDENT_STUDIES` uniquement.
+- [ ] Notification asynchrone (email, Celery, non bloquante), même convention que `send_tenant_status_notification`.
+- [ ] Nouvelles permissions `staff:create`, `staff:read`, `staff:update`, `staff:disable` (aucun codename existant à ce nom, confirmé par l'agent — page vierge).
+- [ ] Tests d'isolation multi-tenant + test explicite du blocage de connexion sur `is_active=False`.
+**Labels :** `personnel` `backend` `priorité-haute`
+
+*(STAFF-MVP-02 et STAFF-MVP-03 restent inchangés par rapport à la proposition précédente.)*
+
+### 🃏 [STAFF-MVP-02] Endpoints CRUD
+**Priorité :** 🔴 Bloquant
+- [ ] `POST /auth/staff/` — création (`staff:create`, `DIRECTOR` uniquement). Payload : `email, first_name, last_name, role, phone`.
+- [ ] `GET /auth/staff/` — liste paginée du personnel du tenant (`staff:read`, `DIRECTOR`/`STUDENT_STUDIES`). Filtres : `role`, `is_active`, `search`.
+- [ ] `GET /auth/staff/{id}/` — détail (`staff:read`).
+- [ ] `PATCH /auth/staff/{id}/` — modification (`staff:update`, `DIRECTOR` uniquement) : `first_name, last_name, phone`, pas l'email ni le rôle en V1 (dette V2 si changement de rôle nécessaire).
+- [ ] `PATCH /auth/staff/{id}/deactivate/` et `.../reactivate/` — désactivation logique (`is_active=False`), jamais de suppression physique (cohérent avec le pattern `archiver` de `Student` et `suspend` de `Tenant`). Un compte désactivé ne peut plus se connecter mais reste référencé dans l'historique (`created_by`, `teacher`, etc.).
+- [ ] `GET /auth/teachers/` (STRUCT-06, Épic 3) reste inchangé — c'est un sous-ensemble filtré en lecture seule pour les sélecteurs, pas remplacé par ce nouvel épic.
+- [ ] Tests 404 isolation tenant sur chaque endpoint.
+**Labels :** `personnel` `backend`
+
+### 🃏 [STAFF-MVP-03] Interface Admin École — Personnel
+**Priorité :** 🟠 Haute
+- [ ] Page `/app/staff` (lien sidebar, visible `DIRECTOR`/`STUDENT_STUDIES`) : liste paginée, filtre par rôle/statut, recherche.
+- [ ] `Sheet` de création (email, nom, prénom, téléphone, rôle) — `DIRECTOR` uniquement.
+- [ ] Page/panneau détail : infos + historique minimal (classes assignées comme `main_teacher`, matières comme `teacher` via `ClassSubject`) — requêtes déjà possibles avec les FK existantes, pas de nouveau modèle nécessaire.
+- [ ] Actions "Désactiver"/"Réactiver" avec confirmation.
+- [ ] Affichage des identifiants temporaires après création (ou confirmation qu'ils ont été envoyés par email) — à décider selon si l'email est fiable en environnement de démo/test.
+**Labels :** `personnel` `frontend`
+
+---
+
+**Notes pour plus tard (V2, à ne pas anticiper) :**
+- `TeacherContext` et "School Switcher" pour enseignants vacataires multi-établissements (CDC §10.2).
+- Tableau de bord effectifs (par fonction, ancienneté, taux de vacataires).
+- Historique complet des affectations et changements de statut (au-delà du simple `is_active`).
+- Changement de rôle d'un compte existant (V1 : rôle fixé à la création).
 
 ---
 

@@ -318,3 +318,160 @@ class TestPermissionsMeView:
         data = response.json()["data"]
         assert data["role"] == "DIRECTOR"
         assert "eleves:read" in data["permissions"]
+
+
+# ─── Tests Must Change Password (AUTH-06) ─────────────────────────────────
+
+@pytest.fixture
+def user_must_change(tenant, director_role):
+    return User.objects.create_user(
+        username="mustchange",
+        email="mustchange@ecole-test.gn",
+        password="SecurePass123!",
+        first_name="ÀChanger",
+        last_name="Test",
+        role=director_role,
+        tenant=tenant,
+        must_change_password=True,
+    )
+
+
+@pytest.mark.django_db
+class TestMustChangePassword:
+
+    def _login(self, api_client, email, password):
+        url = reverse("auth-login")
+        resp = api_client.post(url, {"email": email, "password": password}, format="json")
+        return resp.json()["data"] if resp.status_code == 200 else None
+
+    def _auth(self, api_client, email="mustchange@ecole-test.gn", password="SecurePass123!"):
+        tokens = self._login(api_client, email, password)
+        api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {tokens['access_token']}")
+        return tokens
+
+    # ── Login ────────────────────────────────────────────────────────────
+
+    def test_login_returns_must_change_password_flag(self, api_client, user_must_change):
+        """Le login renvoie le flag must_change_password dans la réponse."""
+        tokens = self._login(api_client, "mustchange@ecole-test.gn", "SecurePass123!")
+        assert tokens is not None
+        assert tokens["user"]["must_change_password"] is True
+
+    def test_login_normal_user_has_flag_false(self, api_client, director_user):
+        """Un utilisateur normal a must_change_password=False."""
+        tokens = self._login(api_client, "directeur@ecole-test.gn", "SecurePass123!")
+        assert tokens is not None
+        assert tokens["user"]["must_change_password"] is False
+
+    # ── Enforcement du blocage ────────────────────────────────────────────
+
+    def test_me_blocked_when_must_change_password(self, api_client, user_must_change):
+        """GET /users/me/ est bloqué (403) quand must_change_password=True."""
+        self._auth(api_client)
+        response = api_client.get(reverse("users-me"))
+        assert response.status_code == 403
+        assert response.json()["message"] == "Vous devez changer votre mot de passe."
+
+    def test_permissions_me_blocked(self, api_client, user_must_change):
+        """Tout endpoint hors whitelist est bloqué."""
+        self._auth(api_client)
+        response = api_client.get(reverse("auth-permissions-me"))
+        assert response.status_code == 403
+
+    def test_logout_allowed_when_must_change_password(self, api_client, user_must_change):
+        """POST /auth/logout/ est accessible malgré must_change_password."""
+        tokens = self._auth(api_client)
+        response = api_client.post(
+            reverse("auth-logout"),
+            {"refresh_token": tokens["refresh_token"]},
+            format="json",
+        )
+        assert response.status_code == 204
+
+    def test_unauthenticated_request_not_blocked(self, api_client):
+        """Une requête sans token n'est pas bloquée par ce middleware (DRF renverra 401)."""
+        response = api_client.get(reverse("users-me"))
+        assert response.status_code == 401  # IsAuthenticated, pas 403
+
+    # ── Change password ──────────────────────────────────────────────────
+
+    def test_change_password_success(self, api_client, user_must_change):
+        """POST /auth/change-password/ réussit et met must_change_password=False."""
+        self._auth(api_client)
+        response = api_client.post(
+            reverse("auth-change-password"),
+            {
+                "old_password": "SecurePass123!",
+                "new_password": "NewSecurePass456!",
+                "new_password_confirm": "NewSecurePass456!",
+            },
+            format="json",
+        )
+        assert response.status_code == 200
+        assert response.json()["data"]["message"] == "Mot de passe modifié avec succès."
+
+        # Vérification en base
+        user_must_change.refresh_from_db()
+        assert user_must_change.must_change_password is False
+
+        # Vérification : après changement, le nouvel accès n'est plus bloqué
+        tokens = self._login(api_client, "mustchange@ecole-test.gn", "NewSecurePass456!")
+        api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {tokens['access_token']}")
+        response = api_client.get(reverse("users-me"))
+        assert response.status_code == 200
+
+    def test_change_password_wrong_old_password(self, api_client, user_must_change):
+        """Mauvais ancien mot de passe → 400."""
+        self._auth(api_client)
+        response = api_client.post(
+            reverse("auth-change-password"),
+            {
+                "old_password": "WrongPassword!",
+                "new_password": "NewSecurePass456!",
+                "new_password_confirm": "NewSecurePass456!",
+            },
+            format="json",
+        )
+        assert response.status_code == 400
+
+    def test_change_password_mismatch(self, api_client, user_must_change):
+        """Les deux nouveaux mots de passe ne correspondent pas → 400."""
+        self._auth(api_client)
+        response = api_client.post(
+            reverse("auth-change-password"),
+            {
+                "old_password": "SecurePass123!",
+                "new_password": "NewSecurePass456!",
+                "new_password_confirm": "DifferentPass789!",
+            },
+            format="json",
+        )
+        assert response.status_code == 400
+
+    def test_change_password_same_as_old(self, api_client, user_must_change):
+        """Nouveau mot de passe identique à l'ancien → 400."""
+        self._auth(api_client)
+        response = api_client.post(
+            reverse("auth-change-password"),
+            {
+                "old_password": "SecurePass123!",
+                "new_password": "SecurePass123!",
+                "new_password_confirm": "SecurePass123!",
+            },
+            format="json",
+        )
+        assert response.status_code == 400
+
+    def test_change_password_too_short(self, api_client, user_must_change):
+        """Mot de passe trop court (< 12) → 400 via validate_password."""
+        self._auth(api_client)
+        response = api_client.post(
+            reverse("auth-change-password"),
+            {
+                "old_password": "SecurePass123!",
+                "new_password": "Short1!",
+                "new_password_confirm": "Short1!",
+            },
+            format="json",
+        )
+        assert response.status_code == 400

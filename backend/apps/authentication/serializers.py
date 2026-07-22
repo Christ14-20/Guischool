@@ -107,3 +107,41 @@ class UserMeSerializer(serializers.ModelSerializer):
         if value and not is_valid_guinea_phone(value):
             raise serializers.ValidationError("Format attendu : +224XXXXXXXXX")
         return value
+
+
+class ChangePasswordSerializer(serializers.Serializer):
+    """
+    Serializer pour POST /auth/change-password/ — AUTH-06.
+
+    Valide :
+    - old_password correspond au mot de passe actuel
+    - new_password n'est pas identique à old_password
+    - new_password_confirm correspond à new_password
+    - new_password respecte les validateurs Django (min 12 car, pas commun, pas que numérique)
+    """
+
+    old_password = serializers.CharField(write_only=True)
+    new_password = serializers.CharField(write_only=True)
+    new_password_confirm = serializers.CharField(write_only=True)
+
+    def validate_old_password(self, value):
+        user = self.context["request"].user
+        if not user.check_password(value):
+            raise serializers.ValidationError("L'ancien mot de passe est incorrect.")
+        return value
+
+    def validate(self, attrs):
+        if attrs["new_password"] != attrs["new_password_confirm"]:
+            raise serializers.ValidationError(
+                {"new_password_confirm": "Les nouveaux mots de passe ne correspondent pas."}
+            )
+        if attrs["old_password"] == attrs["new_password"]:
+            raise serializers.ValidationError(
+                {"new_password": "Le nouveau mot de passe doit être différent de l'ancien."}
+            )
+        return attrs
+
+    def validate_new_password(self, value):
+        from django.contrib.auth.password_validation import validate_password
+        validate_password(value)
+        return value

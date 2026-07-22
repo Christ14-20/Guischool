@@ -164,6 +164,26 @@ Convention uniforme sur toutes les listes : `?champ=valeur` pour un filtre exact
 ### `POST /auth/logout/`
 **Auth :** JWT — **Requête :** `{"refresh_token": "eyJhbGciOi..."}` (mis en blacklist) — **Réponse `204`**
 
+### `POST /auth/change-password/` ⚠️ *(AUTH-06 — ajout post-contrat)*
+**Auth :** JWT
+**Requête :**
+```json
+{
+  "old_password": "SecurePass123!",
+  "new_password": "NouveauMotDePasse456!",
+  "new_password_confirm": "NouveauMotDePasse456!"
+}
+```
+**Réponse `200` :**
+```json
+{"status": "success", "data": {"message": "Mot de passe modifié avec succès."}}
+```
+**Erreurs :**
+- `400` : ancien mot de passe incorrect, nouveau trop court (< 12), confirm différent, ou nouveau identique à l'ancien.
+- `403` : si le token est absent (IsAuthenticated) ou si le compte a `must_change_password=True` et que la requête n'est pas sur cet endpoint ou `/auth/logout/`.
+
+**Note :** cet endpoint est le seul (avec `/auth/logout/`) accessible quand le flag `must_change_password=True` est actif. Le middleware `MustChangePasswordMiddleware` bloque tous les autres endpoints (y compris `/users/me/` et `/auth/permissions/me/`) avec un `403` explicite : `"Vous devez changer votre mot de passe."`.
+
 ### `GET /users/me/`
 **Auth :** JWT
 
@@ -898,7 +918,7 @@ Pour garder une expérience cohérente, le frontend doit afficher **exactement**
 
 | Domaine | Endpoint | Méthode |
 |---|---|---|
-| Auth | `/auth/login/`, `/auth/refresh/`, `/auth/logout/` | POST |
+| Auth | `/auth/login/`, `/auth/refresh/`, `/auth/logout/`, `/auth/change-password/` | POST |
 | Auth | `/users/me/` | GET, PATCH |
 | Auth | `/auth/permissions/me/` | GET |
 | Super Admin | `/superadmin/schools/` | GET, POST |
