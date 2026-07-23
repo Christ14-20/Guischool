@@ -170,11 +170,11 @@ export default async function SchoolYearDetailPage(props: {
                           <td className="px-6 py-4 font-medium text-white">{p.name}</td>
                           <td className="px-6 py-4">
                             <span className="text-xs bg-slate-800/50 px-2 py-0.5 rounded text-slate-400">
-                              {p.type === "SEMESTER"
+                              {p.type === "SEMESTRE"
                                 ? "Semestre"
-                                : p.type === "TRIMESTER"
+                                : p.type === "TRIMESTRE"
                                 ? "Trimestre"
-                                : "Quarter"}
+                                : p.type}
                             </span>
                           </td>
                           <td className="px-6 py-4 text-slate-400">

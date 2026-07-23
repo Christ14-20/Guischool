@@ -77,9 +77,8 @@ export default function CreatePeriodModal({ schoolYearId }: Props) {
                     required
                     className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors"
                   >
-                    <option value="SEMESTER">Semestre</option>
-                    <option value="TRIMESTER">Trimestre</option>
-                    <option value="QUARTER">Quarter</option>
+                    <option value="TRIMESTRE">Trimestre</option>
+                    <option value="SEMESTRE">Semestre</option>
                   </select>
                 </div>
                 <div className="space-y-2">
