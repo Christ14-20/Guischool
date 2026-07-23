@@ -11,6 +11,7 @@ import {
   CalendarCheck,
   FileSpreadsheet,
   ClipboardCheck,
+  Library,
 } from "lucide-react";
 
 const NAV_ITEMS = [
@@ -19,6 +20,7 @@ const NAV_ITEMS = [
   { href: "/students", label: "Élèves", icon: Users, always: true },
   { href: "/staff", label: "Personnel", icon: UserCog, roles: ["DIRECTOR", "STUDENT_STUDIES"] },
   { href: "/pedagogy/classes", label: "Classes", icon: BookMarked, always: true },
+  { href: "/pedagogy/subjects", label: "Matières", icon: Library, always: true },
   { href: "/attendance", label: "Présences", icon: CalendarCheck, always: true },
   { href: "/grades", label: "Notes", icon: FileSpreadsheet, roles: ["DIRECTOR", "TEACHER", "STUDENT_STUDIES"] },
   { href: "/year-end-decisions", label: "Décisions", icon: ClipboardCheck, roles: ["DIRECTOR", "STUDENT_STUDIES"] },

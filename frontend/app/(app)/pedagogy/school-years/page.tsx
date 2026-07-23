@@ -1,7 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React from "react";
+import Link from "next/link";
 import { getBackendClient } from "@/lib/api/client";
-import { CalendarDays, CheckCircle2 } from "lucide-react";
+import { CalendarDays, CheckCircle2, ChevronRight } from "lucide-react";
 import CreateSchoolYearModal from "./CreateSchoolYearModal";
 import SetCurrentButton from "./SetCurrentButton";
 
@@ -49,9 +50,10 @@ export default async function SchoolYearsPage() {
         )}
 
         {schoolYears.map((sy: any) => (
-          <div
+          <Link
             key={sy.id}
-            className="bg-slate-900/40 border border-slate-800/80 rounded-xl p-5 shadow-xl backdrop-blur-md space-y-4 hover:border-slate-700/80 transition-colors"
+            href={`/pedagogy/school-years/${sy.id}`}
+            className="block bg-slate-900/40 border border-slate-800/80 rounded-xl p-5 shadow-xl backdrop-blur-md space-y-4 hover:border-indigo-500/40 hover:bg-slate-900/60 transition-all group"
           >
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-center gap-3">
@@ -59,18 +61,23 @@ export default async function SchoolYearsPage() {
                   <CalendarDays className="size-5" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-white">{sy.label}</h3>
+                  <h3 className="font-semibold text-white group-hover:text-indigo-300 transition-colors">
+                    {sy.label}
+                  </h3>
                   <p className="text-xs text-slate-500 mt-0.5">
                     {sy.start_date} → {sy.end_date}
                   </p>
                 </div>
               </div>
-              {sy.is_current && (
-                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                  <CheckCircle2 className="size-3" />
-                  Courante
-                </span>
-              )}
+              <div className="flex items-center gap-2">
+                {sy.is_current && (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                    <CheckCircle2 className="size-3" />
+                    Courante
+                  </span>
+                )}
+                <ChevronRight className="size-4 text-slate-600 group-hover:text-indigo-400 transition-colors" />
+              </div>
             </div>
 
             <div className="flex items-center justify-between text-xs text-slate-500 border-t border-slate-800/50 pt-3">
@@ -103,7 +110,7 @@ export default async function SchoolYearsPage() {
                 <SetCurrentButton schoolYearId={sy.id} />
               )}
             </div>
-          </div>
+          </Link>
         ))}
       </div>
     </div>
