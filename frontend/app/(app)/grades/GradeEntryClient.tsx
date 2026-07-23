@@ -342,6 +342,11 @@ export default function GradeEntryClient({
                 <option key={p.id} value={p.id}>{p.name}</option>
               ))}
             </select>
+            {syId && periods.length === 0 && !error && (
+              <p className="text-[11px] text-amber-400/80 mt-1">
+                Aucune période configurée. Créez-en une dans Pédagogie → Années scolaires.
+              </p>
+            )}
           </Field>
           <Field label="Type">
             <select
