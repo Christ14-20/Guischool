@@ -147,7 +147,11 @@ export default function GradeEntryClient({
         setPeriods([]);
         if (value) {
           const res = await getPeriods(value);
-          if (res.success) setPeriods(res.data);
+          if (res.success) {
+            setPeriods(res.data);
+          } else {
+            setError(res.error || "Erreur de chargement des périodes.");
+          }
         }
       }
       if (field === "class_id") setClassId(value);
