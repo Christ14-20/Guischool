@@ -79,15 +79,13 @@ export default function GradeEntryClient({
 
   const availableSubjects = useMemo(() => {
     if (!classId) return [];
-    if (role === "TEACHER") {
-      const csIds = classSubjects
-        .filter((cs: any) => cs.class_obj === classId && cs.teacher === userId)
-        .map((cs: any) => cs.subject);
-      return subjects.filter((s: any) => csIds.includes(s.id));
-    }
     const csIds = classSubjects
-      .filter((cs: any) => cs.class_obj === classId)
-      .map((cs: any) => cs.subject);
+      .filter((cs: any) => {
+        if (cs.class_obj_id !== classId) return false;
+        if (role === "TEACHER") return cs.teacher?.id === userId;
+        return true;
+      })
+      .map((cs: any) => cs.subject?.id);
     return subjects.filter((s: any) => csIds.includes(s.id));
   }, [classId, classSubjects, subjects, role, userId]);
 

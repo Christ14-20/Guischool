@@ -374,11 +374,11 @@ class ClassSubjectSerializer(serializers.ModelSerializer):
     class Meta:
         model = ClassSubject
         fields = [
-            "id", "subject", "subject_id", "coefficient", "weekly_hours",
+            "id", "class_obj_id", "subject", "subject_id", "coefficient", "weekly_hours",
             "teacher", "teacher_id",
             "created_at", "updated_at",
         ]
-        read_only_fields = ["id", "created_at", "updated_at"]
+        read_only_fields = ["id", "class_obj_id", "created_at", "updated_at"]
 
     def validate(self, attrs):
         class_obj = self.context.get("class_obj")

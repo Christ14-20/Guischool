@@ -36,14 +36,13 @@ export default async function GradesPage() {
       subjects = subResp.data.data.results ?? subResp.data.data ?? [];
     }
 
-    if (role === "TEACHER") {
-      const classSubjectsPromises = classes.map(async (cls: any) => {
-        const csResp = await client.get(`/pedagogy/classes/${cls.id}/subjects/`);
-        return csResp.data?.data?.results ?? csResp.data?.data ?? csResp.data ?? [];
-      });
-      const nested = await Promise.all(classSubjectsPromises);
-      classSubjects = nested.flat();
-    }
+    // Charger les matières liées à chaque classe (pour le filtrage)
+    const classSubjectsPromises = classes.map(async (cls: any) => {
+      const csResp = await client.get(`/pedagogy/classes/${cls.id}/subjects/`);
+      return csResp.data?.data?.results ?? csResp.data?.data ?? csResp.data ?? [];
+    });
+    const nested = await Promise.all(classSubjectsPromises);
+    classSubjects = nested.flat();
   } catch {
     errorMsg = "Impossible de charger les données.";
   }
