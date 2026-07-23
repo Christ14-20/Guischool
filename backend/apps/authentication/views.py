@@ -201,7 +201,8 @@ class TeachersListView(APIView):
     Retourne id, first_name, last_name, email.
     Permission : authentication:read:teachers (DIRECTOR, STUDENT_STUDIES uniquement).
     """
-    permission_classes = [IsAuthenticated, HasPermission("authentication:read:teachers")]
+    def get_permissions(self):
+        return [IsAuthenticated(), HasPermission("authentication:read:teachers")]
 
     def get(self, request):
         teachers = User.objects.filter(
