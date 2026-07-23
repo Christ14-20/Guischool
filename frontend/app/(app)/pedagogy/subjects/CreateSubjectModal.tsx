@@ -64,16 +64,23 @@ export default function CreateSubjectModal() {
                 </div>
                 <div className="space-y-2">
                   <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                    Catégorie *
+                    Catégorie
                   </label>
-                  <select
+                  <input
+                    type="text"
                     name="category"
-                    required
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors"
-                  >
-                    <option value="PRIMARY">PRIMARY</option>
-                    <option value="SECONDARY">SECONDARY</option>
-                  </select>
+                    list="cat-list"
+                    placeholder="ex: Langue, Scientifique, Humaines..."
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 transition-colors"
+                  />
+                  <datalist id="cat-list">
+                    <option value="Scientifique" />
+                    <option value="Langue" />
+                    <option value="Humaines" />
+                    <option value="Sport" />
+                    <option value="Civique" />
+                    <option value="Technique" />
+                  </datalist>
                 </div>
               </div>
 
