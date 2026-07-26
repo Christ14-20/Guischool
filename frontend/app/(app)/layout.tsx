@@ -12,6 +12,7 @@ import {
   FileSpreadsheet,
   ClipboardCheck,
   Library,
+  Landmark,
 } from "lucide-react";
 
 const NAV_ITEMS = [
@@ -24,6 +25,9 @@ const NAV_ITEMS = [
   { href: "/attendance", label: "Présences", icon: CalendarCheck, always: true },
   { href: "/grades", label: "Notes", icon: FileSpreadsheet, roles: ["DIRECTOR", "TEACHER", "STUDENT_STUDIES"] },
   { href: "/year-end-decisions", label: "Décisions", icon: ClipboardCheck, roles: ["DIRECTOR", "STUDENT_STUDIES"] },
+  { href: "/finance/fees", label: "Frais", icon: Landmark, roles: ["DIRECTOR", "ACCOUNTANT"] },
+  { href: "/finance/payments", label: "Paiements", icon: Landmark, roles: ["DIRECTOR", "ACCOUNTANT"] },
+  { href: "/finance/invoices", label: "Factures", icon: Landmark, roles: ["DIRECTOR", "ACCOUNTANT"] },
 ];
 
 export default async function TenantAppLayout({

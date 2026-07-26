@@ -60,6 +60,8 @@ class FeeCategoryViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         if self.action in ("list", "retrieve"):
             return [IsAuthenticated(), HasPermission("finance:read")]
+        if self.action in ("update", "partial_update", "destroy"):
+            return [IsAuthenticated(), HasPermission("finance:update")]
         return [IsAuthenticated(), HasPermission("finance:create")]
 
     def get_queryset(self):
@@ -67,6 +69,14 @@ class FeeCategoryViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(tenant=self.request.tenant)
+
+    def perform_destroy(self, instance):
+        if instance.student_fees.exists():
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied(
+                "Impossible de supprimer cette catégorie : des frais y sont déjà rattachés."
+            )
+        instance.delete()
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)

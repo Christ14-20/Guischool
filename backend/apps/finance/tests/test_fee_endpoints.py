@@ -352,3 +352,96 @@ class TestStudentFeeEndpoints:
             format="json",
         )
         assert response.status_code == 400
+
+
+# ─── Tests PUT/PATCH/DELETE FeeCategory ─────────────────────────────────────
+
+class TestFeeCategoryUpdateDelete:
+
+    def test_update_fee_category(self, api_client, tenant, director_user,
+                                  director_role, school_year):
+        _ensure_permissions(director_role, ["finance:update"])
+        _auth(api_client, director_user)
+
+        cat = FeeCategory.objects.create(
+            tenant=tenant, school_year=school_year,
+            name="Ancien nom", type="INSCRIPTION", amount=10000,
+        )
+
+        resp = api_client.put(
+            reverse("feecategory-detail", args=[cat.id]),
+            {"school_year": str(school_year.id), "name": "Nouveau nom",
+             "type": "SCOLARITE", "amount": 20000, "is_mandatory": True},
+            format="json",
+        )
+        assert resp.status_code == 200
+        cat.refresh_from_db()
+        assert cat.name == "Nouveau nom"
+        assert cat.amount == 20000
+
+    def test_partial_update_fee_category(self, api_client, tenant, director_user,
+                                          director_role, school_year):
+        _ensure_permissions(director_role, ["finance:update"])
+        _auth(api_client, director_user)
+
+        cat = FeeCategory.objects.create(
+            tenant=tenant, school_year=school_year,
+            name="Modifiable", type="SCOLARITE", amount=50000,
+            is_mandatory=False,
+        )
+
+        resp = api_client.patch(
+            reverse("feecategory-detail", args=[cat.id]),
+            {"amount": 45000},
+            format="json",
+        )
+        assert resp.status_code == 200
+        cat.refresh_from_db()
+        assert cat.amount == 45000
+        assert cat.name == "Modifiable"  # inchangé
+
+    def test_delete_fee_category_without_student_fees(
+            self, api_client, tenant, director_user, director_role, school_year):
+        _ensure_permissions(director_role, ["finance:update"])
+        _auth(api_client, director_user)
+
+        cat = FeeCategory.objects.create(
+            tenant=tenant, school_year=school_year,
+            name="À supprimer", type="INSCRIPTION", amount=5000,
+        )
+
+        resp = api_client.delete(reverse("feecategory-detail", args=[cat.id]))
+        assert resp.status_code == 204
+        assert FeeCategory.objects.filter(id=cat.id).count() == 0
+
+    def test_delete_fee_category_with_student_fees_blocked(
+            self, api_client, tenant, director_user, director_role,
+            school_year, student):
+        _ensure_permissions(director_role, ["finance:update"])
+        _auth(api_client, director_user)
+
+        cat = FeeCategory.objects.create(
+            tenant=tenant, school_year=school_year,
+            name="Protégée", type="SCOLARITE", amount=50000,
+        )
+        StudentFee.objects.create(
+            tenant=tenant, student=student, fee_category=cat,
+            total_amount=50000, discount_amount=0, balance_due=50000,
+        )
+
+        resp = api_client.delete(reverse("feecategory-detail", args=[cat.id]))
+        assert resp.status_code == 403
+        assert FeeCategory.objects.filter(id=cat.id).count() == 1
+
+    def test_delete_fee_category_requires_finance_update(
+            self, api_client, tenant, director_user, director_role, school_year):
+        _ensure_permissions(director_role, ["finance:read"])  # read only
+        _auth(api_client, director_user)
+
+        cat = FeeCategory.objects.create(
+            tenant=tenant, school_year=school_year,
+            name="Sans perm", type="INSCRIPTION", amount=10000,
+        )
+
+        resp = api_client.delete(reverse("feecategory-detail", args=[cat.id]))
+        assert resp.status_code == 403

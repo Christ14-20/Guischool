@@ -8,6 +8,9 @@ urlpatterns = [
     }), name="feecategory-list"),
     path("feecategories/<uuid:pk>/", views.FeeCategoryViewSet.as_view({
         "get": "retrieve",
+        "put": "update",
+        "patch": "partial_update",
+        "delete": "destroy",
     }), name="feecategory-detail"),
     path("student-fees/", views.StudentFeeViewSet.as_view({
         "get": "list",
