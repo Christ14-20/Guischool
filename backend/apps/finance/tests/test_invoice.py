@@ -648,3 +648,95 @@ class TestFeeCategoryCreateWithDueDate:
         assert resp.status_code == 201
         cat = FeeCategory.objects.first()
         assert cat.due_date is None
+
+
+# ─── Tests résolution année scolaire sans student_fee ─────────────────────────
+
+class TestSyncInvoiceSchoolYearResolution:
+
+    def test_cash_payment_without_student_fee_uses_current_sy(
+            self, api_client, tenant, school_year,
+            student, director_user, director_role):
+        """
+        Paiement CASH sans student_fee : sync_invoice utilise l'année courante,
+        PAS student.annee_inscription.
+        """
+        _ensure_permissions(director_role, ["finance:read", "finance:create"])
+        _auth(api_client, director_user)
+
+        api_client.post(
+            reverse("payment-list"),
+            {"student_id": str(student.id), "amount": 50000,
+             "method": "CASH", "idempotency_key": "cash-no-fee-sy"},
+            format="json",
+        )
+
+        inv = Invoice.objects.first()
+        assert inv is not None
+        assert inv.school_year == school_year, (
+            f"devrait être {school_year}, got {inv.school_year}"
+        )
+        assert inv.total_paid == 50000
+
+    def test_cash_payment_without_student_fee_not_annee_inscription(
+            self, api_client, tenant, school_year, sy_old,
+            student, director_user, director_role):
+        """
+        Régression : si l'élève est inscrit en 2023-2024 mais que l'année
+        courante est 2025-2026, la facture doit être créée sur 2025-2026.
+        """
+        _ensure_permissions(director_role, ["finance:read", "finance:create"])
+        _auth(api_client, director_user)
+
+        # L'élève est inscrit en 2023-2024 (sy_old)
+        student.annee_inscription = sy_old
+        student.save()
+
+        api_client.post(
+            reverse("payment-list"),
+            {"student_id": str(student.id), "amount": 25000,
+             "method": "CASH", "idempotency_key": "cash-no-fee-sy-old"},
+            format="json",
+        )
+
+        inv = Invoice.objects.first()
+        assert inv is not None
+        assert inv.school_year == school_year, (
+            f"devrait être {school_year} (is_current), got {inv.school_year}"
+        )
+
+    def test_om_webhook_without_student_fee_uses_current_sy(
+            self, api_client, tenant, school_year,
+            student, director_user, director_role):
+        """
+        Webhook OM sans student_fee : sync_invoice utilise l'année courante,
+        pas None (qui ferait sauter l'appel).
+        """
+        _ensure_permissions(director_role, ["finance:read", "finance:create"])
+        _auth(api_client, director_user)
+
+        # Initier OM sans student_fee_id
+        init_resp = api_client.post(
+            reverse("payment-om-initiate"),
+            {"student_id": str(student.id), "amount": "40000",
+             "payer_phone": "+224655112233"},
+            format="json",
+        )
+        txn_id = init_resp.json()["data"]["provider_transaction_id"]
+
+        from apps.finance.providers.orange_money import (
+            OrangeMoneyProvider, _compute_signature,
+        )
+        payload = {"transaction_id": txn_id, "status": "SUCCESS", "amount": "40000"}
+        sig = _compute_signature(payload, OrangeMoneyProvider().secret)
+        body = json.dumps(payload, separators=(",", ":"), sort_keys=True)
+
+        api_client.post(
+            reverse("payment-om-webhook"), body,
+            content_type="application/json", HTTP_X_ORANGE_SIGNATURE=sig,
+        )
+
+        inv = Invoice.objects.first()
+        assert inv is not None, "sync_invoice aurait dû être appelé même sans student_fee"
+        assert inv.school_year == school_year
+        assert inv.total_paid == 40000

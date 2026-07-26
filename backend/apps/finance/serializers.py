@@ -150,9 +150,9 @@ class PaymentCreateSerializer(serializers.ModelSerializer):
         return payment
 
 
-def _resolve_receipt_school_year(payment):
+def resolve_payment_school_year(payment):
     """
-    Détermine l'année scolaire à utiliser pour la numérotation du reçu.
+    Détermine l'année scolaire associée à un paiement.
 
     Ordre de résolution :
       1. student_fee.fee_category.school_year (si la transaction est liée à un frais)
@@ -178,14 +178,14 @@ def generate_receipt_for_payment(payment):
       - la confirmation webhook Orange Money
       - la réconciliation nocturne
 
-    Elle détermine l'année scolaire via _resolve_receipt_school_year(),
+    Elle détermine l'année scolaire via resolve_payment_school_year(),
     génère un numéro séquentiel via ReceiptSequence, puis génère et stocke
     le PDF via WeasyPrint + default_storage.
 
     La fonction modifie payment.receipt_number et payment.receipt_pdf_url
     et sauvegarde le tout en base.
     """
-    sy = _resolve_receipt_school_year(payment)
+    sy = resolve_payment_school_year(payment)
     if sy is None:
         import logging
         logger = logging.getLogger(__name__)

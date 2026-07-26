@@ -35,6 +35,7 @@ from .serializers import (
     PaymentStatusSerializer,
     InvoiceSerializer,
     generate_receipt_for_payment,
+    resolve_payment_school_year,
     sync_invoice,
 )
 
@@ -164,11 +165,7 @@ class PaymentViewSet(viewsets.GenericViewSet):
                 )
             raise
         payment = serializer.instance
-        school_year = (
-            payment.student_fee.fee_category.school_year
-            if payment.student_fee
-            else payment.student.annee_inscription
-        )
+        school_year = resolve_payment_school_year(payment)
         if school_year:
             sync_invoice(payment.student, school_year)
         return created_response(PaymentListSerializer(payment).data)
@@ -425,11 +422,7 @@ def orange_money_webhook(request):
 
         generate_receipt_for_payment(payment)
 
-        school_year = (
-            payment.student_fee.fee_category.school_year
-            if payment.student_fee
-            else None
-        )
+        school_year = resolve_payment_school_year(payment)
         if school_year:
             sync_invoice(payment.student, school_year)
 
