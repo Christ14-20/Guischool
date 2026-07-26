@@ -35,3 +35,6 @@ Thumbs.db
 
 # Generated media files (tests)
 backend/mediafiles/
+
+
+agents/

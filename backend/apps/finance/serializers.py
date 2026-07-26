@@ -179,3 +179,69 @@ class PaymentCreateSerializer(serializers.ModelSerializer):
         payment.save(update_fields=["receipt_pdf_url", "updated_at"])
 
         return payment
+
+
+def _generate_receipt(payment):
+    """Génère un numéro de reçu et un PDF pour un paiement COMPLETED.
+
+    Appelé pour les paiements CASH (création) et OM (confirmation webhook).
+    """
+    tenant = payment.tenant
+    from apps.pedagogy.models import SchoolYear
+    sy = SchoolYear.objects.filter(
+        id=payment.student.annee_inscription_id,
+    ).first()
+    if sy is None:
+        sy = SchoolYear.objects.filter(tenant=tenant, is_current=True).first()
+    if sy is None:
+        return
+
+    annee = sy.start_date.year
+    from django.db import transaction as db_transaction
+    with db_transaction.atomic():
+        seq, _ = ReceiptSequence.objects.select_for_update().get_or_create(
+            tenant=tenant, school_year=sy, defaults={"last_seq": 0},
+        )
+        seq.last_seq += 1
+        seq.save(update_fields=["last_seq", "updated_at"])
+        receipt_number = f"REC-{annee}-{seq.last_seq:06d}"
+
+    payment.receipt_number = receipt_number
+    pdf_buffer = io.BytesIO()
+    html = render_to_string("finance/receipt.html", {"payment": payment})
+    from weasyprint import HTML
+    HTML(string=html).write_pdf(pdf_buffer)
+
+    filename = f"receipts/{receipt_number}.pdf"
+    from django.core.files.storage import default_storage
+    saved_path = default_storage.save(filename, ContentFile(pdf_buffer.getvalue()))
+    payment.receipt_pdf_url = default_storage.url(saved_path)
+    payment.save(update_fields=["receipt_number", "receipt_pdf_url", "updated_at"])
+
+
+class OrangeMoneyInitiateSerializer(serializers.Serializer):
+    student_id = serializers.UUIDField()
+    student_fee_id = serializers.UUIDField(required=False, allow_null=True)
+    amount = serializers.DecimalField(max_digits=12, decimal_places=0)
+    payer_phone = serializers.CharField(max_length=20)
+
+    def validate_payer_phone(self, value):
+        if not value.startswith("+"):
+            raise serializers.ValidationError(
+                "Le numéro doit être au format international, ex. +224655112233."
+            )
+        return value
+
+
+class PaymentStatusSerializer(serializers.ModelSerializer):
+    new_balance_due = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Payment
+        fields = ["id", "status", "receipt_number", "receipt_pdf_url",
+                   "new_balance_due", "failure_reason"]
+
+    def get_new_balance_due(self, obj):
+        if obj.student_fee:
+            return str(obj.student_fee.balance_due)
+        return "0"

@@ -1,17 +1,27 @@
 import io
-from django.http import FileResponse
+import json
+import logging
+import time
+import uuid
+
+from django.http import FileResponse, JsonResponse
 from django.template.loader import render_to_string
 from django.db import IntegrityError
+from django.db import transaction as db_transaction
+from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_http_methods
 from rest_framework import viewsets, status
-from rest_framework.decorators import action
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.decorators import action, api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 from core.permissions import HasPermission
 from core.utils import success_response, created_response
-from .models import FeeCategory, StudentFee, Payment
+from .models import FeeCategory, StudentFee, Payment, OrangeMoneyTransaction
+from .providers.orange_money import OrangeMoneyProvider
 from .serializers import (
     FeeCategorySerializer,
     FeeCategoryCreateSerializer,
@@ -19,7 +29,16 @@ from .serializers import (
     StudentFeeCreateSerializer,
     PaymentListSerializer,
     PaymentCreateSerializer,
+    OrangeMoneyInitiateSerializer,
+    PaymentStatusSerializer,
+    _generate_receipt,
 )
+
+logger = logging.getLogger(__name__)
+
+
+def get_provider():
+    return OrangeMoneyProvider()
 
 
 class FeeCategoryViewSet(viewsets.ModelViewSet):
@@ -171,3 +190,170 @@ class PaymentViewSet(viewsets.GenericViewSet):
 
         return FileResponse(pdf_buffer, as_attachment=True,
                             filename=f"recu_{payment.receipt_number}.pdf")
+
+    @action(detail=False, methods=["post"], url_path="orange-money/initiate")
+    def initiate_orange_money(self, request):
+        serializer = OrangeMoneyInitiateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        tenant = request.tenant
+        student_id = serializer.validated_data["student_id"]
+        student_fee_id = serializer.validated_data.get("student_fee_id")
+        amount = serializer.validated_data["amount"]
+        payer_phone = serializer.validated_data["payer_phone"]
+
+        from apps.pedagogy.models import Student
+        student = Student.objects.get(id=student_id, tenant=tenant)
+
+        student_fee = None
+        if student_fee_id:
+            student_fee = StudentFee.objects.select_for_update().get(
+                id=student_fee_id, tenant=tenant, student=student,
+            )
+            if amount > student_fee.balance_due:
+                return Response(
+                    {"status": "error", "message": "Le montant dépasse le solde dû."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+        # Initier via le provider
+        provider = get_provider()
+        idempotency_key = f"om-{uuid.uuid4().hex}"
+
+        try:
+            result = provider.initiate_payment(tenant, int(amount), payer_phone, idempotency_key)
+        except Exception as e:
+            logger.error("OM initiate failed: %s", e)
+            return success_response(
+                {"message": "Le service Orange Money est temporairement indisponible."},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+
+        provider_txn_id = result["provider_transaction_id"]
+
+        with db_transaction.atomic():
+            payment = Payment.objects.create(
+                tenant=tenant,
+                student=student,
+                student_fee=student_fee,
+                amount=amount,
+                method=Payment.Method.ORANGE_MONEY,
+                status=Payment.Status.PENDING,
+                idempotency_key=idempotency_key,
+                received_by=request.user,
+            )
+            OrangeMoneyTransaction.objects.create(
+                tenant=tenant,
+                payment=payment,
+                provider_transaction_id=provider_txn_id,
+                provider_status=OrangeMoneyTransaction.Status.INITIATED,
+            )
+
+        return Response(
+            {
+                "status": "success",
+                "data": {
+                    "payment_id": str(payment.id),
+                    "status": "PENDING",
+                    "provider_transaction_id": provider_txn_id,
+                    "message": (
+                        f"Une notification a été envoyée sur le téléphone {payer_phone}. "
+                        "Le parent doit valider le paiement dans son application Orange Money."
+                    ),
+                    "poll_url": f"/finance/payments/{payment.id}/status/",
+                },
+            },
+            status=status.HTTP_202_ACCEPTED,
+        )
+
+    @action(detail=True, methods=["get"], url_path="status")
+    def payment_status(self, request, pk=None):
+        payment = self.get_object()
+        serializer = PaymentStatusSerializer(payment)
+        return success_response(serializer.data)
+
+
+# Exempté de JWT/TenantMiddleware : Orange ne connaît pas nos tenants.
+# L'authenticité repose sur HMAC (X-Orange-Signature).
+@csrf_exempt
+@require_http_methods(["POST"])
+def orange_money_webhook(request):
+    """
+    Webhook Orange Money — appelé par Orange Money lors d'une confirmation de paiement.
+
+    ⚠  Aucun JWT requis : la vérification d'authenticité repose uniquement
+       sur la signature HMAC (header X-Orange-Signature).
+       L'endpoint est exempté du TenantMiddleware (pas de JWT).
+       Le tenant est déduit via la chaîne :
+         provider_transaction_id → OrangeMoneyTransaction → Payment → tenant.
+
+    ⚠  HYPOTHÈSE MVP — ALGORITHME HMAC NON CONFIRMÉ
+       Voir apps/finance/providers/orange_money.py pour les détails.
+    """
+    raw_body = request.body
+    signature = request.META.get("HTTP_X_ORANGE_SIGNATURE", "")
+
+    provider = get_provider()
+
+    if not provider.verify_webhook(raw_body, signature):
+        logger.warning("OM webhook rejeté : signature invalide")
+        return JsonResponse({"received": False}, status=401)
+
+    try:
+        data = json.loads(raw_body)
+    except json.JSONDecodeError:
+        return JsonResponse({"received": False}, status=400)
+
+    transaction_id = data.get("transaction_id", "")
+    webhook_status = data.get("status", "")
+
+    if not transaction_id:
+        return JsonResponse({"received": False}, status=400)
+
+    try:
+        om_txn = OrangeMoneyTransaction.objects.select_related(
+            "payment__student_fee__fee_category__school_year",
+            "payment__student",
+        ).get(provider_transaction_id=transaction_id)
+    except OrangeMoneyTransaction.DoesNotExist:
+        logger.warning("OM webhook : transaction inconnue %s", transaction_id)
+        return JsonResponse({"received": True})
+
+    payment = om_txn.payment
+
+    om_txn.raw_webhook_payload = data
+
+    if webhook_status == "SUCCESS":
+        # Éviter le double traitement
+        if payment.status == Payment.Status.COMPLETED:
+            return JsonResponse({"received": True})
+
+        om_txn.provider_status = OrangeMoneyTransaction.Status.CONFIRMED
+        om_txn.save(update_fields=["provider_status", "raw_webhook_payload", "updated_at"])
+
+        payment.status = Payment.Status.COMPLETED
+        payment.reference = transaction_id
+        payment.save(update_fields=["status", "reference", "updated_at"])
+
+        _generate_receipt(payment)
+
+        if payment.student_fee:
+            from decimal import Decimal
+            payment.student_fee.balance_due -= Decimal(str(payment.amount))
+            payment.student_fee.save(update_fields=["balance_due", "updated_at"])
+
+        logger.info("OM paiement confirmé — %s (%s)", payment.receipt_number, transaction_id)
+    else:
+        if payment.status == Payment.Status.FAILED:
+            return JsonResponse({"received": True})
+
+        om_txn.provider_status = OrangeMoneyTransaction.Status.FAILED
+        om_txn.save(update_fields=["provider_status", "raw_webhook_payload", "updated_at"])
+
+        payment.status = Payment.Status.FAILED
+        payment.failure_reason = data.get("failure_reason", "Paiement rejeté par Orange Money")
+        payment.save(update_fields=["status", "failure_reason", "updated_at"])
+
+        logger.info("OM paiement échoué — %s", transaction_id)
+
+    return JsonResponse({"received": True})

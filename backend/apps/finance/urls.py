@@ -26,4 +26,10 @@ urlpatterns = [
     path("payments/<uuid:pk>/receipt/", views.PaymentViewSet.as_view({
         "get": "receipt",
     }), name="payment-receipt"),
+    path("payments/orange-money/initiate/", views.PaymentViewSet.as_view({
+        "post": "initiate_orange_money",
+    }), name="payment-om-initiate"),
+    path("payments/<uuid:pk>/status/", views.PaymentViewSet.as_view({
+        "get": "payment_status",
+    }), name="payment-status"),
 ]

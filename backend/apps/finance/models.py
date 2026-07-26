@@ -116,3 +116,23 @@ class Payment(TenantScopedModel):
 
     def __str__(self):
         return f"{self.receipt_number or '(sans reçu)'} — {self.amount} GNF ({self.get_status_display()})"
+
+
+class OrangeMoneyTransaction(TenantScopedModel):
+    class Status(models.TextChoices):
+        INITIATED = "INITIATED", "Initiée"
+        CONFIRMED = "CONFIRMED", "Confirmée"
+        FAILED = "FAILED", "Échouée"
+
+    payment = models.OneToOneField(
+        Payment, on_delete=models.CASCADE, related_name="orange_money_details",
+    )
+    provider_transaction_id = models.CharField(max_length=100, unique=True)
+    provider_status = models.CharField(
+        max_length=20, choices=Status.choices, default=Status.INITIATED,
+    )
+    raw_webhook_payload = models.JSONField(default=dict, blank=True)
+    reconciled_at = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return f"OM {self.provider_transaction_id} — {self.get_provider_status_display()}"

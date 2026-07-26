@@ -512,14 +512,21 @@
 - [x] Isolation multi-tenant, tests (10 tests)
 **Labels :** `finance` `backend` `priorité-haute`
 
-### 🃏 [FIN-MVP-03] Intégration Orange Money
-**Priorité :** 🔴 Bloquant
-- [ ] Interface abstraite `PaymentProvider` (`initiate_payment()`, `check_status()`, `webhook_verify()`) — même si un seul opérateur en V1, prévoir l'abstraction pour ajouter MTN/Wave sans réécrire
-- [ ] Implémentation `OrangeMoneyProvider` (API REST Orange Money Guinée)
-- [ ] `POST /webhooks/orange-money/` : réception de la confirmation de paiement
-- [ ] Génération de référence unique par transaction (idempotence), retry avec backoff en cas d'échec (3 tentatives)
-- [ ] Réconciliation nocturne simple (tâche Celery) : comparaison transactions Orange vs base interne
-- [ ] Chiffrement de la clé API Orange (variables d'environnement sécurisées, pas en clair dans le repo)
+### 🃏 [FIN-MVP-03] Intégration Orange Money ✅
+**Priorité :** 🔴 Bloquant · **Commit :** `FIN-MVP-03`
+- [x] Interface abstraite `PaymentProvider` (ABC avec `initiate_payment()`, `check_status()`, `verify_webhook()`)
+- [x] Implémentation `OrangeMoneyProvider` (mode mock `ORANGE_MONEY_MOCK=true`, HMAC-SHA256, retry via `_call_api()`)
+- [x] Modèle `OrangeMoneyTransaction` (OneToOneField Payment, provider_transaction_id unique, raw_webhook_payload)
+- [x] `POST /finance/payments/orange-money/initiate/` → 202 (PENDING)
+- [x] `GET /finance/payments/{id}/status/` → polling statut
+- [x] `POST /webhooks/orange-money/` (HMAC, no JWT, exempté TenantMiddleware)
+- [x] Webhook SUCCESS → COMPLETED + reçu PDF + mise à jour solde
+- [x] Webhook idempotent (double appel OK, pas de double décrémentation)
+- [x] Signature invalide → 401 rejeté, transaction inconnue → 200
+- [x] `retry_with_backoff()` testé : échoue 2 fois, réussit 3ᵉ avec backoff
+- [x] Réconciliation nocturne (Celery Beat, tâche `reconcile_orange_money_transactions`)
+- [x] Chiffrement : clé `ORANGE_MONEY_SECRET` en variable d'environnement (pas dans le repo)
+- [x] Tests : 20 tests (retry, provider mock, endpoints, webhook, idempotence)
 **Labels :** `finance` `mobile-money` `intégrations` `priorité-haute`
 
 ### 🃏 [FIN-MVP-04] Factures
