@@ -114,22 +114,10 @@ class PaymentCreateSerializer(serializers.ModelSerializer):
         student = Student.objects.get(id=student_id, tenant=tenant)
 
         student_fee = None
-        sy = None
         if student_fee_id:
             student_fee = StudentFee.objects.select_for_update().get(
                 id=student_fee_id, tenant=tenant, student=student,
             )
-            sy = student_fee.fee_category.school_year
-
-        if sy is None:
-            from apps.pedagogy.models import SchoolYear
-            sy = SchoolYear.objects.filter(
-                tenant=tenant, is_current=True,
-            ).select_for_update().first()
-            if sy is None:
-                raise serializers.ValidationError(
-                    "Aucune année scolaire courante trouvée pour générer le reçu."
-                )
 
         amount = validated_data["amount"]
 
@@ -138,17 +126,6 @@ class PaymentCreateSerializer(serializers.ModelSerializer):
                 {"amount": "Le montant du paiement dépasse le solde dû."}
             )
 
-        # Generate receipt number
-        annee = sy.start_date.year
-        seq, _ = ReceiptSequence.objects.select_for_update().get_or_create(
-            tenant=tenant,
-            school_year=sy,
-            defaults={"last_seq": 0},
-        )
-        seq.last_seq += 1
-        seq.save(update_fields=["last_seq", "updated_at"])
-        receipt_number = f"REC-{annee}-{seq.last_seq:06d}"
-
         payment = Payment.objects.create(
             tenant=tenant,
             student=student,
@@ -156,51 +133,70 @@ class PaymentCreateSerializer(serializers.ModelSerializer):
             amount=amount,
             method=Payment.Method.CASH,
             status=Payment.Status.COMPLETED,
-            receipt_number=receipt_number,
             idempotency_key=validated_data["idempotency_key"],
             received_by=request.user,
         )
 
-        # Update balance
+        # Mise à jour du solde AVANT génération du reçu (pour cohérence
+        # entre les deux chemins — le webhook fait de même)
         if student_fee:
             student_fee.balance_due -= Decimal(str(amount))
             student_fee.save(update_fields=["balance_due", "updated_at"])
 
-        # Generate and store receipt PDF
-        pdf_buffer = io.BytesIO()
-        html = render_to_string("finance/receipt.html", {"payment": payment})
-        from weasyprint import HTML
-        HTML(string=html).write_pdf(pdf_buffer)
-
-        filename = f"receipts/{payment.receipt_number}.pdf"
-        from django.core.files.storage import default_storage
-        saved_path = default_storage.save(filename, ContentFile(pdf_buffer.getvalue()))
-        payment.receipt_pdf_url = default_storage.url(saved_path)
-        payment.save(update_fields=["receipt_pdf_url", "updated_at"])
+        generate_receipt_for_payment(payment)
 
         return payment
 
 
-def _generate_receipt(payment):
-    """Génère un numéro de reçu et un PDF pour un paiement COMPLETED.
-
-    Appelé pour les paiements CASH (création) et OM (confirmation webhook).
+def _resolve_receipt_school_year(payment):
     """
-    tenant = payment.tenant
+    Détermine l'année scolaire à utiliser pour la numérotation du reçu.
+
+    Ordre de résolution :
+      1. student_fee.fee_category.school_year (si la transaction est liée à un frais)
+      2. SchoolYear.is_current du tenant
+    """
+    if payment.student_fee:
+        return payment.student_fee.fee_category.school_year
+
     from apps.pedagogy.models import SchoolYear
     sy = SchoolYear.objects.filter(
-        id=payment.student.annee_inscription_id,
+        tenant=payment.tenant, is_current=True,
     ).first()
+    return sy
+
+
+def generate_receipt_for_payment(payment):
+    """
+    Génère un numéro de reçu et un PDF pour un paiement COMPLETED.
+
+    Cette fonction est le point d'entrée UNIQUE pour la génération de reçu,
+    utilisée à la fois par :
+      - le paiement espèces (CASH, création synchrone)
+      - la confirmation webhook Orange Money
+      - la réconciliation nocturne
+
+    Elle détermine l'année scolaire via _resolve_receipt_school_year(),
+    génère un numéro séquentiel via ReceiptSequence, puis génère et stocke
+    le PDF via WeasyPrint + default_storage.
+
+    La fonction modifie payment.receipt_number et payment.receipt_pdf_url
+    et sauvegarde le tout en base.
+    """
+    sy = _resolve_receipt_school_year(payment)
     if sy is None:
-        sy = SchoolYear.objects.filter(tenant=tenant, is_current=True).first()
-    if sy is None:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error("Impossible de générer le reçu : aucune année scolaire trouvée")
         return
 
     annee = sy.start_date.year
     from django.db import transaction as db_transaction
     with db_transaction.atomic():
         seq, _ = ReceiptSequence.objects.select_for_update().get_or_create(
-            tenant=tenant, school_year=sy, defaults={"last_seq": 0},
+            tenant=payment.tenant,
+            school_year=sy,
+            defaults={"last_seq": 0},
         )
         seq.last_seq += 1
         seq.save(update_fields=["last_seq", "updated_at"])
@@ -224,6 +220,7 @@ class OrangeMoneyInitiateSerializer(serializers.Serializer):
     student_fee_id = serializers.UUIDField(required=False, allow_null=True)
     amount = serializers.DecimalField(max_digits=12, decimal_places=0)
     payer_phone = serializers.CharField(max_length=20)
+    idempotency_key = serializers.CharField(required=False, allow_blank=True)
 
     def validate_payer_phone(self, value):
         if not value.startswith("+"):

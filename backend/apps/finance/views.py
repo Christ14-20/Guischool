@@ -1,3 +1,4 @@
+import hashlib
 import io
 import json
 import logging
@@ -22,6 +23,7 @@ from core.permissions import HasPermission
 from core.utils import success_response, created_response
 from .models import FeeCategory, StudentFee, Payment, OrangeMoneyTransaction
 from .providers.orange_money import OrangeMoneyProvider
+from .providers.base import ProviderNetworkError, retry_with_backoff
 from .serializers import (
     FeeCategorySerializer,
     FeeCategoryCreateSerializer,
@@ -31,7 +33,7 @@ from .serializers import (
     PaymentCreateSerializer,
     OrangeMoneyInitiateSerializer,
     PaymentStatusSerializer,
-    _generate_receipt,
+    generate_receipt_for_payment,
 )
 
 logger = logging.getLogger(__name__)
@@ -218,36 +220,60 @@ class PaymentViewSet(viewsets.GenericViewSet):
 
         # Initier via le provider
         provider = get_provider()
-        idempotency_key = f"om-{uuid.uuid4().hex}"
+        idempotency_key = serializer.validated_data.get("idempotency_key") or (
+            hashlib.sha256(
+                f"{tenant.id}:{student_id}:{amount}:{payer_phone}:{time.strftime('%Y-%m-%d')}".encode()
+            ).hexdigest()
+        )
 
         try:
-            result = provider.initiate_payment(tenant, int(amount), payer_phone, idempotency_key)
-        except Exception as e:
-            logger.error("OM initiate failed: %s", e)
-            return success_response(
-                {"message": "Le service Orange Money est temporairement indisponible."},
+            result = retry_with_backoff(
+                lambda: provider.initiate_payment(
+                    tenant, int(amount), payer_phone, idempotency_key,
+                ),
+                max_attempts=3,
+                base_delay=1,
+            )
+        except ProviderNetworkError:
+            logger.error("OM initiate failed after retries")
+            return Response(
+                {"status": "error",
+                 "message": "Le service Orange Money est temporairement indisponible. Veuillez réessayer."},
                 status=status.HTTP_502_BAD_GATEWAY,
             )
 
         provider_txn_id = result["provider_transaction_id"]
 
-        with db_transaction.atomic():
-            payment = Payment.objects.create(
-                tenant=tenant,
-                student=student,
-                student_fee=student_fee,
-                amount=amount,
-                method=Payment.Method.ORANGE_MONEY,
-                status=Payment.Status.PENDING,
-                idempotency_key=idempotency_key,
-                received_by=request.user,
-            )
-            OrangeMoneyTransaction.objects.create(
-                tenant=tenant,
-                payment=payment,
-                provider_transaction_id=provider_txn_id,
-                provider_status=OrangeMoneyTransaction.Status.INITIATED,
-            )
+        try:
+            with db_transaction.atomic():
+                payment = Payment.objects.create(
+                    tenant=tenant,
+                    student=student,
+                    student_fee=student_fee,
+                    amount=amount,
+                    method=Payment.Method.ORANGE_MONEY,
+                    status=Payment.Status.PENDING,
+                    idempotency_key=idempotency_key,
+                    received_by=request.user,
+                )
+                OrangeMoneyTransaction.objects.create(
+                    tenant=tenant,
+                    payment=payment,
+                    provider_transaction_id=provider_txn_id,
+                    provider_status=OrangeMoneyTransaction.Status.INITIATED,
+                )
+        except IntegrityError:
+            existing = Payment.objects.filter(
+                idempotency_key=idempotency_key, tenant=tenant,
+            ).first()
+            if existing:
+                return Response(
+                    {"status": "error",
+                     "message": "Ce paiement a déjà été initié (clé d'idempotence déjà utilisée).",
+                     "existing_payment_id": str(existing.id)},
+                    status=status.HTTP_409_CONFLICT,
+                )
+            raise
 
         return Response(
             {
@@ -335,12 +361,14 @@ def orange_money_webhook(request):
         payment.reference = transaction_id
         payment.save(update_fields=["status", "reference", "updated_at"])
 
-        _generate_receipt(payment)
-
+        # Balance update AVANT generate_receipt (cohérent avec le chemin CASH)
         if payment.student_fee:
             from decimal import Decimal
+
             payment.student_fee.balance_due -= Decimal(str(payment.amount))
             payment.student_fee.save(update_fields=["balance_due", "updated_at"])
+
+        generate_receipt_for_payment(payment)
 
         logger.info("OM paiement confirmé — %s (%s)", payment.receipt_number, transaction_id)
     else:

@@ -524,9 +524,14 @@
 - [x] Webhook idempotent (double appel OK, pas de double décrémentation)
 - [x] Signature invalide → 401 rejeté, transaction inconnue → 200
 - [x] `retry_with_backoff()` testé : échoue 2 fois, réussit 3ᵉ avec backoff
+- [x] `retry_with_backoff` branché sur `initiate_payment()` (pas seulement `check_status`)
+- [x] `idempotency_key` déterministe côté serveur (SHA256) + idempotency client optionnel
+- [x] `idempotency_key` dupliqué → 409 Conflict avec `existing_payment_id`
+- [x] `generate_receipt_for_payment()` factorisée entre CASH et OM (pas de duplication)
+- [x] Régression : année de reçu = année des frais (pas `annee_inscription`)
 - [x] Réconciliation nocturne (Celery Beat, tâche `reconcile_orange_money_transactions`)
 - [x] Chiffrement : clé `ORANGE_MONEY_SECRET` en variable d'environnement (pas dans le repo)
-- [x] Tests : 20 tests (retry, provider mock, endpoints, webhook, idempotence)
+- [x] Tests : 25 tests (retry, provider mock, endpoints, webhook, idempotence, régression)
 **Labels :** `finance` `mobile-money` `intégrations` `priorité-haute`
 
 ### 🃏 [FIN-MVP-04] Factures

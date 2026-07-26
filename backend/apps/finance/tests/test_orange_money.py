@@ -513,3 +513,166 @@ class TestReconciliation:
         """Test structurel : la tâche existe et peut être importée."""
         from apps.finance.tasks import reconcile_orange_money_transactions
         assert reconcile_orange_money_transactions is not None
+
+
+# ─── Tests complémentaires FIN-MVP-03 ───────────────────────────────────────
+
+@pytest.mark.django_db
+class TestRegressionReceiptYear:
+
+    def test_webhook_receipt_year_from_fee_not_enrollment(self, api_client, tenant, director_user, director_role):
+        """
+        Régression : un élève inscrit en 2023-2024 payant des frais 2025-2026
+        via Orange Money doit obtenir un reçu REC-2025-..., pas REC-2023-...
+        """
+        _ensure_permissions(director_role, ["finance:read", "finance:create"])
+        _auth(api_client, director_user)
+
+        sy_old = SchoolYear.objects.create(
+            tenant=tenant, label="2023-2024",
+            start_date="2023-10-01", end_date="2024-07-31",
+            status="CLOSED",
+        )
+        sy_current = SchoolYear.objects.create(
+            tenant=tenant, label="2025-2026",
+            start_date="2025-10-01", end_date="2026-07-31",
+            status="OPEN", is_current=True,
+        )
+        level = Level.objects.create(tenant=tenant, name="6ème", cycle="PRIMAIRE", order_index=1)
+        sc = SchoolClass.objects.create(
+            tenant=tenant, school_year=sy_current, level=level, name="6ème A", capacity=60,
+        )
+        student = Student.objects.create(
+            tenant=tenant, matricule="2023-00001", nom="Old", prenom="Student",
+            date_naissance="2010-01-01", sexe="M", statut="ACTIF",
+            annee_inscription=sy_old, classe_actuelle=sc,
+        )
+        cat = FeeCategory.objects.create(
+            tenant=tenant, school_year=sy_current,
+            name="Scolarité 2025", type="SCOLARITE", amount=100000,
+        )
+        sf = StudentFee.objects.create(
+            tenant=tenant, student=student, fee_category=cat,
+            total_amount=100000, discount_amount=0, balance_due=100000,
+        )
+
+        init_resp = api_client.post(
+            reverse("payment-om-initiate"),
+            {"student_id": str(student.id), "student_fee_id": str(sf.id),
+             "amount": "50000", "payer_phone": "+224655112233"},
+            format="json",
+        )
+        txn_id = init_resp.json()["data"]["provider_transaction_id"]
+
+        payload = {"transaction_id": txn_id, "status": "SUCCESS", "amount": "50000"}
+        provider = OrangeMoneyProvider()
+        sig = _compute_signature(payload, provider.secret)
+        body = json.dumps(payload, separators=(",", ":"), sort_keys=True)
+
+        webhook_resp = api_client.post(
+            reverse("payment-om-webhook"), body,
+            content_type="application/json", HTTP_X_ORANGE_SIGNATURE=sig,
+        )
+        assert webhook_resp.status_code == 200
+
+        payment = Payment.objects.get(id=init_resp.json()["data"]["payment_id"])
+        assert payment.receipt_number.startswith("REC-2025-"), \
+            f"Reçu devrait être REC-2025-, got {payment.receipt_number}"
+
+
+@pytest.mark.django_db
+class TestOMIdempotency:
+
+    def test_same_idempotency_key_returns_409(self, api_client, tenant, director_user, director_role, student):
+        _ensure_permissions(director_role, ["finance:read", "finance:create"])
+        _auth(api_client, director_user)
+
+        payload = {
+            "student_id": str(student.id),
+            "amount": "50000",
+            "payer_phone": "+224655112233",
+            "idempotency_key": "om-client-key-001",
+        }
+
+        r1 = api_client.post(reverse("payment-om-initiate"), payload, format="json")
+        assert r1.status_code == 202
+
+        r2 = api_client.post(reverse("payment-om-initiate"), payload, format="json")
+        assert r2.status_code == 409
+
+    def test_deterministic_key_prevents_double_click(self, api_client, tenant, director_user, director_role, student):
+        """Même appel sans idempotency_key explicite → même clé déterministe → 409."""
+        _ensure_permissions(director_role, ["finance:read", "finance:create"])
+        _auth(api_client, director_user)
+
+        payload = {
+            "student_id": str(student.id),
+            "amount": "30000",
+            "payer_phone": "+224655112233",
+        }
+
+        r1 = api_client.post(reverse("payment-om-initiate"), payload, format="json")
+        assert r1.status_code == 202
+
+        r2 = api_client.post(reverse("payment-om-initiate"), payload, format="json")
+        assert r2.status_code == 409
+
+
+@pytest.mark.django_db
+class TestOMInitiateRetry:
+
+    def test_initiate_retries_on_provider_error(self, api_client, tenant, director_user, director_role, student, monkeypatch):
+        """
+        Vérifie que initiate_orange_money utilise retry_with_backoff :
+        provider échoue 2 fois (ProviderNetworkError), réussit à la 3e.
+        """
+        _ensure_permissions(director_role, ["finance:read", "finance:create"])
+        _auth(api_client, director_user)
+
+        call_count = 0
+
+        def failing_initiate(self, tenant, amount, phone, ref):
+            nonlocal call_count
+            call_count += 1
+            if call_count < 3:
+                from apps.finance.providers.base import ProviderNetworkError
+                raise ProviderNetworkError("OM API timeout")
+            return {
+                "provider_transaction_id": f"OM-RETRY-{call_count}",
+                "status": "PENDING",
+            }
+
+        from apps.finance.providers.orange_money import OrangeMoneyProvider
+        monkeypatch.setattr(OrangeMoneyProvider, "initiate_payment", failing_initiate)
+
+        response = api_client.post(
+            reverse("payment-om-initiate"),
+            {"student_id": str(student.id), "amount": "50000",
+             "payer_phone": "+224655112233"},
+            format="json",
+        )
+        assert response.status_code == 202, f"Error: {response.json()}"
+        tx_id = response.json()["data"]["provider_transaction_id"]
+        assert tx_id == "OM-RETRY-3", f"Expected OM-RETRY-3, got {tx_id}"
+        assert call_count == 3
+
+    def test_initiate_fails_after_3_retries(self, api_client, tenant, director_user, director_role, student, monkeypatch):
+        """Provider toujours en erreur → 502 après 3 tentatives."""
+        _ensure_permissions(director_role, ["finance:read", "finance:create"])
+        _auth(api_client, director_user)
+
+        def always_fails(self, tenant, amount, phone, ref):
+            from apps.finance.providers.base import ProviderNetworkError
+            raise ProviderNetworkError("OM API down")
+
+        from apps.finance.providers.orange_money import OrangeMoneyProvider
+        monkeypatch.setattr(OrangeMoneyProvider, "initiate_payment", always_fails)
+
+        response = api_client.post(
+            reverse("payment-om-initiate"),
+            {"student_id": str(student.id), "amount": "50000",
+             "payer_phone": "+224655112233"},
+            format="json",
+        )
+        assert response.status_code == 502
+        assert "temporairement indisponible" in response.json()["message"]

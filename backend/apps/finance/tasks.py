@@ -68,8 +68,8 @@ def reconcile_orange_money_transactions():
             payment.status = Payment.Status.COMPLETED
             payment.save(update_fields=["status", "updated_at"])
 
-            from .serializers import _generate_receipt
-            _generate_receipt(payment)
+            from .serializers import generate_receipt_for_payment
+            generate_receipt_for_payment(payment)
 
             if payment.student_fee:
                 from decimal import Decimal
