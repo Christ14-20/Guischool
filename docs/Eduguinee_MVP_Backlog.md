@@ -493,19 +493,23 @@
 - [x] Tests : création `ACCOUNTANT` via service et API, présent dans GET /auth/staff/
 - [x] État : 376 tests, build frontend 0 erreur
 
-### 🃏 [FIN-MVP-01] Catégories de frais et frais élève
-**Priorité :** 🔴 Bloquant
-- [ ] Modèle `FeeCategory` : tenant, name, type (Inscription/Scolarité — les autres catégories type Cantine/Transport différées V2), amount, is_mandatory
-- [ ] Modèle `StudentFee` : tenant, student, fee_category, total_amount, discount_amount, balance_due
-- [ ] `GET/POST /finance/feecategories/`, `GET /finance/students/{id}/fees/`
+### 🃏 [FIN-MVP-01] Catégories de frais et frais élève ✅
+**Priorité :** 🔴 Bloquant · **Commit :** `FIN-MVP-01`
+- [x] Modèle `FeeCategory` : tenant, school_year, name, type (Inscription/Scolarité), amount, is_mandatory
+- [x] Modèle `StudentFee` : tenant, student, fee_category, total_amount, discount_amount, balance_due
+- [x] `GET/POST /finance/feecategories/`, `GET /finance/student-fees/`
+- [x] Permissions finance seedées (migration `0005_add_finance_permissions`)
+- [x] Isolation multi-tenant, tests (11 tests)
 **Labels :** `finance` `backend` `priorité-haute`
 
-### 🃏 [FIN-MVP-02] Paiement en espèces
-**Priorité :** 🔴 Bloquant
-- [ ] Modèle `Payment` : tenant, student, amount, payment_date, method (Cash/Orange_Money), reference, received_by, status, receipt_number (unique, idempotence)
-- [ ] `POST /finance/payments/` : mise à jour automatique du solde de l'élève
-- [ ] Génération automatique du numéro de reçu et du PDF de reçu
-- [ ] `GET /finance/payments/` (filtres méthode/statut/dates)
+### 🃏 [FIN-MVP-02] Paiement en espèces ✅
+**Priorité :** 🔴 Bloquant · **Commit :** `FIN-MVP-02`
+- [x] Modèle `Payment` : tenant, student, student_fee, amount, method (Cash/Orange_Money), status, idempotency_key, receipt_number
+- [x] `POST /finance/payments/` : mise à jour automatique du solde (balance_due), idempotence (409)
+- [x] `GET /finance/payments/` (filtres méthode/statut/élève)
+- [x] Génération automatique du numéro de reçu (`REC-{année}-{seq:06d}`) et du PDF de reçu (WeasyPrint synchrone)
+- [x] `GET /finance/payments/{id}/receipt/` — téléchargement PDF
+- [x] Isolation multi-tenant, tests (10 tests)
 **Labels :** `finance` `backend` `priorité-haute`
 
 ### 🃏 [FIN-MVP-03] Intégration Orange Money

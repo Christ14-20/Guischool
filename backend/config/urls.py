@@ -22,6 +22,7 @@ api_v1_patterns = [
     path("pedagogy/", include("apps.pedagogy.urls")),
     path("students/", include("apps.pedagogy.student_urls")),
     path("grades/", include("apps.pedagogy.grade_urls")),
+    path("finance/", include("apps.finance.urls")),
 ]
 
 urlpatterns = [

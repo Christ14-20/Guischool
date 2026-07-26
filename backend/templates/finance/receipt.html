@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  @page { margin: 2cm; size: A5; }
+  body { font-family: 'DejaVu Sans', sans-serif; font-size: 11pt; color: #333; }
+  .header { text-align: center; margin-bottom: 1.5em; border-bottom: 2px solid #2563eb; padding-bottom: 1em; }
+  .header h1 { font-size: 16pt; margin: 0; color: #2563eb; }
+  .header p { margin: 0.2em 0; font-size: 10pt; color: #666; }
+  .receipt-title { text-align: center; font-size: 13pt; font-weight: bold; margin: 1.5em 0; }
+  table { width: 100%; border-collapse: collapse; margin: 1em 0; }
+  td, th { padding: 0.4em 0.2em; }
+  td.label { font-weight: bold; width: 40%; color: #555; }
+  td.value { width: 60%; }
+  .amount { font-size: 14pt; font-weight: bold; color: #2563eb; text-align: center; }
+  .footer { text-align: center; font-size: 9pt; color: #999; margin-top: 2em; border-top: 1px solid #ddd; padding-top: 1em; }
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>{{ payment.tenant.name }}</h1>
+  <p>{{ payment.tenant.contact_address|default:"" }}</p>
+  <p>{{ payment.tenant.contact_phone|default:"" }}</p>
+</div>
+<div class="receipt-title">REÇU DE PAIEMENT</div>
+<table>
+  <tr><td class="label">N° Reçu</td><td class="value">{{ payment.receipt_number }}</td></tr>
+  <tr><td class="label">Date</td><td class="value">{{ payment.payment_date|date:"d/m/Y H:i" }}</td></tr>
+  <tr><td class="label">Élève</td><td class="value">{{ payment.student.nom }} {{ payment.student.prenom }}</td></tr>
+  <tr><td class="label">Matricule</td><td class="value">{{ payment.student.matricule }}</td></tr>
+  {% if payment.student_fee %}
+  <tr><td class="label">Frais</td><td class="value">{{ payment.student_fee.fee_category.name }}</td></tr>
+  {% endif %}
+  <tr><td class="label">Mode de paiement</td><td class="value">{{ payment.get_method_display }}</td></tr>
+  <tr><td class="label">Reçu par</td><td class="value">{{ payment.received_by.get_full_name|default:payment.received_by.username }}</td></tr>
+</table>
+<p class="amount">{{ payment.amount }} GNF</p>
+<div class="footer">
+  Reçu généré le {% now "d/m/Y H:i" %} — ÉduGuinée
+</div>
+</body>
+</html>
