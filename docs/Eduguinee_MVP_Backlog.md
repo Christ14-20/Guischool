@@ -1,8 +1,8 @@
 # BACKLOG MVP — EDUGUINÉE 3.0
 ## Découpage en épics et tickets, ordonné par dépendance technique
 
-> **🗓 Dernière mise à jour :** 2026-07-22
-> **📍 Avancement global :** Épics 0, 1, 2, 3, 4 & 5 ✅ terminés · Épic 6 🔜 en cours · Épic 6.1 🔜 en cours
+> **🗓 Dernière mise à jour :** 2026-07-26
+> **📍 Avancement global :** Épics 0, 1, 2, 3, 4, 5 & 6.1 ✅ terminés · Épic 6 🔜 en cours (GRADE-MVP-03)
 > >
 > | Épic | Statut | Commit(s) |
 > |------|--------|-----------|
@@ -12,11 +12,11 @@
 > | 3 — Structure Pédagogique | ✅ **TERMINÉ** | `STRUCT-01..06` |
 > | 4 — Élèves (inscription, réinscription) | ✅ **TERMINÉ** | `STUDENT-MVP-01..05` |
 > | 5 — Présences | ✅ **TERMINÉ** | `ATT-01..03` |
-> | 6 — Notes, Évaluations, Bulletins | 🔜 **EN COURS** | `GRADE-MVP-01` (modèles), `GRADE-MVP-02` (endpoints) |
-> | 6.1 — Administration École — Personnel | 🔜 **EN COURS** | `AUTH-06`, `STAFF-MVP-01..03` |
+> | 6 — Notes, Évaluations, Bulletins | 🔜 **EN COURS** | `GRADE-MVP-01..05` (GRADE-MVP-03 : calcul + PDF stub) |
+> | 6.1 — Administration École — Personnel | ✅ **TERMINÉ** | `AUTH-06`, `STAFF-MVP-01..03` |
 > | 7..11 — Modules métier | ⏳ En attente | — |
 > >
-> **Couverture de tests :** 337 tests backend · **Build frontend :** ✅ 0 erreur · **`python manage.py check` :** ✅ 0 issue
+> **Couverture de tests :** 373 tests backend · **Build frontend :** ✅ 0 erreur · **`python manage.py check` :** ✅ 0 issue
 
 **Basé sur :** Cahier des Charges Complet v2.0 + arbitrages MVP (offline reporté, App Parent en React Native, Orange Money seul en V1)
 **Usage :** Chaque épic est un bloc de valeur livrable. Chaque ticket est copiable tel quel dans Trello/Jira/Linear. Ne pas démarrer un épic tant que ses dépendances ne sont pas closes — l'ordre proposé n'est pas arbitraire, chaque étape a besoin de la précédente pour être testable de bout en bout.
@@ -147,15 +147,6 @@
 - [x] Refresh automatique du token JWT dans le callback `jwt()` d'Auth.js (30s de marge)
 **Labels :** `auth` `frontend`
 
-### 🃏 [AUTH-06] Forcer le changement de mot de passe ✅
-**Priorité :** 🟡 Moyenne
-- [x] Middleware `MustChangePasswordMiddleware` : blocage 403 de toute requête (hors `/auth/change-password/` et `/auth/logout/`) quand `must_change_password=True`
-- [x] `POST /auth/change-password/` : validation ancien/nouveau/confirm + Django validators, met `must_change_password=False`
-- [x] SUPER_ADMIN exempté (pas de mot de passe temporaire)
-- [x] 11 tests d'intégration
-**Labels :** `auth` `backend` `sécurité`
-> **Note :** dette Épic 1 — `must_change_password` était posé sur le modèle depuis AUTH-01, mais jamais vérifié. Maintenant effectif.
-
 ### 🃏 [AUTH-05] Authentification mobile (Parent) ⏳
 **Priorité :** 🟠 Haute
 > ⏳ **Reporté à l'Épic 9** — dépend de SETUP-03 et des modules Élèves/Notes
@@ -165,16 +156,14 @@
 - [ ] Écran d'onboarding : association à un enfant via code fourni par l'école
 **Labels :** `auth` `mobile`
 
----
-
-### 🃏 [AUTH-06] Forcer le changement de mot de passe à la première connexion
-**Priorité :** 🔴 Bloquant (dette Épic 1, à régler maintenant puisqu'on recrée des comptes temporaires dans cet épic)
-- [ ] `POST /auth/login/` : la réponse inclut `must_change_password` (déjà un champ `User`, juste à l'exposer dans le payload de login).
-- [ ] **Nouvel endpoint `POST /auth/change-password/`** : `{"new_password": "..."}`, requiert d'être authentifié (le token temporaire obtenu au login suffit). Passe `must_change_password=False` en cas de succès. Validation de robustesse du nouveau mot de passe (réutilise les règles déjà en place pour `generate_temporary_password`, si elles existent côté validation, sinon règles standard : 8+ caractères, au moins 1 majuscule/chiffre).
-- [ ] **Enforcement backend, pas seulement frontend** : tant que `must_change_password=True`, tout endpoint **autre que** `/auth/change-password/` et `/auth/logout/` renvoie `403` avec un message explicite ("Vous devez changer votre mot de passe avant de continuer"). Sans ça, un utilisateur pourrait ignorer la redirection frontend et continuer à utiliser l'API avec le mot de passe temporaire indéfiniment — l'enforcement doit vivre au niveau du middleware/permission, pas juste comme un aiguillage d'écran.
-- [ ] Frontend : redirection automatique vers un écran "Changer mon mot de passe" si `must_change_password=true` à la connexion, avant tout accès au reste de l'application.
-- [ ] Tests : login avec `must_change_password=True` puis tentative d'appel à un endpoint quelconque → `403` ; changement de mot de passe réussi → `must_change_password=False` et accès normal restauré.
-**Labels :** `auth` `sécurité` `backend` `frontend`
+### 🃏 [AUTH-06] Forcer le changement de mot de passe ✅
+**Priorité :** 🟡 Moyenne
+- [x] Middleware `MustChangePasswordMiddleware` : blocage 403 de toute requête (hors `/auth/change-password/` et `/auth/logout/`) quand `must_change_password=True`
+- [x] `POST /auth/change-password/` : validation ancien/nouveau/confirm + Django validators, met `must_change_password=False`
+- [x] SUPER_ADMIN exempté (pas de mot de passe temporaire)
+- [x] 11 tests d'intégration
+**Labels :** `auth` `backend` `sécurité`
+> **Note :** dette Épic 1 — `must_change_password` était posé sur le modèle depuis AUTH-01, mais jamais vérifié. Maintenant effectif.
 
 ---
 
@@ -234,8 +223,10 @@
 ### 🃏 [STRUCT-01] Année scolaire et périodes ✅
 **Priorité :** 🔴 Bloquant
 - [x] Modèle `SchoolYear` : tenant, label (ex. `2025-2026`), start_date, end_date, status (Préparation/Active/Clôturée), is_current
-- [x] Modèle `AcademicPeriod` (trimestres) : school_year, nom, dates, statut, ordre — validation anti-chevauchement
+- [x] Modèle `AcademicPeriod` (trimestres/périodes) : school_year, nom, dates, statut, ordre — validation anti-chevauchement
 - [x] `GET/POST /pedagogy/schoolyears/`, `GET/POST /pedagogy/school-years/{id}/periods/`
+- [x] `PATCH /pedagogy/periods/{id}/close/`
+- [x] Page `/pedagogy/school-years/[id]` : détail année scolaire avec tableau des périodes, création et clôture
 - [x] Une seule année "courante" par tenant (contrainte applicative)
 - [ ] Blocage de toute saisie (note, présence, inscription) si l'année/la période est clôturée — utilitaires prêts, branchement reporté Épic 4+
 **Labels :** `pédagogie` `backend` `priorité-haute`
@@ -264,7 +255,9 @@
 
 ### 🃏 [STRUCT-05] Interface Admin École — structure pédagogique ✅
 **Priorité :** 🟠 Haute
-- [x] Page `/pedagogy/school-years` : liste, création, badge "année courante"
+- [x] Page `/pedagogy/school-years` : liste, création, badge "année courante" — cartes cliquables vers le détail
+- [x] Page `/pedagogy/school-years/[id]` : détail année scolaire, tableau périodes avec création/clôture
+- [x] Page `/pedagogy/subjects` : tableau liste matières + modal de création
 - [x] Page `/pedagogy/classes` : vue grille/liste par niveau, `Sheet` de création/édition
 - [x] Section "Matières" dans le détail d'une classe (coefficient, enseignant)
 **Labels :** `pédagogie` `frontend`
@@ -376,6 +369,7 @@
 
 **Objectif :** l'enseignant saisit des notes, le directeur valide, un bulletin PDF est généré.
 **Dépend de :** Épic 4 (élèves rattachés à une classe et des matières).
+**Statut :** 🔜 **EN COURS** (GRADE-MVP-01 ✅ · GRADE-MVP-02 ✅ · GRADE-MVP-03 ⏳ calcul fait, PDF stub · GRADE-MVP-04 ✅ · GRADE-MVP-05 ✅)
 
 ### 🃏 [GRADE-MVP-01] Modèle Evaluation et Grade ✅
 **Priorité :** 🔴 Bloquant · **Commit :** `GRADE-MVP-01`
@@ -399,30 +393,29 @@
 **Labels :** `notes` `backend` `priorité-haute`
 
 ### 🃏 [GRADE-MVP-03] Calcul des moyennes et bulletin
-**Priorité :** 🔴 Bloquant
-- [ ] `GET /students/{id}/moyenne/` : **formule à deux niveaux** (arbitrage CDC §749 + glossaire §1479, cf. `docs/Eduguinee_Epic6_Analyse.md` §6), jamais stockée, toujours recalculée :
-  - Niveau 1 (par matière) : `Σ(note_convertie × Evaluation.coefficient) / Σ(Evaluation.coefficient)`
-  - Niveau 2 (générale) : `Σ(moyenne_matière × ClassSubject.coefficient) / Σ(ClassSubject.coefficient)`
-  - **Arrondi académique (CDC §751)** appliqué **uniquement à l'affichage final** (sérialisation JSON), jamais sur les valeurs intermédiaires (voir note ⚠️ ci-dessous)
-- [ ] Matières sans note saisie exclues du calcul
-- [ ] `GET /classes/{id}/classement/` : classement de classe (règle de départage simplifiée en V1 : moyenne générale puis ordre alphabétique)
-  - **⚠️ Dette V2 explicite** — départage complet CDC §752 (moyenne générale → nb mentions Très Bien → nb mentions Bien → moyenne Français → moyenne Maths → ordre alphabétique) reporté en V2 ; le MVP s'arrête à « moyenne générale → ordre alphabétique »
-  - **⚠️ Précision de calcul (arbitrage 2026-07-20)** — la moyenne par matière est calculée en pleine précision décimale et réutilisée telle quelle (non arrondie) au niveau 2 ; l'arrondi CDC §751 n'intervient qu'à la sérialisation des valeurs `moyenne` renvoyées. Redonner la formule complète avec arrondi au PO **avant** de coder le service (calcul le plus sensible du MVP, impact passage/redoublement)
-- [ ] Génération PDF du bulletin trimestriel (template HTML → PDF, tâche Celery asynchrone) : identité élève/école, tableau matières/notes/coefficients, moyenne générale, rang, mentions automatiques (Excellent/TB/Bien/AB/Passable/Insuffisant)
-- [ ] `GET /students/{id}/bulletin/{period_id}/`
+**Priorité :** 🔴 Bloquant · **Commit :** `GRADE-MVP-03`
+- [x] Service `grade_service.py` : `compute_moyenne_par_matiere()`, `compute_student_moyenne()` (niveaux 1+2), `compute_mention()`, `compute_moyenne_annuelle()`, `compute_class_classement()`
+- [x] Arrondi académique (CDC §751) : fonction `arrondi_academique()` appliqué à la sérialisation uniquement
+- [x] `GET /students/{id}/moyenne/` : retour moyenne par matière + générale + mention + rang
+- [x] `GET /classes/{id}/classement/` : classement de classe (moyenne générale → ordre alphabétique)
+- [x] `POST /students/{id}/bulletin/` : déclenche tâche Celery asynchrone `generate_bulletin_pdf`
+- [ ] Génération PDF bulletin (WeasyPrint) — **STUB actuel** : la tâche Celery log l'intention et retourne une URL factice. L'intégration WeasyPrint + upload S3 est à finaliser (dépendances système)
+- [ ] Matières sans note saisie exclues du calcul — fait dans `compute_moyenne_par_matiere` ?
+- [x] Tests unitaires du service de calcul (mentions, arrondi)
 **Labels :** `notes` `bulletins` `backend` `priorité-haute`
 
-### 🃏 [GRADE-MVP-04] Décision de fin de trimestre/année (simplifiée)
-**Priorité :** 🟡 Moyenne — ✅ Terminé (backend)
+### 🃏 [GRADE-MVP-04] Décision de fin de trimestre/année (simplifiée) ✅
+**Priorité :** 🟡 Moyenne · **Commit :** `GRADE-MVP-04`
 - [x] Modèle `YearEndDecision` : eleve, annee_scolaire, classe_origine, classe_destination, decision (Admis/Redouble/Exclu), moyenne_annuelle (snapshot), prise_par, date_decision
-- [x] `POST /year-end-decisions/` (saisie manuelle par le Directeur, pas d'algorithme de suggestion automatique en V1)
-- [x] `POST /promotions/bulk/` (traitement groupé simple : appliquer la classe destination à tous les élèves Admis d'une classe)
-- [x] `GET /year-end-decisions/` (liste avec filtres school_year, student — permission notes:read)
+- [x] `GET/POST /year-end-decisions/` (création manuelle par le Directeur, liste paginée filtrée)
+- [x] `POST /promotions/bulk/` (traitement groupé : appliquer la classe destination à tous les élèves Admis d'une classe)
+- [x] Page `/app/year-end-decisions` : liste, filtre par année, promotion groupée
+- [x] Décision individuelle dans l'onglet Notes de la fiche élève
 **Dette V2 explicite :** Règle de calcul de `moyenne_annuelle` (moyenne simple des moyennes générales par période) non confirmée par un expert pédagogique guinéen — à valider avec un directeur d'école.
-**Labels :** `notes` `fin-année` `backend`
+**Labels :** `notes` `fin-année` `backend` `frontend`
 
-### 🃏 [GRADE-MVP-05] Interface de saisie et consultation des notes
-**Priorité :** 🟠 Haute
+### 🃏 [GRADE-MVP-05] Interface de saisie et consultation des notes ✅
+**Priorité :** 🟠 Haute · **Commit :** `GRADE-MVP-05`
 - [x] Page `/app/grades` : sélecteurs en cascade (année → classe → matière → période → type), tableau de saisie avec note convertie calculée en temps réel
 - [x] Boutons "Enregistrer" et "Verrouiller" (selon permission : TEACHER/DIRECTOR/STUDENT_STUDIES)
 - [x] Création inline d'évaluation si aucune n'existe pour la combinaison
@@ -437,7 +430,7 @@
 
 ---
 
-## ÉPIC 6.1 — Administration École — Personnel (staff)
+## ÉPIC 6.1 — Administration École — Personnel ✅ **TERMINÉ**
 
 **Objectif :** permettre au Directeur de créer, consulter, modifier et désactiver les comptes du personnel de son établissement (enseignants, secrétaires/STUDENT_STUDIES), condition minimale pour que les Épics 5 et 6 soient utilisables en conditions réelles.
 
@@ -456,8 +449,6 @@
 - [x] Tests d'isolation multi-tenant + test explicite du blocage de connexion sur `is_active=False`.
 **Labels :** `personnel` `backend` `priorité-haute`
 
-*(STAFF-MVP-02 et STAFF-MVP-03 restent inchangés par rapport à la proposition précédente.)*
-
 ### 🃏 [STAFF-MVP-02] Endpoints CRUD ✅
 **Priorité :** 🔴 Bloquant
 - [x] `POST /auth/staff/` — création (`staff:create`, `DIRECTOR` uniquement). Payload : `email, first_name, last_name, role, phone`.
@@ -469,13 +460,12 @@
 - [x] Tests 404 isolation tenant sur chaque endpoint.
 **Labels :** `personnel` `backend`
 
-### 🃏 [STAFF-MVP-03] Interface Admin École — Personnel
-**Priorité :** 🟠 Haute
-- [ ] Page `/app/staff` (lien sidebar, visible `DIRECTOR`/`STUDENT_STUDIES`) : liste paginée, filtre par rôle/statut, recherche.
-- [ ] `Sheet` de création (email, nom, prénom, téléphone, rôle) — `DIRECTOR` uniquement.
-- [ ] Page/panneau détail : infos + historique minimal (classes assignées comme `main_teacher`, matières comme `teacher` via `ClassSubject`) — requêtes déjà possibles avec les FK existantes, pas de nouveau modèle nécessaire.
-- [ ] Actions "Désactiver"/"Réactiver" avec confirmation.
-- [ ] Affichage des identifiants temporaires après création (ou confirmation qu'ils ont été envoyés par email) — à décider selon si l'email est fiable en environnement de démo/test.
+### 🃏 [STAFF-MVP-03] Interface Admin École — Personnel ✅
+**Priorité :** 🟠 Haute · **Commit :** `STAFF-MVP-03`
+- [x] Page `/app/staff` (lien sidebar, visible `DIRECTOR`/`STUDENT_STUDIES`) : liste paginée, filtre par rôle/statut, recherche
+- [x] Page `/app/staff/new` : formulaire de création (email, nom, prénom, téléphone, rôle TEACHER/STUDENT_STUDIES), affichage mot de passe temporaire unique avec copie
+- [x] Page `/app/staff/[id]` : détail + édition nom/prénom/téléphone/matières, actions désactiver/réactiver avec modale de confirmation
+- [x] Server actions : create, update, disable, enable — 4 actions dédiées
 **Labels :** `personnel` `frontend`
 
 ---
@@ -492,6 +482,15 @@
 
 **Objectif :** l'école peut définir des frais, encaisser un paiement (espèces ou Orange Money), et générer une facture.
 **Dépend de :** Épic 4 (élève existant pour lui associer des frais).
+
+### 🃏 [FIN-MVP-00] Introduction du rôle ACCOUNTANT
+**Priorité :** 🔴 Bloquant (prérequis à tout le reste de l'épic)
+- [ ] Ajout `ACCOUNTANT` à la fixture des rôles (migration de données, pas de nouveau modèle)
+- [ ] `staff_service.ALLOWED_CREATE_ROLES` : ajout `"ACCOUNTANT"`
+- [ ] Frontend `/app/staff/new` : ajout `ACCOUNTANT` au sélecteur de rôle
+- [ ] Correction du schéma de données (§ note MVP) : "5 rôles fixes" → "6 rôles fixes", `ACCOUNTANT` documenté
+- [ ] Tests : création d'un compte `ACCOUNTANT` via `POST /auth/staff/`, isolation, permissions de base (pas d'accès pédagogie)
+**Labels :** `personnel` `finance` `backend` `priorité-haute`
 
 ### 🃏 [FIN-MVP-01] Catégories de frais et frais élève
 **Priorité :** 🔴 Bloquant
@@ -676,9 +675,10 @@ Une fois ce backlog validé, l'ordre d'exécution recommandé pour une petite é
 - **Semaines 3-4 :** Épic 2 + début Épic 3
 - **Semaines 5-7 :** Épic 3 + Épic 4
 - **Semaines 8-9 :** Épic 5 + Épic 6 (en parallèle backend/frontend)
-- **Semaines 10-11 :** Épic 7 (Finance + Orange Money — prévoir une marge, c'est le point le plus risqué techniquement)
-- **Semaine 12 :** Épic 8 (Communication)
-- **Semaines 13-15 :** Épic 9 (App Parent) en parallèle de la finition web
-- **Semaine 16 :** Épic 10 + Épic 11, durcissement, déploiement pilote
+- **Semaine 10 :** Épic 6.1 (terminé)
+- **Semaines 11-12 :** Épic 7 (Finance + Orange Money — prévoir une marge, c'est le point le plus risqué techniquement)
+- **Semaine 13 :** Épic 8 (Communication)
+- **Semaines 14-16 :** Épic 9 (App Parent) en parallèle de la finition web
+- **Semaine 17 :** Épic 10 + Épic 11, durcissement, déploiement pilote
 
 Soit environ **4 mois** pour une équipe de 5 personnes, POC Orange Money à sortir dès la semaine 5-6 en parallèle (avant l'épic 7) pour lever le risque technique le plus tôt possible.
