@@ -2,7 +2,7 @@
 ## Découpage en épics et tickets, ordonné par dépendance technique
 
 > **🗓 Dernière mise à jour :** 2026-07-26
-> **📍 Avancement global :** Épics 0, 1, 2, 3, 4, 5 & 6.1 ✅ terminés · Épic 6 🔜 en cours (GRADE-MVP-03)
+> **📍 Avancement global :** Épics 0, 1, 2, 3, 4, 5 & 6.1 ✅ terminés · Épic 6 🔜 en cours (GRADE-MVP-03) · FIN-MVP-00 ✅
 > >
 > | Épic | Statut | Commit(s) |
 > |------|--------|-----------|
@@ -14,9 +14,10 @@
 > | 5 — Présences | ✅ **TERMINÉ** | `ATT-01..03` |
 > | 6 — Notes, Évaluations, Bulletins | 🔜 **EN COURS** | `GRADE-MVP-01..05` (GRADE-MVP-03 : calcul + PDF stub) |
 > | 6.1 — Administration École — Personnel | ✅ **TERMINÉ** | `AUTH-06`, `STAFF-MVP-01..03` |
-> | 7..11 — Modules métier | ⏳ En attente | — |
+> | 7 — Finance, paiements, Orange Money | 🔜 **EN COURS** | `FIN-MVP-00` ✅ |
+> | 8..11 — Modules métier | ⏳ En attente | — |
 > >
-> **Couverture de tests :** 373 tests backend · **Build frontend :** ✅ 0 erreur · **`python manage.py check` :** ✅ 0 issue
+> **Couverture de tests :** 376 tests backend · **Build frontend :** ✅ 0 erreur · **`python manage.py check` :** ✅ 0 issue
 
 **Basé sur :** Cahier des Charges Complet v2.0 + arbitrages MVP (offline reporté, App Parent en React Native, Orange Money seul en V1)
 **Usage :** Chaque épic est un bloc de valeur livrable. Chaque ticket est copiable tel quel dans Trello/Jira/Linear. Ne pas démarrer un épic tant que ses dépendances ne sont pas closes — l'ordre proposé n'est pas arbitraire, chaque étape a besoin de la précédente pour être testable de bout en bout.
@@ -478,19 +479,19 @@
 
 ---
 
-## ÉPIC 7 — Finance (frais, paiements, Orange Money)
+## ÉPIC 7 — Finance (frais, paiements, Orange Money) 🔜 EN COURS
 
 **Objectif :** l'école peut définir des frais, encaisser un paiement (espèces ou Orange Money), et générer une facture.
 **Dépend de :** Épic 4 (élève existant pour lui associer des frais).
 
-### 🃏 [FIN-MVP-00] Introduction du rôle ACCOUNTANT
-**Priorité :** 🔴 Bloquant (prérequis à tout le reste de l'épic)
-- [ ] Ajout `ACCOUNTANT` à la fixture des rôles (migration de données, pas de nouveau modèle)
-- [ ] `staff_service.ALLOWED_CREATE_ROLES` : ajout `"ACCOUNTANT"`
-- [ ] Frontend `/app/staff/new` : ajout `ACCOUNTANT` au sélecteur de rôle
-- [ ] Correction du schéma de données (§ note MVP) : "5 rôles fixes" → "6 rôles fixes", `ACCOUNTANT` documenté
-- [ ] Tests : création d'un compte `ACCOUNTANT` via `POST /auth/staff/`, isolation, permissions de base (pas d'accès pédagogie)
-**Labels :** `personnel` `finance` `backend` `priorité-haute`
+### 🃏 [FIN-MVP-00] Introduction du rôle ACCOUNTANT ✅
+**Priorité :** 🔴 Bloquant (prérequis à tout le reste de l'épic) · **Commit :** `FIN-MVP-00`
+- [x] Ajout `ACCOUNTANT` à la fixture des rôles (migration `0004_add_accountant_role`)
+- [x] `ACCOUNTANT` ajouté à `Role.RoleName` (models.py), `ALLOWED_CREATE_ROLES` (staff_service.py), `StaffCreateSerializer.role.choices`
+- [x] `init_data.py` mis à jour
+- [x] Frontend `/app/staff/new` : `ACCOUNTANT` dans le sélecteur de rôle
+- [x] Tests : création `ACCOUNTANT` via service et API, présent dans GET /auth/staff/
+- [x] État : 376 tests, build frontend 0 erreur
 
 ### 🃏 [FIN-MVP-01] Catégories de frais et frais élève
 **Priorité :** 🔴 Bloquant

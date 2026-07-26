@@ -9,6 +9,7 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from .models import User
+from .services.staff_service import ALLOWED_CREATE_ROLES
 
 
 class TenantMiniSerializer(serializers.Serializer):
@@ -204,12 +205,12 @@ class StaffCreateSerializer(serializers.Serializer):
     Serializer pour POST /auth/staff/ — création d'un compte personnel.
 
     Champs acceptés :
-    - email, first_name, last_name, role (TEACHER|STUDENT_STUDIES), phone, subjects_taught
+    - email, first_name, last_name, role, phone, subjects_taught
     """
     email = serializers.EmailField()
     first_name = serializers.CharField(max_length=150)
     last_name = serializers.CharField(max_length=150)
-    role = serializers.ChoiceField(choices=["TEACHER", "STUDENT_STUDIES"])
+    role = serializers.ChoiceField(choices=ALLOWED_CREATE_ROLES)
     phone = serializers.CharField(max_length=20, required=False, default="")
     subjects_taught = serializers.ListField(
         child=serializers.CharField(max_length=20),

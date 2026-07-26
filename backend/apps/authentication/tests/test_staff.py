@@ -66,6 +66,12 @@ def ss_role(db):
 
 
 @pytest.fixture
+def accountant_role(db):
+    role, _ = Role.objects.get_or_create(name="ACCOUNTANT", defaults={"label": "Comptable"})
+    return role
+
+
+@pytest.fixture
 def director_user(tenant, director_role):
     return User.objects.create_user(
         username="directeur",
@@ -213,6 +219,27 @@ class TestStaffCreateService:
                 role_name="DIRECTOR",
             )
 
+    def test_create_accountant_success(self, api_client, tenant, director_user, accountant_role):
+        """Création d'un ACCOUNTANT via le service."""
+        from apps.authentication.services.staff_service import create_staff_account
+
+        user, temp_pass = create_staff_account(
+            tenant=tenant,
+            created_by=director_user,
+            email="comptable@ecole-test.gn",
+            first_name="Oumar",
+            last_name="Diallo",
+            role_name="ACCOUNTANT",
+            phone="+224620000015",
+        )
+
+        assert user.email == "comptable@ecole-test.gn"
+        assert user.role.name == "ACCOUNTANT"
+        assert user.tenant_id == tenant.id
+        assert user.must_change_password is True
+        assert user.is_active is True
+        assert temp_pass is not None
+
     def test_create_staff_tenant_isolation(self, api_client, tenant, tenant2, director_user, teacher_role):
         """La création dans tenant1 n'affecte pas tenant2."""
         from apps.authentication.services.staff_service import create_staff_account
@@ -307,6 +334,41 @@ class TestStaffEndpoints:
 
         # Vérification en base
         assert User.objects.filter(email="nouvel-ens@ecole-test.gn", tenant=tenant).exists()
+
+    def test_create_accountant_via_api(self, api_client, tenant, director_user, director_role, accountant_role):
+        """POST /auth/staff/ crée un comptable et retourne le mot de passe temporaire."""
+        _ensure_director_permissions(director_role)
+        _auth(api_client, director_user)
+
+        response = api_client.post(
+            reverse("staff-list"),
+            {
+                "email": "comptable@ecole-test.gn",
+                "first_name": "Oumar",
+                "last_name": "Diallo",
+                "role": "ACCOUNTANT",
+                "phone": "+224620000015",
+            },
+            format="json",
+        )
+        assert response.status_code == 201
+        data = response.json()["data"]
+        assert data["role"]["name"] == "ACCOUNTANT"
+        assert "temporary_password" in data
+        assert User.objects.filter(email="comptable@ecole-test.gn", tenant=tenant).exists()
+
+    def test_create_accountant_on_staff_list(self, api_client, tenant, director_user, director_role, teacher_role, accountant_role):
+        """Un ACCOUNTANT créé apparaît dans GET /auth/staff/."""
+        _ensure_director_permissions(director_role)
+        User.objects.create_user(
+            username="comptable", email="comptable@ecole-test.gn", password="P@ss123!",
+            role=accountant_role, tenant=tenant, first_name="Oumar", last_name="Diallo",
+        )
+        _auth(api_client, director_user)
+
+        response = api_client.get(reverse("staff-list"))
+        emails = [u["email"] for u in response.json()["data"]["results"]]
+        assert "comptable@ecole-test.gn" in emails
 
     def test_create_staff_without_permission(self, api_client, tenant, teacher_role, ss_role):
         """Un utilisateur sans staff:create reçoit 403."""

@@ -16,7 +16,7 @@ from apps.superadmin.services.tenant_service import generate_temporary_password
 from apps.monitoring.services import audit_log
 
 
-ALLOWED_CREATE_ROLES = ("TEACHER", "STUDENT_STUDIES")
+ALLOWED_CREATE_ROLES = ("TEACHER", "STUDENT_STUDIES", "ACCOUNTANT")
 
 
 def create_staff_account(

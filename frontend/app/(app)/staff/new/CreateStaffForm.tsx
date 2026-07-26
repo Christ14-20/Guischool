@@ -30,6 +30,7 @@ interface CreateStaffFormProps {
 const ROLE_OPTIONS = [
   { value: "TEACHER", label: "Enseignant" },
   { value: "STUDENT_STUDIES", label: "Études" },
+  { value: "ACCOUNTANT", label: "Comptable" },
 ];
 
 export default function CreateStaffForm({ subjects }: CreateStaffFormProps) {

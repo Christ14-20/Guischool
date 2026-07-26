@@ -40,6 +40,7 @@ ROLES = [
     {"name": "DIRECTOR",        "label": "Directeur"},
     {"name": "STUDENT_STUDIES", "label": "Directeur des études"},
     {"name": "TEACHER",         "label": "Enseignant"},
+    {"name": "ACCOUNTANT",      "label": "Comptable"},
     {"name": "PARENT",          "label": "Parent d'élève"},
 ]
 

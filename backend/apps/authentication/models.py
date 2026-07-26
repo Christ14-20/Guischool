@@ -58,7 +58,8 @@ class Permission(TimestampedModel):
 
 class Role(TimestampedModel):
     """
-    Rôle applicatif — 5 rôles fixes pour le MVP.
+    Rôle applicatif — 6 rôles fixes pour le MVP (SUPER_ADMIN, DIRECTOR,
+    STUDENT_STUDIES, TEACHER, ACCOUNTANT, PARENT).
     Le rôle CUSTOM (constructeur de rôle) est prévu dans l'enum mais son usage
     réel est différé en V2.
     """
@@ -68,6 +69,7 @@ class Role(TimestampedModel):
         DIRECTOR = "DIRECTOR", "Directeur"
         STUDENT_STUDIES = "STUDENT_STUDIES", "Directeur des études / Scolarité"
         TEACHER = "TEACHER", "Enseignant"
+        ACCOUNTANT = "ACCOUNTANT", "Comptable"
         PARENT = "PARENT", "Parent d'élève"
         CUSTOM = "CUSTOM", "Personnalisé"
 
