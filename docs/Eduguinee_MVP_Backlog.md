@@ -534,11 +534,19 @@
 - [x] Tests : 25 tests (retry, provider mock, endpoints, webhook, idempotence, régression)
 **Labels :** `finance` `mobile-money` `intégrations` `priorité-haute`
 
-### 🃏 [FIN-MVP-04] Factures
-**Priorité :** 🟠 Haute
-- [ ] Modèle `Invoice` : tenant, student, school_year, total_due, total_paid, balance, status (Pending/Paid/Overdue), pdf_url
-- [ ] `GET /finance/invoices/`
-- [ ] `POST /finance/invoices/{id}/generate-pdf/` (tâche Celery)
+### 🃏 [FIN-MVP-04] Factures ✅
+**Priorité :** 🟠 Haute · **Commit :** `FIN-MVP-04`
+- [x] Modèle `Invoice` : `TenantScopedModel`, student/school_year (PROTECT), decimal_places=0, due_date, generated_at, 4 statuts (PENDING/PARTIAL/PAID/OVERDUE)
+- [x] `FeeCategory.due_date` : DateField nullable + `FeeCategoryCreateSerializer` mis à jour
+- [x] `sync_invoice(student, school_year)` : total_due = sum(total_amount - discount_amount), total_paid = sum(COMPLETED), balance, due_date = min(fee_category.due_date), statut par ordre de priorité (PAID > OVERDUE > PARTIAL > PENDING)
+- [x] Points d'appel : création StudentFee, paiement CASH, webhook OM, réconciliation OM
+- [x] `GET /finance/invoices/` + `GET /finance/invoices/{id}/` (filtres student/status/school_year)
+- [x] `POST /finance/invoices/{id}/generate-pdf/` → 202 + task_id (asynchrone, réutilise polling `/tasks/{id}/status/`)
+- [x] Tâche Celery `generate_invoice_pdf` : génération PDF WeasyPrint + `invoice.pdf_url` + `generated_at`
+- [x] Tâche Celery Beat `flag_overdue_invoices` (quotidienne) + migration `0007`
+- [x] Templates PDF : `templates/finance/invoice.html`
+- [x] Backfill : pas nécessaire (aucun environnement staging existant)
+- [x] Tests : 25 tests (sync_invoice, sum with discount, endpoints, generate-pdf, overdue, isolation, intégration StudentFee/Payment/OM)
 **Labels :** `finance` `backend`
 
 ### 🃏 [FIN-MVP-05] Interface Finance

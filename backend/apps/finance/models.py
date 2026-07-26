@@ -26,6 +26,7 @@ class FeeCategory(TenantScopedModel):
     type = models.CharField(max_length=20, choices=FeeType.choices)
     amount = models.DecimalField(max_digits=10, decimal_places=0)
     is_mandatory = models.BooleanField(default=True)
+    due_date = models.DateField(null=True, blank=True)
 
     class Meta:
         unique_together = ["tenant", "school_year", "name"]
@@ -136,3 +137,37 @@ class OrangeMoneyTransaction(TenantScopedModel):
 
     def __str__(self):
         return f"OM {self.provider_transaction_id} — {self.get_provider_status_display()}"
+
+
+class Invoice(TenantScopedModel):
+    class Status(models.TextChoices):
+        PENDING = "PENDING", "En attente"
+        PARTIAL = "PARTIAL", "Partiellement payé"
+        PAID = "PAID", "Payé"
+        OVERDUE = "OVERDUE", "En retard"
+
+    student = models.ForeignKey(
+        "pedagogy.Student", on_delete=models.PROTECT, related_name="invoices",
+    )
+    school_year = models.ForeignKey(
+        "pedagogy.SchoolYear", on_delete=models.PROTECT, related_name="invoices",
+    )
+    total_due = models.DecimalField(max_digits=12, decimal_places=0)
+    total_paid = models.DecimalField(max_digits=12, decimal_places=0)
+    balance = models.DecimalField(max_digits=12, decimal_places=0)
+    due_date = models.DateField(null=True, blank=True)
+    status = models.CharField(
+        max_length=10, choices=Status.choices, default=Status.PENDING, db_index=True,
+    )
+    pdf_url = models.URLField(max_length=500, blank=True)
+    generated_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        unique_together = ["tenant", "student", "school_year"]
+        indexes = [
+            models.Index(fields=["tenant", "status"]),
+            models.Index(fields=["tenant", "student"]),
+        ]
+
+    def __str__(self):
+        return f"Facture {self.student} — {self.school_year} : {self.balance} GNF ({self.get_status_display()})"

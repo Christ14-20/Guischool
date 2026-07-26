@@ -1,11 +1,13 @@
 import io
 from decimal import Decimal
+from datetime import date
+from django.db.models import Q
 from rest_framework import serializers
 from django.conf import settings
 from django.core.files.base import ContentFile
 from django.db import transaction
 from django.template.loader import render_to_string
-from .models import FeeCategory, StudentFee, Payment, ReceiptSequence
+from .models import FeeCategory, StudentFee, Payment, ReceiptSequence, Invoice
 
 
 class FeeCategorySerializer(serializers.ModelSerializer):
@@ -18,7 +20,7 @@ class FeeCategorySerializer(serializers.ModelSerializer):
 class FeeCategoryCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = FeeCategory
-        fields = ["school_year", "name", "type", "amount", "is_mandatory"]
+        fields = ["school_year", "name", "type", "amount", "is_mandatory", "due_date"]
 
 
 class StudentFeeSerializer(serializers.ModelSerializer):
@@ -213,6 +215,83 @@ def generate_receipt_for_payment(payment):
     saved_path = default_storage.save(filename, ContentFile(pdf_buffer.getvalue()))
     payment.receipt_pdf_url = default_storage.url(saved_path)
     payment.save(update_fields=["receipt_number", "receipt_pdf_url", "updated_at"])
+
+
+def sync_invoice(student, school_year):
+    from .models import Invoice as InvoiceModel
+
+    invoice, _ = InvoiceModel.objects.get_or_create(
+        tenant=student.tenant,
+        student=student,
+        school_year=school_year,
+        defaults={"total_due": 0, "total_paid": 0, "balance": 0},
+    )
+
+    due_sum = sum(
+        (sf.total_amount - sf.discount_amount)
+        for sf in StudentFee.objects.filter(
+            student=student, fee_category__school_year=school_year,
+        )
+    )
+    invoice.total_due = due_sum
+
+    paid_sum = sum(
+        p.amount
+        for p in Payment.objects.filter(
+            student=student, status=Payment.Status.COMPLETED,
+        ).filter(
+            Q(student_fee__fee_category__school_year=school_year)
+            | Q(student_fee__isnull=True,
+                payment_date__date__range=(
+                    school_year.start_date, school_year.end_date
+                ))
+        )
+    )
+    invoice.total_paid = paid_sum
+    invoice.balance = invoice.total_due - invoice.total_paid
+
+    unpaid_fees = StudentFee.objects.filter(
+        student=student, fee_category__school_year=school_year,
+        balance_due__gt=0,
+    ).select_related("fee_category")
+    due_dates = [
+        sf.fee_category.due_date or school_year.end_date
+        for sf in unpaid_fees
+    ]
+    invoice.due_date = min(due_dates) if due_dates else (
+        invoice.due_date or school_year.end_date
+    )
+
+    if invoice.balance == 0:
+        invoice.status = InvoiceModel.Status.PAID
+    elif invoice.due_date and date.today() > invoice.due_date:
+        invoice.status = InvoiceModel.Status.OVERDUE
+    elif invoice.total_paid > 0:
+        invoice.status = InvoiceModel.Status.PARTIAL
+    else:
+        invoice.status = InvoiceModel.Status.PENDING
+
+    invoice.save()
+    return invoice
+
+
+class InvoiceSerializer(serializers.ModelSerializer):
+    student_name = serializers.SerializerMethodField()
+    school_year_label = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Invoice
+        fields = [
+            "id", "student", "student_name", "school_year", "school_year_label",
+            "total_due", "total_paid", "balance", "due_date", "status",
+            "pdf_url", "generated_at", "created_at", "updated_at",
+        ]
+
+    def get_student_name(self, obj):
+        return f"{obj.student.nom} {obj.student.prenom}"
+
+    def get_school_year_label(self, obj):
+        return obj.school_year.label
 
 
 class OrangeMoneyInitiateSerializer(serializers.Serializer):

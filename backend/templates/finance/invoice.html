@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  @page { margin: 2cm; size: A4; }
+  body { font-family: 'DejaVu Sans', sans-serif; font-size: 10pt; color: #333; }
+  .header { text-align: center; margin-bottom: 1.5em; border-bottom: 2px solid #2563eb; padding-bottom: 1em; }
+  .header h1 { font-size: 16pt; margin: 0; color: #2563eb; }
+  .header p { margin: 0.2em 0; font-size: 10pt; color: #666; }
+  .invoice-title { text-align: center; font-size: 14pt; font-weight: bold; margin: 1.5em 0; }
+  .info-section { margin: 1em 0; }
+  .info-section table { width: 100%; border-collapse: collapse; }
+  .info-section td { padding: 0.3em 0.2em; }
+  .info-section td.label { font-weight: bold; width: 30%; color: #555; }
+  .info-section td.value { width: 70%; }
+  .summary { margin: 2em 0; }
+  .summary table { width: 100%; border-collapse: collapse; }
+  .summary th { background: #2563eb; color: white; padding: 0.5em; text-align: left; }
+  .summary td { padding: 0.5em; border-bottom: 1px solid #ddd; }
+  .summary .total-row td { font-weight: bold; font-size: 11pt; border-top: 2px solid #2563eb; }
+  .status-badge { display: inline-block; padding: 0.2em 0.8em; border-radius: 3px; font-weight: bold; font-size: 9pt; }
+  .status-PAID { background: #d4edda; color: #155724; }
+  .status-OVERDUE { background: #f8d7da; color: #721c24; }
+  .status-PARTIAL { background: #fff3cd; color: #856404; }
+  .status-PENDING { background: #e2e3e5; color: #383d41; }
+  .footer { text-align: center; font-size: 9pt; color: #999; margin-top: 3em; border-top: 1px solid #ddd; padding-top: 1em; }
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>{{ invoice.tenant.name }}</h1>
+  <p>{{ invoice.tenant.contact_address|default:"" }}</p>
+  <p>{{ invoice.tenant.contact_phone|default:"" }}</p>
+</div>
+<div class="invoice-title">FACTURE — {{ invoice.school_year.label }}</div>
+<div class="info-section">
+  <table>
+    <tr><td class="label">Élève</td><td class="value">{{ invoice.student.nom }} {{ invoice.student.prenom }}</td></tr>
+    <tr><td class="label">Matricule</td><td class="value">{{ invoice.student.matricule }}</td></tr>
+    <tr><td class="label">Classe</td><td class="value">{{ invoice.student.classe_actuelle.nom|default:"" }}</td></tr>
+    <tr><td class="label">Statut</td><td class="value"><span class="status-badge status-{{ invoice.status }}">{{ invoice.get_status_display }}</span></td></tr>
+    <tr><td class="label">Échéance</td><td class="value">{{ invoice.due_date|date:"d/m/Y"|default:"-" }}</td></tr>
+  </table>
+</div>
+<div class="summary">
+  <table>
+    <tr><th>Désignation</th><th style="text-align:right">Montant (GNF)</th></tr>
+    <tr><td>Total dû</td><td style="text-align:right">{{ invoice.total_due }}</td></tr>
+    <tr><td>Total payé</td><td style="text-align:right">{{ invoice.total_paid }}</td></tr>
+    <tr class="total-row"><td>Solde restant</td><td style="text-align:right">{{ invoice.balance }} GNF</td></tr>
+  </table>
+</div>
+<div class="footer">
+  Facture générée le {% now "d/m/Y H:i" %} — ÉduGuinée
+</div>
+</body>
+</html>

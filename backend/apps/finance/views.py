@@ -21,7 +21,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 from core.permissions import HasPermission
 from core.utils import success_response, created_response
-from .models import FeeCategory, StudentFee, Payment, OrangeMoneyTransaction
+from .models import FeeCategory, StudentFee, Payment, OrangeMoneyTransaction, Invoice
 from .providers.orange_money import OrangeMoneyProvider
 from .providers.base import ProviderNetworkError, retry_with_backoff
 from .serializers import (
@@ -33,7 +33,9 @@ from .serializers import (
     PaymentCreateSerializer,
     OrangeMoneyInitiateSerializer,
     PaymentStatusSerializer,
+    InvoiceSerializer,
     generate_receipt_for_payment,
+    sync_invoice,
 )
 
 logger = logging.getLogger(__name__)
@@ -102,7 +104,8 @@ class StudentFeeViewSet(viewsets.ModelViewSet):
         ).select_related("student", "fee_category")
 
     def perform_create(self, serializer):
-        serializer.save()
+        instance = serializer.save()
+        sync_invoice(instance.student, instance.fee_category.school_year)
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data, context={"request": request})
@@ -161,6 +164,13 @@ class PaymentViewSet(viewsets.GenericViewSet):
                 )
             raise
         payment = serializer.instance
+        school_year = (
+            payment.student_fee.fee_category.school_year
+            if payment.student_fee
+            else payment.student.annee_inscription
+        )
+        if school_year:
+            sync_invoice(payment.student, school_year)
         return created_response(PaymentListSerializer(payment).data)
 
     def perform_create(self, serializer):
@@ -299,6 +309,51 @@ class PaymentViewSet(viewsets.GenericViewSet):
         return success_response(serializer.data)
 
 
+class InvoiceViewSet(viewsets.GenericViewSet):
+    queryset = Invoice.objects.none()
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ["student", "status", "school_year"]
+
+    def get_serializer_class(self):
+        return InvoiceSerializer
+
+    def get_permissions(self):
+        if self.action == "generate_pdf":
+            return [IsAuthenticated(), HasPermission("finance:update")]
+        return [IsAuthenticated(), HasPermission("finance:read")]
+
+    def get_queryset(self):
+        return Invoice.objects.filter(
+            tenant=self.request.tenant
+        ).select_related("student", "school_year")
+
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        return success_response(serializer.data)
+
+    def list(self, request, *args, **kwargs):
+        qs = self.filter_queryset(self.get_queryset())
+        page = self.paginate_queryset(qs)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+        serializer = self.get_serializer(qs, many=True)
+        return success_response(serializer.data)
+
+    @action(detail=True, methods=["post"], url_path="generate-pdf")
+    def generate_pdf(self, request, pk=None):
+        invoice = self.get_object()
+
+        from .tasks import generate_invoice_pdf
+        task = generate_invoice_pdf.delay(str(invoice.id))
+
+        return Response(
+            {"task_id": task.id, "status": "PENDING"},
+            status=status.HTTP_202_ACCEPTED,
+        )
+
+
 # Exempté de JWT/TenantMiddleware : Orange ne connaît pas nos tenants.
 # L'authenticité repose sur HMAC (X-Orange-Signature).
 @csrf_exempt
@@ -369,6 +424,14 @@ def orange_money_webhook(request):
             payment.student_fee.save(update_fields=["balance_due", "updated_at"])
 
         generate_receipt_for_payment(payment)
+
+        school_year = (
+            payment.student_fee.fee_category.school_year
+            if payment.student_fee
+            else None
+        )
+        if school_year:
+            sync_invoice(payment.student, school_year)
 
         logger.info("OM paiement confirmé — %s (%s)", payment.receipt_number, transaction_id)
     else:

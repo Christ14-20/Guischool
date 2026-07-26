@@ -1,17 +1,23 @@
 """
 apps/finance/tasks.py
 
-Tâches Celley pour le module Finance.
+Tâches Celery pour le module Finance.
 
 - reconcile_orange_money_transactions : réconciliation nocturne
   des transactions Orange Money (FIN-MVP-03).
+- generate_invoice_pdf : génération asynchrone de PDF de facture (FIN-MVP-04).
+- flag_overdue_invoices : marquage quotidien des factures en retard (FIN-MVP-04).
 """
 
+import io
 import logging
-from datetime import timedelta
+from datetime import timedelta, date
 
 from celery import shared_task
 from django.utils import timezone
+from django.template.loader import render_to_string
+from django.core.files.base import ContentFile
+from django.core.files.storage import default_storage
 
 from .models import OrangeMoneyTransaction, Payment
 from .providers.base import ProviderNetworkError, retry_with_backoff
@@ -68,8 +74,16 @@ def reconcile_orange_money_transactions():
             payment.status = Payment.Status.COMPLETED
             payment.save(update_fields=["status", "updated_at"])
 
-            from .serializers import generate_receipt_for_payment
+            from .serializers import generate_receipt_for_payment, sync_invoice
             generate_receipt_for_payment(payment)
+
+            school_year = (
+                payment.student_fee.fee_category.school_year
+                if payment.student_fee
+                else None
+            )
+            if school_year:
+                sync_invoice(payment.student, school_year)
 
             if payment.student_fee:
                 from decimal import Decimal
@@ -101,3 +115,66 @@ def reconcile_orange_money_transactions():
     if updated_count:
         logger.info("Réconciliation OM — %s transaction(s) mise(s) à jour", updated_count)
     return updated_count
+
+
+@shared_task(name="apps.finance.tasks.generate_invoice_pdf")
+def generate_invoice_pdf(invoice_id):
+    """
+    Génération asynchrone du PDF d'une facture.
+
+    Appelée par POST /finance/invoices/{id}/generate-pdf/.
+    Le résultat est stocké dans Invoice.pdf_url, et Invoice.generated_at
+    est mis à jour.
+
+    Pattern identique au bulletin (Épic 6) : la tâche est polling via
+    /tasks/{id}/status/.
+    """
+    from .models import Invoice as InvoiceModel
+
+    try:
+        invoice = InvoiceModel.objects.select_related(
+            "student", "school_year",
+        ).get(id=invoice_id)
+    except InvoiceModel.DoesNotExist:
+        logger.error("generate_invoice_pdf — facture %s introuvable", invoice_id)
+        return {"error": "Facture introuvable"}
+
+    html = render_to_string("finance/invoice.html", {"invoice": invoice})
+    pdf_buffer = io.BytesIO()
+    from weasyprint import HTML
+    HTML(string=html).write_pdf(pdf_buffer)
+
+    filename = f"invoices/{invoice.id}.pdf"
+    saved_path = default_storage.save(filename, ContentFile(pdf_buffer.getvalue()))
+    invoice.pdf_url = default_storage.url(saved_path)
+    invoice.generated_at = timezone.now()
+    invoice.save(update_fields=["pdf_url", "generated_at", "updated_at"])
+
+    logger.info("PDF généré pour la facture %s", invoice.id)
+    return {"invoice_id": str(invoice.id), "pdf_url": invoice.pdf_url}
+
+
+@shared_task(name="apps.finance.tasks.flag_overdue_invoices")
+def flag_overdue_invoices():
+    """
+    Tâche quotidienne Celery Beat.
+
+    Parcourt les factures avec balance > 0 dont due_date est dépassée
+    et les bascule en OVERDUE.
+
+    N'efface jamais OVERDUE (même si paiement partiel est fait ensuite,
+    le statut reste OVERDUE jusqu'à PAID complet — géré par sync_invoice).
+    """
+    from .models import Invoice as InvoiceModel
+
+    today = date.today()
+    overdue_invoices = InvoiceModel.objects.filter(
+        balance__gt=0,
+        due_date__lt=today,
+    ).exclude(status=InvoiceModel.Status.PAID)
+
+    count = overdue_invoices.update(status=InvoiceModel.Status.OVERDUE)
+
+    if count:
+        logger.info("flag_overdue_invoices — %s facture(s) marquée(s) OVERDUE", count)
+    return count

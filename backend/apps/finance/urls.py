@@ -32,4 +32,13 @@ urlpatterns = [
     path("payments/<uuid:pk>/status/", views.PaymentViewSet.as_view({
         "get": "payment_status",
     }), name="payment-status"),
+    path("invoices/", views.InvoiceViewSet.as_view({
+        "get": "list",
+    }), name="invoice-list"),
+    path("invoices/<uuid:pk>/", views.InvoiceViewSet.as_view({
+        "get": "retrieve",
+    }), name="invoice-detail"),
+    path("invoices/<uuid:pk>/generate-pdf/", views.InvoiceViewSet.as_view({
+        "post": "generate_pdf",
+    }), name="invoice-generate-pdf"),
 ]
