@@ -2,6 +2,7 @@ import io
 from django.http import FileResponse
 from django.template.loader import render_to_string
 from django.db import IntegrityError
+from django.core.files.storage import default_storage
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
@@ -168,5 +169,5 @@ class PaymentViewSet(viewsets.GenericViewSet):
         HTML(string=html).write_pdf(pdf_buffer)
         pdf_buffer.seek(0)
 
-        filename = f"recu_{payment.receipt_number}.pdf"
-        return FileResponse(pdf_buffer, as_attachment=True, filename=filename)
+        return FileResponse(pdf_buffer, as_attachment=True,
+                            filename=f"recu_{payment.receipt_number}.pdf")

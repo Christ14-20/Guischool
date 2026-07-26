@@ -1,6 +1,10 @@
+import io
 from decimal import Decimal
 from rest_framework import serializers
+from django.conf import settings
+from django.core.files.base import ContentFile
 from django.db import transaction
+from django.template.loader import render_to_string
 from .models import FeeCategory, StudentFee, Payment, ReceiptSequence
 
 
@@ -68,7 +72,7 @@ class PaymentListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Payment
         fields = [
-            "id", "receipt_number", "amount", "method", "status",
+            "id", "receipt_number", "receipt_pdf_url", "amount", "method", "status",
             "payment_date", "student_name", "fee_category_name",
         ]
 
@@ -110,10 +114,22 @@ class PaymentCreateSerializer(serializers.ModelSerializer):
         student = Student.objects.get(id=student_id, tenant=tenant)
 
         student_fee = None
+        sy = None
         if student_fee_id:
             student_fee = StudentFee.objects.select_for_update().get(
                 id=student_fee_id, tenant=tenant, student=student,
             )
+            sy = student_fee.fee_category.school_year
+
+        if sy is None:
+            from apps.pedagogy.models import SchoolYear
+            sy = SchoolYear.objects.filter(
+                tenant=tenant, is_current=True,
+            ).select_for_update().first()
+            if sy is None:
+                raise serializers.ValidationError(
+                    "Aucune année scolaire courante trouvée pour générer le reçu."
+                )
 
         amount = validated_data["amount"]
 
@@ -123,12 +139,7 @@ class PaymentCreateSerializer(serializers.ModelSerializer):
             )
 
         # Generate receipt number
-        from apps.pedagogy.models import SchoolYear
-        sy = SchoolYear.objects.filter(
-            id=student.annee_inscription_id
-        ).select_for_update().first()
-        annee = sy.start_date.year if sy else 2025
-
+        annee = sy.start_date.year
         seq, _ = ReceiptSequence.objects.select_for_update().get_or_create(
             tenant=tenant,
             school_year=sy,
@@ -154,5 +165,17 @@ class PaymentCreateSerializer(serializers.ModelSerializer):
         if student_fee:
             student_fee.balance_due -= Decimal(str(amount))
             student_fee.save(update_fields=["balance_due", "updated_at"])
+
+        # Generate and store receipt PDF
+        pdf_buffer = io.BytesIO()
+        html = render_to_string("finance/receipt.html", {"payment": payment})
+        from weasyprint import HTML
+        HTML(string=html).write_pdf(pdf_buffer)
+
+        filename = f"receipts/{payment.receipt_number}.pdf"
+        from django.core.files.storage import default_storage
+        saved_path = default_storage.save(filename, ContentFile(pdf_buffer.getvalue()))
+        payment.receipt_pdf_url = default_storage.url(saved_path)
+        payment.save(update_fields=["receipt_pdf_url", "updated_at"])
 
         return payment

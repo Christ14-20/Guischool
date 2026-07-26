@@ -1,3 +1,11 @@
+"""
+apps/finance/models.py
+
+Tous les montants utilisent decimal_places=0 (GNF entier) car le franc guinéen
+n'a pas de sous-unité. Ce choix est conforme au schéma métier : les frais de
+scolarité, paiements et soldes sont toujours des nombres entiers de GNF.
+"""
+
 import uuid
 from django.db import models
 from django.core.validators import MinValueValidator
@@ -81,7 +89,7 @@ class Payment(TenantScopedModel):
         StudentFee, on_delete=models.PROTECT, related_name="payments",
         null=True, blank=True,
     )
-    amount = models.DecimalField(max_digits=12, decimal_places=2,
+    amount = models.DecimalField(max_digits=12, decimal_places=0,
                                  validators=[MinValueValidator(0)])
     payment_date = models.DateTimeField(auto_now_add=True)
     method = models.CharField(max_length=20, choices=Method.choices)
@@ -97,7 +105,7 @@ class Payment(TenantScopedModel):
         max_length=20, choices=Status.choices, default=Status.PENDING, db_index=True,
     )
     receipt_number = models.CharField(max_length=50, unique=True, db_index=True, blank=True)
-    receipt_pdf = models.FileField(upload_to="receipts/", blank=True, null=True)
+    receipt_pdf_url = models.URLField(max_length=500, blank=True)
     sms_notification_sent = models.BooleanField(default=False)
     failure_reason = models.TextField(blank=True)
 

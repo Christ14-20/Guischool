@@ -33,4 +33,5 @@ build/
 Thumbs.db
 
 
-agents/
+# Generated media files (tests)
+backend/mediafiles/

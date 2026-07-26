@@ -64,6 +64,7 @@ def school_year(tenant):
         start_date="2025-10-01",
         end_date="2026-07-31",
         status="PREPARATION",
+        is_current=True,
     )
 
 
@@ -157,6 +158,12 @@ def api_client():
     return APIClient()
 
 
+@pytest.fixture(autouse=True)
+def _use_local_storage(settings):
+    """Override S3 storage → FileSystemStorage pour les tests."""
+    settings.DEFAULT_FILE_STORAGE = 'django.core.files.storage.FileSystemStorage'
+
+
 def _login(api_client, email, password):
     url = reverse("auth-login")
     return api_client.post(url, {"email": email, "password": password}, format="json")
@@ -201,6 +208,8 @@ class TestCashPaymentEndpoints:
         assert data["status"] == "COMPLETED"
         assert data["method"] == "CASH"
         assert data["receipt_number"].startswith("REC-")
+        assert data["receipt_pdf_url"] != ""
+        assert "receipts/REC-" in data["receipt_pdf_url"]
         assert Decimal(data["amount"]) == 50000
 
         # Vérifier mise à jour du solde
@@ -377,8 +386,57 @@ class TestCashPaymentEndpoints:
             format="json",
         )
         payment_id = create_resp.json()["data"]["id"]
+        pdf_url = create_resp.json()["data"]["receipt_pdf_url"]
+        assert pdf_url != ""
 
         response = api_client.get(reverse("payment-receipt", args=[payment_id]))
         assert response.status_code == 200
         assert response["Content-Type"] == "application/pdf"
         assert "recu_REC-" in response["Content-Disposition"]
+
+    def test_receipt_year_from_student_fee_school_year(self, api_client, tenant, director_user, director_role):
+        """
+        Un élève inscrit en 2023-2024 paye des frais de l'année 2025-2026.
+        Le reçu doit porter l'année 2025, pas 2023.
+        """
+        _ensure_permissions(director_role, ["finance:read", "finance:create"])
+        _auth(api_client, director_user)
+
+        sy_old = SchoolYear.objects.create(
+            tenant=tenant, label="2023-2024",
+            start_date="2023-10-01", end_date="2024-07-31",
+            status="CLOSED",
+        )
+        sy_current = SchoolYear.objects.create(
+            tenant=tenant, label="2025-2026",
+            start_date="2025-10-01", end_date="2026-07-31",
+            status="OPEN", is_current=True,
+        )
+        level = Level.objects.create(tenant=tenant, name="6ème", cycle="PRIMAIRE", order_index=1)
+        sc = SchoolClass.objects.create(
+            tenant=tenant, school_year=sy_current, level=level, name="6ème A", capacity=60,
+        )
+        student = Student.objects.create(
+            tenant=tenant, matricule="2023-00001", nom="Old", prenom="Student",
+            date_naissance="2010-01-01", sexe="M", statut="ACTIF",
+            annee_inscription=sy_old, classe_actuelle=sc,
+        )
+        cat = FeeCategory.objects.create(
+            tenant=tenant, school_year=sy_current,
+            name="Scolarité 2025", type="SCOLARITE", amount=100000,
+        )
+        sf = StudentFee.objects.create(
+            tenant=tenant, student=student, fee_category=cat,
+            total_amount=100000, discount_amount=0, balance_due=100000,
+        )
+
+        resp = api_client.post(
+            reverse("payment-list"),
+            {"student_id": str(student.id), "student_fee_id": str(sf.id),
+             "amount": "50000", "method": "CASH",
+             "idempotency_key": "year-test"},
+            format="json",
+        )
+        assert resp.status_code == 201, f"Error: {resp.json()}"
+        assert resp.json()["data"]["receipt_number"].startswith("REC-2025-"), \
+            f"Reçu devrait être REC-2025-, got {resp.json()['data']['receipt_number']}"
