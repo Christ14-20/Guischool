@@ -1,8 +1,8 @@
 # BACKLOG MVP — EDUGUINÉE 3.0
 ## Découpage en épics et tickets, ordonné par dépendance technique
 
-> **🗓 Dernière mise à jour :** 2026-07-26
-> **📍 Avancement global :** Épics 0, 1, 2, 3, 4, 5 & 6.1 ✅ terminés · Épic 6 🔜 en cours (GRADE-MVP-03) · FIN-MVP-00 ✅
+> **🗓 Dernière mise à jour :** 2026-07-27
+> **📍 Avancement global :** Épics 0, 1, 2, 3, 4, 5, 6.1 & 7 ✅ terminés · Épic 6 🔜 en cours (GRADE-MVP-03 PDF stub)
 > >
 > | Épic | Statut | Commit(s) |
 > |------|--------|-----------|
@@ -12,12 +12,12 @@
 > | 3 — Structure Pédagogique | ✅ **TERMINÉ** | `STRUCT-01..06` |
 > | 4 — Élèves (inscription, réinscription) | ✅ **TERMINÉ** | `STUDENT-MVP-01..05` |
 > | 5 — Présences | ✅ **TERMINÉ** | `ATT-01..03` |
-> | 6 — Notes, Évaluations, Bulletins | 🔜 **EN COURS** | `GRADE-MVP-01..05` (GRADE-MVP-03 : calcul + PDF stub) |
+> | 6 — Notes, Évaluations, Bulletins | 🔜 **EN COURS** | `GRADE-MVP-01..05` (GRADE-MVP-03 : PDF stub) |
 > | 6.1 — Administration École — Personnel | ✅ **TERMINÉ** | `AUTH-06`, `STAFF-MVP-01..03` |
-> | 7 — Finance, paiements, Orange Money | 🔜 **EN COURS** | `FIN-MVP-00` ✅ |
+> | 7 — Finance, paiements, Orange Money | ✅ **TERMINÉ** | `FIN-MVP-00..05` |
 > | 8..11 — Modules métier | ⏳ En attente | — |
 > >
-> **Couverture de tests :** 376 tests backend · **Build frontend :** ✅ 0 erreur · **`python manage.py check` :** ✅ 0 issue
+> **Couverture de tests :** 456 tests backend · **Build frontend :** ✅ 0 erreur · **`python manage.py check` :** ✅ 0 issue
 
 **Basé sur :** Cahier des Charges Complet v2.0 + arbitrages MVP (offline reporté, App Parent en React Native, Orange Money seul en V1)
 **Usage :** Chaque épic est un bloc de valeur livrable. Chaque ticket est copiable tel quel dans Trello/Jira/Linear. Ne pas démarrer un épic tant que ses dépendances ne sont pas closes — l'ordre proposé n'est pas arbitraire, chaque étape a besoin de la précédente pour être testable de bout en bout.
@@ -479,7 +479,7 @@
 
 ---
 
-## ÉPIC 7 — Finance (frais, paiements, Orange Money) 🔜 EN COURS
+## ÉPIC 7 — Finance (frais, paiements, Orange Money) ✅ TERMINÉ
 
 **Objectif :** l'école peut définir des frais, encaisser un paiement (espèces ou Orange Money), et générer une facture.
 **Dépend de :** Épic 4 (élève existant pour lui associer des frais).
@@ -549,12 +549,14 @@
 - [x] Tests : 25 tests (sync_invoice, sum with discount, endpoints, generate-pdf, overdue, isolation, intégration StudentFee/Payment/OM)
 **Labels :** `finance` `backend`
 
-### 🃏 [FIN-MVP-05] Interface Finance
-**Priorité :** 🟠 Haute
-- [ ] Page `/app/finance/fees` : liste des catégories de frais, création/édition
-- [ ] Page `/app/finance/payments` : formulaire d'enregistrement (élève en autocomplete, montant, méthode, référence), impression du reçu
-- [ ] Liste des paiements avec filtres et totaux
-- [ ] Page `/app/finance/invoices` : liste, génération PDF, vue détail (dû/payé/solde)
+### 🃏 [FIN-MVP-05] Interface Finance ✅
+**Priorité :** 🟠 Haute · **Commits :** `FIN-MVP-05 commit 1..4`
+- [x] Page `/app/finance/fees` : liste CRUD catégories de frais + PUT/PATCH/DELETE FeeCategory + assignation frais élève avec autocomplétion
+- [x] Page `/app/finance/payments` : 3 onglets (Historique filtré, Encaissement espèces synchrone, Paiement Orange Money asynchrone avec polling 3s)
+- [x] Page `/app/finance/invoices` : liste avec filtres par statut + génération PDF asynchrone avec polling `/pedagogy/tasks/{id}/status/` + badges 4 couleurs
+- [x] Onglet Finances dans fiche élève `/app/students/[id]` : lecture seule, cartes résumé (toutes années) + tableaux factures/paiements, filtré par rôle (DIRECTOR/ACCOUNTANT)
+- [x] Sidebar : 3 entrées finance visibles DIRECTOR/ACCOUNTANT uniquement
+- [x] Actions serveur : CRUD, searchStudents, createCashPayment, initiateOMPayment, pollPaymentStatus, generateInvoicePdf
 **Labels :** `finance` `frontend` `priorité-haute`
 
 ---
@@ -701,7 +703,7 @@ Une fois ce backlog validé, l'ordre d'exécution recommandé pour une petite é
 - **Semaines 5-7 :** Épic 3 + Épic 4
 - **Semaines 8-9 :** Épic 5 + Épic 6 (en parallèle backend/frontend)
 - **Semaine 10 :** Épic 6.1 (terminé)
-- **Semaines 11-12 :** Épic 7 (Finance + Orange Money — prévoir une marge, c'est le point le plus risqué techniquement)
+- **Semaines 11-12 :** Épic 7 (Finance + Orange Money) ✅ terminé
 - **Semaine 13 :** Épic 8 (Communication)
 - **Semaines 14-16 :** Épic 9 (App Parent) en parallèle de la finition web
 - **Semaine 17 :** Épic 10 + Épic 11, durcissement, déploiement pilote
