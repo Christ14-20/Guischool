@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import StatutBadge from "../StatutBadge";
 import StudentGradesTab from "./StudentGradesTab";
+import StudentFinancesTab from "./StudentFinancesTab";
 import {
   updateStudentAction,
   archiveStudentAction,
@@ -30,6 +31,8 @@ interface Props {
   classes: { id: string; name: string }[];
   schoolYears: { id: string; label: string }[];
   attendances?: any[];
+  invoices?: any[];
+  payments?: any[];
 }
 
 const TABS = [
@@ -48,6 +51,8 @@ export default function StudentTabs({
   classes,
   schoolYears,
   attendances = [],
+  invoices = [],
+  payments = [],
 }: Props) {
   const router = useRouter();
   const [tab, setTab] = useState("profil");
@@ -108,7 +113,7 @@ export default function StudentTabs({
       )}
       {tab === "presences" && <PresencesTab attendances={attendances} />}
       {tab === "notes" && <StudentGradesTab studentId={student.id} />}
-      {tab === "finances" && <Placeholder label="Frais et paiements" epic="Épic 7" />}
+      {tab === "finances" && <StudentFinancesTab invoices={invoices} payments={payments} />}
       {tab === "historique" && <HistoriqueTab enrollments={student.enrollments ?? []} />}
     </div>
   );

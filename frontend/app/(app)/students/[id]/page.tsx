@@ -16,11 +16,13 @@ export default async function StudentDetailPage(props: {
   let classes: any[] = [];
   let schoolYears: any[] = [];
   let attendances: any[] = [];
+  let invoices: any[] = [];
+  let payments: any[] = [];
   let errorMsg: string | null = null;
 
   try {
     const client = await getBackendClient();
-    const [studentResp, classesResp, syResp, attResp] = await Promise.all([
+    const [studentResp, classesResp, syResp, attResp, invResp, payResp] = await Promise.all([
       client
         .get(`/students/${id}/`)
         .catch(() => ({ data: { status: "error" } })),
@@ -28,6 +30,12 @@ export default async function StudentDetailPage(props: {
       client.get("/pedagogy/schoolyears/"),
       client
         .get(`/pedagogy/attendances/?student_id=${id}`)
+        .catch(() => ({ data: { status: "error" } })),
+      client
+        .get(`/finance/invoices/?student=${id}`)
+        .catch(() => ({ data: { status: "error" } })),
+      client
+        .get(`/finance/payments/?student=${id}`)
         .catch(() => ({ data: { status: "error" } })),
     ]);
 
@@ -42,6 +50,16 @@ export default async function StudentDetailPage(props: {
     }
     if (attResp.data?.status === "success") {
       attendances = attResp.data.data ?? [];
+    }
+    if (invResp.data?.data?.results) {
+      invoices = invResp.data.data.results;
+    } else if (Array.isArray(invResp.data?.data)) {
+      invoices = invResp.data.data;
+    }
+    if (payResp.data?.data?.results) {
+      payments = payResp.data.data.results;
+    } else if (Array.isArray(payResp.data?.data)) {
+      payments = payResp.data.data;
     }
   } catch {
     errorMsg = "Impossible de charger la fiche élève.";
@@ -73,6 +91,8 @@ export default async function StudentDetailPage(props: {
           classes={classes}
           schoolYears={schoolYears}
           attendances={attendances}
+          invoices={invoices}
+          payments={payments}
         />
       )}
     </div>
