@@ -2,6 +2,7 @@
 import React from "react";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
+import { auth } from "@/auth";
 import { getBackendClient } from "@/lib/api/client";
 import StudentTabs from "./StudentTabs";
 
@@ -11,6 +12,9 @@ export default async function StudentDetailPage(props: {
   params: Promise<{ id: string }>;
 }) {
   const { id } = await props.params;
+
+  const session = await auth();
+  const role = (session as any)?.user?.role;
 
   let student: any = null;
   let classes: any[] = [];
@@ -93,6 +97,7 @@ export default async function StudentDetailPage(props: {
           attendances={attendances}
           invoices={invoices}
           payments={payments}
+          role={role}
         />
       )}
     </div>

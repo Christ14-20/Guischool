@@ -38,24 +38,24 @@ export default function StudentFinancesTab({
 
   return (
     <div className="space-y-6">
-      {/* Summary cards */}
+      {/* Summary cards (toutes années confondues) */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-slate-900/40 border border-slate-800/80 rounded-xl p-5 shadow-xl backdrop-blur-md">
-          <p className="text-xs text-slate-500 uppercase tracking-wider">Total dû</p>
+          <p className="text-xs text-slate-500 uppercase tracking-wider">Total dû (toutes années)</p>
           <p className="text-2xl font-bold mt-1 text-white">{totalDue.toLocaleString()} GNF</p>
         </div>
         <div className="bg-slate-900/40 border border-slate-800/80 rounded-xl p-5 shadow-xl backdrop-blur-md">
-          <p className="text-xs text-slate-500 uppercase tracking-wider">Total payé</p>
+          <p className="text-xs text-slate-500 uppercase tracking-wider">Total payé (toutes années)</p>
           <p className="text-2xl font-bold mt-1 text-emerald-400">{totalPaid.toLocaleString()} GNF</p>
         </div>
         <div className="bg-slate-900/40 border border-slate-800/80 rounded-xl p-5 shadow-xl backdrop-blur-md">
-          <p className="text-xs text-slate-500 uppercase tracking-wider">Solde restant</p>
+          <p className="text-xs text-slate-500 uppercase tracking-wider">Solde restant (toutes années)</p>
           <p className={`text-2xl font-bold mt-1 ${balance > 0 ? "text-amber-400" : "text-emerald-400"}`}>
             {balance.toLocaleString()} GNF
           </p>
         </div>
         <div className="bg-slate-900/40 border border-slate-800/80 rounded-xl p-5 shadow-xl backdrop-blur-md">
-          <p className="text-xs text-slate-500 uppercase tracking-wider">Imp ayés en retard</p>
+          <p className="text-xs text-slate-500 uppercase tracking-wider">Factures en retard (toutes années)</p>
           <p className={`text-2xl font-bold mt-1 ${overdueCount > 0 ? "text-red-400" : "text-emerald-400"}`}>
             {overdueCount > 0 ? `${overdueCount}` : "0"}
           </p>

@@ -33,14 +33,15 @@ interface Props {
   attendances?: any[];
   invoices?: any[];
   payments?: any[];
+  role?: string;
 }
 
-const TABS = [
-  { key: "profil", label: "Profil", icon: User },
-  { key: "presences", label: "Présences", icon: CalendarCheck },
-  { key: "notes", label: "Notes", icon: BookOpen },
-  { key: "finances", label: "Finances", icon: Wallet },
-  { key: "historique", label: "Historique", icon: History },
+const ALL_TABS = [
+  { key: "profil", label: "Profil", icon: User, roles: null },
+  { key: "presences", label: "Présences", icon: CalendarCheck, roles: null },
+  { key: "notes", label: "Notes", icon: BookOpen, roles: null },
+  { key: "finances", label: "Finances", icon: Wallet, roles: ["DIRECTOR", "ACCOUNTANT", "STUDENT_STUDIES"] },
+  { key: "historique", label: "Historique", icon: History, roles: null },
 ];
 
 const inputClass =
@@ -53,9 +54,11 @@ export default function StudentTabs({
   attendances = [],
   invoices = [],
   payments = [],
+  role,
 }: Props) {
   const router = useRouter();
   const [tab, setTab] = useState("profil");
+  const TABS = ALL_TABS.filter((t) => !t.roles || (role && t.roles.includes(role)));
 
   return (
     <div className="space-y-6">
@@ -91,11 +94,10 @@ export default function StudentTabs({
           <button
             key={key}
             onClick={() => setTab(key)}
-            className={`inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors cursor-pointer ${
-              tab === key
+            className={`inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors cursor-pointer ${tab === key
                 ? "border-indigo-500 text-white"
                 : "border-transparent text-slate-400 hover:text-white"
-            }`}
+              }`}
           >
             <Icon className="size-4" />
             {label}
@@ -187,9 +189,8 @@ function PresencesTab({ attendances }: { attendances: any[] }) {
                   <td className="px-6 py-4 text-white">{a.date}</td>
                   <td className="px-6 py-4">
                     <span
-                      className={`inline-flex items-center px-2.5 py-0.5 rounded-lg border text-xs font-medium ${
-                        PRESENCE_STYLES[a.status] ?? ""
-                      }`}
+                      className={`inline-flex items-center px-2.5 py-0.5 rounded-lg border text-xs font-medium ${PRESENCE_STYLES[a.status] ?? ""
+                        }`}
                     >
                       {PRESENCE_LABELS[a.status] ?? a.status}
                     </span>
