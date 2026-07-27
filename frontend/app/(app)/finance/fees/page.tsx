@@ -28,7 +28,7 @@ async function fetchStudentFees() {
 async function fetchSchoolYears() {
   try {
     const client = await getBackendClient();
-    const resp = await client.get("/pedagogy/school-years/");
+    const resp = await client.get("/pedagogy/schoolyears/");
     const data = resp.data;
     return data?.data?.results ?? data?.data ?? data?.results ?? [];
   } catch {

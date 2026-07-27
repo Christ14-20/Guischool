@@ -196,12 +196,9 @@ export default function FeesClient({
   };
 
   const refreshAssignList = async () => {
-    const client = await (await import("@/lib/api/client")).getBackendClient();
-    try {
-      const resp = await client.get("/finance/student-fees/");
-      const data = resp.data;
-      setStudentFees(data?.data?.results ?? data?.data ?? data?.results ?? []);
-    } catch { /* ignore */ }
+    const { listStudentFeesAction } = await import("./actions");
+    const res = await listStudentFeesAction();
+    if (res.success) setStudentFees(res.data as StudentFee[]);
   };
 
   // ─── Fee category type label ───────────────────────────────────────────
@@ -257,97 +254,6 @@ export default function FeesClient({
               + Nouvelle catégorie
             </button>
           </div>
-
-          {/* Form modal */}
-          {formOpen && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={(e) => { if (e.target === e.currentTarget) resetForm(); }}>
-              <div className="bg-slate-900 border border-slate-700/80 rounded-xl p-6 w-full max-w-md mx-4 shadow-2xl">
-                <h3 className="text-lg font-semibold text-white mb-4">
-                  {editId ? "Modifier la catégorie" : "Nouvelle catégorie"}
-                </h3>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-xs font-medium text-slate-400 mb-1">Année scolaire *</label>
-                    <select
-                      value={formData.school_year}
-                      onChange={(e) => setFormData({ ...formData, school_year: e.target.value })}
-                      className={INPUT_CLASS}
-                    >
-                      <option value="">Sélectionner...</option>
-                      {schoolYears.map((sy) => (
-                        <option key={sy.id} value={sy.id}>{sy.label}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-slate-400 mb-1">Nom *</label>
-                    <input
-                      value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      className={INPUT_CLASS}
-                      placeholder="Ex: Scolarité 1er trimestre"
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs font-medium text-slate-400 mb-1">Type *</label>
-                      <select
-                        value={formData.type}
-                        onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                        className={INPUT_CLASS}
-                      >
-                        <option value="SCOLARITE">Scolarité</option>
-                        <option value="INSCRIPTION">Inscription</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-slate-400 mb-1">Montant (GNF) *</label>
-                      <input
-                        type="number"
-                        value={formData.amount}
-                        onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-                        className={INPUT_CLASS}
-                        placeholder="50000"
-                      />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs font-medium text-slate-400 mb-1">Date échéance</label>
-                      <input
-                        type="date"
-                        value={formData.due_date}
-                        onChange={(e) => setFormData({ ...formData, due_date: e.target.value })}
-                        className={INPUT_CLASS}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-slate-400 mb-1">Obligatoire</label>
-                      <select
-                        value={formData.is_mandatory ? "true" : "false"}
-                        onChange={(e) => setFormData({ ...formData, is_mandatory: e.target.value === "true" })}
-                        className={INPUT_CLASS}
-                      >
-                        <option value="true">Oui</option>
-                        <option value="false">Non</option>
-                      </select>
-                    </div>
-                  </div>
-                  <div className="flex justify-end gap-3 pt-2">
-                    <button onClick={resetForm} className="px-4 py-2 text-sm text-slate-400 hover:text-white transition-colors">
-                      Annuler
-                    </button>
-                    <button
-                      onClick={handleSaveCategory}
-                      className="px-5 py-2 rounded-lg text-sm font-medium bg-emerald-600 hover:bg-emerald-500 text-white transition-colors"
-                    >
-                      {editId ? "Enregistrer" : "Créer"}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
 
           {/* Table */}
           <table className={TABLE_CLASS}>
@@ -530,6 +436,100 @@ export default function FeesClient({
                   )}
                 </tbody>
               </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Form modal */}
+      {formOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={(e) => { if (e.target === e.currentTarget) resetForm(); }}>
+          <div className="bg-slate-900 border border-slate-700/80 rounded-xl p-6 w-full max-w-md mx-4 shadow-2xl">
+            <h3 className="text-lg font-semibold text-white mb-4">
+              {editId ? "Modifier la catégorie" : "Nouvelle catégorie"}
+            </h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-medium text-slate-400 mb-1">Année scolaire *</label>
+                <select
+                  value={formData.school_year}
+                  onChange={(e) => setFormData({ ...formData, school_year: e.target.value })}
+                  className={INPUT_CLASS}
+                >
+                  <option value="">Sélectionner...</option>
+                  {schoolYears.map((sy) => (
+                    <option key={sy.id} value={sy.id}>{sy.label}</option>
+                  ))}
+                </select>
+                {schoolYears.length === 0 && (
+                  <p className="mt-1 text-xs text-red-400">Aucune année scolaire disponible.</p>
+                )}
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-400 mb-1">Nom *</label>
+                <input
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  className={INPUT_CLASS}
+                  placeholder="Ex: Scolarité 1er trimestre"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-slate-400 mb-1">Type *</label>
+                  <select
+                    value={formData.type}
+                    onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                    className={INPUT_CLASS}
+                  >
+                    <option value="SCOLARITE">Scolarité</option>
+                    <option value="INSCRIPTION">Inscription</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-400 mb-1">Montant (GNF) *</label>
+                  <input
+                    type="number"
+                    value={formData.amount}
+                    onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+                    className={INPUT_CLASS}
+                    placeholder="50000"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-slate-400 mb-1">Date échéance</label>
+                  <input
+                    type="date"
+                    value={formData.due_date}
+                    onChange={(e) => setFormData({ ...formData, due_date: e.target.value })}
+                    className={INPUT_CLASS}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-400 mb-1">Obligatoire</label>
+                  <select
+                    value={formData.is_mandatory ? "true" : "false"}
+                    onChange={(e) => setFormData({ ...formData, is_mandatory: e.target.value === "true" })}
+                    className={INPUT_CLASS}
+                  >
+                    <option value="true">Oui</option>
+                    <option value="false">Non</option>
+                  </select>
+                </div>
+              </div>
+              <div className="flex justify-end gap-3 pt-2">
+                <button onClick={resetForm} className="px-4 py-2 text-sm text-slate-400 hover:text-white transition-colors">
+                  Annuler
+                </button>
+                <button
+                  onClick={handleSaveCategory}
+                  className="px-5 py-2 rounded-lg text-sm font-medium bg-emerald-600 hover:bg-emerald-500 text-white transition-colors"
+                >
+                  {editId ? "Enregistrer" : "Créer"}
+                </button>
+              </div>
             </div>
           </div>
         </div>

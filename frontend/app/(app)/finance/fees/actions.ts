@@ -97,6 +97,16 @@ export async function searchStudentsAction(query: string): Promise<{ success: bo
   }
 }
 
+export async function listStudentFeesAction(): Promise<{ success: boolean; data: Record<string, unknown>[]; error: string | null }> {
+  try {
+    const client = await getBackendClient();
+    const resp = await client.get("/finance/student-fees/");
+    return { success: true, data: extractData(resp) as Record<string, unknown>[], error: null };
+  } catch (err) {
+    return { success: false, data: [], error: extractError(err) };
+  }
+}
+
 export async function assignStudentFeeAction(data: {
   student: string;
   fee_category_id: string;
