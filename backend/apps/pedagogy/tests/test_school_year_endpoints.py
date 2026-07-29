@@ -37,12 +37,24 @@ def _add_pedagogy_permissions(role):
         role.permissions.add(perm)
 
 
+def _add_director_only_permissions(role):
+    from apps.authentication.models import Permission
+    codenames = ["pedagogy:update:schoolyear", "pedagogy:close:schoolyear"]
+    for codename in codenames:
+        perm, _ = Permission.objects.get_or_create(
+            codename=codename,
+            defaults={"name": codename, "module": "pedagogy"},
+        )
+        role.permissions.add(perm)
+
+
 @pytest.fixture
 def director_role(db):
     role = Role.objects.get_or_create(
         name="DIRECTOR", defaults={"label": "Directeur"}
     )[0]
     _add_pedagogy_permissions(role)
+    _add_director_only_permissions(role)
     return role
 
 
@@ -223,6 +235,133 @@ class TestSchoolYearEndpoints:
         assert sy1.is_current is False
         assert sy2.is_current is True
 
+    def test_set_current_school_year_unauthorized_for_teacher(self, teacher_user, tenant):
+        sy = SchoolYear.objects.create(
+            tenant=tenant, label="2025-2026",
+            start_date="2025-09-15", end_date="2026-07-10",
+        )
+        client = login_client(APIClient(), teacher_user.email)
+        resp = client.patch(
+            reverse("schoolyear-set-current", args=[sy.id]), {}, format="json",
+        )
+        assert resp.status_code == 403
+
+    def test_close_school_year_success(self, director_user, tenant):
+        sy = SchoolYear.objects.create(
+            tenant=tenant, label="2025-2026",
+            start_date="2025-09-15", end_date="2026-07-10",
+            status=SchoolYear.Status.ACTIVE, is_current=True,
+        )
+        AcademicPeriod.objects.create(
+            tenant=tenant, school_year=sy,
+            name="Trimestre 1", type=AcademicPeriod.PeriodType.TRIMESTRE,
+            start_date="2025-09-15", end_date="2025-12-20", order=1,
+            is_closed=True,
+        )
+        client = login_client(APIClient(), director_user.email)
+        resp = client.patch(
+            reverse("schoolyear-close", args=[sy.id]), {}, format="json",
+        )
+        assert resp.status_code == 200
+        data = resp.json()["data"]
+        assert data["status"] == "CLOSED"
+        # Clôturer ne touche jamais is_current (décision PO 2026-07-29).
+        assert data["is_current"] is True
+
+    def test_close_school_year_unclosed_period_returns_422(self, director_user, tenant):
+        sy = SchoolYear.objects.create(
+            tenant=tenant, label="2025-2026",
+            start_date="2025-09-15", end_date="2026-07-10",
+        )
+        AcademicPeriod.objects.create(
+            tenant=tenant, school_year=sy,
+            name="Trimestre 1", type=AcademicPeriod.PeriodType.TRIMESTRE,
+            start_date="2025-09-15", end_date="2025-12-20", order=1,
+            is_closed=False,
+        )
+        client = login_client(APIClient(), director_user.email)
+        resp = client.patch(
+            reverse("schoolyear-close", args=[sy.id]), {}, format="json",
+        )
+        assert resp.status_code == 422
+        assert "période(s)" in resp.json()["message"]
+        sy.refresh_from_db()
+        assert sy.status != SchoolYear.Status.CLOSED
+
+    def test_close_school_year_without_periods_returns_422(self, director_user, tenant):
+        sy = SchoolYear.objects.create(
+            tenant=tenant, label="2025-2026",
+            start_date="2025-09-15", end_date="2026-07-10",
+        )
+        client = login_client(APIClient(), director_user.email)
+        resp = client.patch(
+            reverse("schoolyear-close", args=[sy.id]), {}, format="json",
+        )
+        assert resp.status_code == 422
+        assert "Aucune période" in resp.json()["message"]
+
+    def test_close_school_year_already_closed_returns_422(self, director_user, tenant):
+        sy = SchoolYear.objects.create(
+            tenant=tenant, label="2025-2026",
+            start_date="2025-09-15", end_date="2026-07-10",
+            status=SchoolYear.Status.CLOSED,
+        )
+        client = login_client(APIClient(), director_user.email)
+        resp = client.patch(
+            reverse("schoolyear-close", args=[sy.id]), {}, format="json",
+        )
+        assert resp.status_code == 422
+        assert "déjà clôturée" in resp.json()["message"]
+
+    def test_close_school_year_not_current_is_allowed(self, director_user, tenant):
+        """Aucune contrainte is_current sur la clôture (décision PO 2026-07-29)."""
+        sy_current = SchoolYear.objects.create(
+            tenant=tenant, label="2026-2027",
+            start_date="2026-09-15", end_date="2027-07-10",
+            is_current=True,
+        )
+        sy_abandoned = SchoolYear.objects.create(
+            tenant=tenant, label="2025-2026",
+            start_date="2025-09-15", end_date="2026-07-10",
+            status=SchoolYear.Status.PREPARATION, is_current=False,
+        )
+        AcademicPeriod.objects.create(
+            tenant=tenant, school_year=sy_abandoned,
+            name="Trimestre 1", type=AcademicPeriod.PeriodType.TRIMESTRE,
+            start_date="2025-09-15", end_date="2025-12-20", order=1,
+            is_closed=True,
+        )
+        client = login_client(APIClient(), director_user.email)
+        resp = client.patch(
+            reverse("schoolyear-close", args=[sy_abandoned.id]), {}, format="json",
+        )
+        assert resp.status_code == 200
+        sy_current.refresh_from_db()
+        assert sy_current.is_current is True
+
+    def test_close_school_year_unauthorized_for_teacher(self, teacher_user, tenant):
+        sy = SchoolYear.objects.create(
+            tenant=tenant, label="2025-2026",
+            start_date="2025-09-15", end_date="2026-07-10",
+        )
+        client = login_client(APIClient(), teacher_user.email)
+        resp = client.patch(
+            reverse("schoolyear-close", args=[sy.id]), {}, format="json",
+        )
+        assert resp.status_code == 403
+
+    def test_secretaire_cannot_close_school_year(self, secretaire_user, tenant):
+        """close/set-current sont DIRECTOR uniquement, contrairement à create."""
+        sy = SchoolYear.objects.create(
+            tenant=tenant, label="2025-2026",
+            start_date="2025-09-15", end_date="2026-07-10",
+        )
+        client = login_client(APIClient(), secretaire_user.email)
+        resp = client.patch(
+            reverse("schoolyear-close", args=[sy.id]), {}, format="json",
+        )
+        assert resp.status_code == 403
+
     def test_create_school_year_unauthorized_for_teacher(self, teacher_user):
         client = login_client(APIClient(), teacher_user.email)
         resp = client.post(
@@ -330,6 +469,24 @@ class TestPeriodEndpoints:
         assert resp.status_code == 200
         data = resp.json()["data"]
         assert data["is_closed"] is True
+
+    def test_close_period_unauthorized_for_teacher(self, teacher_user, tenant):
+        sy = SchoolYear.objects.create(
+            tenant=tenant, label="2025-2026",
+            start_date="2025-09-15", end_date="2026-07-10",
+        )
+        period = AcademicPeriod.objects.create(
+            tenant=tenant, school_year=sy,
+            name="Trimestre 1", type=AcademicPeriod.PeriodType.TRIMESTRE,
+            start_date="2025-09-15", end_date="2025-12-20", order=1,
+        )
+        client = login_client(APIClient(), teacher_user.email)
+        resp = client.patch(
+            reverse("period-close", args=[period.id]), {}, format="json",
+        )
+        assert resp.status_code == 403
+        period.refresh_from_db()
+        assert period.is_closed is False
 
     def test_create_period_unauthorized_for_teacher(self, teacher_user, tenant):
         sy = SchoolYear.objects.create(

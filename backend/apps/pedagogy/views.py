@@ -47,6 +47,8 @@ from apps.pedagogy.serializers import (
 from apps.pedagogy.services.school_year_service import (
     set_current_school_year,
     close_period,
+    close_school_year,
+    assert_school_year_open,
 )
 from apps.pedagogy.services.student_service import (
     enroll_student,
@@ -85,6 +87,7 @@ class SchoolYearViewSet(
     POST /pedagogy/schoolyears/           — création (DIRECTOR/STUDENT_STUDIES)
     GET  /pedagogy/schoolyears/{id}/      — détail d'une année avec ses périodes
     PATCH /pedagogy/schoolyears/{id}/set-current/ — définir l'année courante (DIRECTOR)
+    PATCH /pedagogy/schoolyears/{id}/close/       — clôturer l'année (DIRECTOR)
     """
 
     queryset = SchoolYear.objects.all()
@@ -99,8 +102,12 @@ class SchoolYearViewSet(
         return SchoolYearSerializer
 
     def get_permissions(self):
-        if self.action in ("create",):
+        if self.action == "create":
             return [IsAuthenticated(), HasPermission("pedagogy:create:schoolyear")]
+        if self.action == "set_current":
+            return [IsAuthenticated(), HasPermission("pedagogy:update:schoolyear")]
+        if self.action == "close":
+            return [IsAuthenticated(), HasPermission("pedagogy:close:schoolyear")]
         return [IsAuthenticated()]
 
     def create(self, request, *args, **kwargs):
@@ -122,6 +129,19 @@ class SchoolYearViewSet(
         """
         school_year = self.get_object()
         set_current_school_year(school_year)
+        serializer = SchoolYearSerializer(school_year)
+        return success_response(serializer.data)
+
+    @action(detail=True, methods=["patch"], url_path="close")
+    def close(self, request, pk=None):
+        """
+        PATCH /pedagogy/schoolyears/{id}/close/
+        Clôture l'année scolaire (status=CLOSED) — refuse si une AcademicPeriod
+        n'est pas is_closed=True, ou s'il n'y en a aucune. Ne modifie jamais
+        is_current : set-current reste une action séparée.
+        """
+        school_year = self.get_object()
+        close_school_year(school_year)
         serializer = SchoolYearSerializer(school_year)
         return success_response(serializer.data)
 
@@ -158,7 +178,10 @@ class PeriodViewSet(
         return context
 
     def get_permissions(self):
-        if self.action in ("create",):
+        # "close" réutilise le codename period existant plutôt que d'en créer
+        # un nouveau (SCHOOLYEAR-V2-01 — correction découverte en marge :
+        # l'action n'avait auparavant aucune permission au-delà d'IsAuthenticated).
+        if self.action in ("create", "close"):
             return [IsAuthenticated(), HasPermission("pedagogy:create:period")]
         return [IsAuthenticated()]
 
@@ -186,6 +209,7 @@ class PeriodViewSet(
                 "Ressource non trouvée",
                 status_code=status.HTTP_404_NOT_FOUND,
             )
+        assert_school_year_open(school_year)
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         instance = serializer.save()
@@ -200,6 +224,7 @@ class PeriodViewSet(
         TODO Épic 6 : vérifier qu'aucune évaluation n'est non verrouillée avant clôture.
         """
         period = self.get_object()
+        assert_school_year_open(period.school_year)
         close_period(period)
         serializer = AcademicPeriodSerializer(period)
         return success_response(serializer.data)
@@ -242,6 +267,7 @@ class ClassViewSet(
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        assert_school_year_open(serializer.validated_data["school_year"])
         self.perform_create(serializer)
         return created_response(serializer.data)
 
@@ -380,6 +406,7 @@ class ClassSubjectViewSet(
                 "Ressource non trouvée",
                 status_code=status.HTTP_404_NOT_FOUND,
             )
+        assert_school_year_open(class_obj.school_year)
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         self.perform_create(serializer)
@@ -972,6 +999,7 @@ class EvaluationViewSet(
 
     def perform_create(self, serializer):
         self._check_teacher_scope(serializer)
+        assert_school_year_open(serializer.validated_data["period"].school_year)
         serializer.save(tenant=self.request.tenant, teacher=self.request.user)
 
     def _check_teacher_scope(self, serializer):
@@ -1000,6 +1028,7 @@ class EvaluationViewSet(
     @action(detail=True, methods=["patch"])
     def lock(self, request, pk=None):
         evaluation = self.get_object()
+        assert_school_year_open(evaluation.period.school_year)
         if evaluation.is_locked:
             return error_response(
                 "L'évaluation est déjà verrouillée.",
@@ -1081,6 +1110,7 @@ class GradeViewSet(
         data = serializer.validated_data
 
         evaluation = self._get_evaluation_or_404(data["evaluation_id"])
+        assert_school_year_open(evaluation.period.school_year)
         if evaluation.is_locked:
             return error_response(
                 "L'évaluation est verrouillée : impossible d'ajouter ou de modifier des notes.",
@@ -1132,6 +1162,7 @@ class GradeViewSet(
     @action(detail=True, methods=["post"])
     def valider(self, request, pk=None):
         grade = self.get_object()
+        assert_school_year_open(grade.evaluation.period.school_year)
         if not grade.evaluation.is_locked:
             return error_response(
                 "L'évaluation doit être verrouillée avant de pouvoir valider les notes.",
@@ -1171,6 +1202,7 @@ class GradeViewSet(
     @action(detail=True, methods=["patch"])
     def modifier_apres_validation(self, request, pk=None):
         grade = self.get_object()
+        assert_school_year_open(grade.evaluation.period.school_year)
         if not grade.is_validated:
             return error_response(
                 "Cette note n'est pas encore validée. Utilisez PATCH /pedagogy/grades/{id}/ pour la modifier.",
@@ -1298,6 +1330,7 @@ class YearEndDecisionViewSet(
                 "Année scolaire non trouvée.",
                 status_code=status.HTTP_404_NOT_FOUND,
             )
+        assert_school_year_open(school_year)
         try:
             self.perform_create(serializer)
         except serializers.ValidationError as exc:

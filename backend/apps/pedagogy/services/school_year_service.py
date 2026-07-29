@@ -1,8 +1,27 @@
 from django.db import transaction
 from django.db.models import Q
+from rest_framework import status as drf_status
+from rest_framework.exceptions import APIException
 from rest_framework.exceptions import ValidationError as DRFValidationError
 
 from apps.pedagogy.models import Level, SchoolYear, AcademicPeriod, Subject
+
+
+class SchoolYearError(APIException):
+    """
+    Erreur liée au cycle de vie d'une année scolaire (clôture, écriture refusée
+    sur une année clôturée). Sous-classe de APIException (et non un simple
+    Exception, contrairement à EnrollmentError/AttendanceError) afin que le
+    handler DRF global (core.exceptions.custom_exception_handler) la formate
+    automatiquement en 422 partout où assert_school_year_open() est appelée,
+    sans avoir à dupliquer un bloc try/except à chacun des points d'écriture.
+    """
+
+    status_code = drf_status.HTTP_422_UNPROCESSABLE_ENTITY
+    default_detail = (
+        "Cette année scolaire est clôturée : aucune écriture n'est autorisée."
+    )
+    default_code = "school_year_closed"
 
 
 def set_current_school_year(school_year: SchoolYear) -> SchoolYear:
@@ -78,6 +97,50 @@ def check_year_is_open(school_year: SchoolYear) -> bool:
     Les statuts PREPARATION et ACTIVE autorisent donc les inscriptions.
     """
     return school_year.status != SchoolYear.Status.CLOSED
+
+
+def assert_school_year_open(school_year: SchoolYear) -> None:
+    """
+    Point d'entrée central : lève SchoolYearError (422) si l'année scolaire
+    est clôturée. Tout endpoint qui écrit une ressource rattachée directement
+    ou indirectement à une SchoolYear doit passer par ici plutôt que
+    réimplémenter la vérification (cf. les trois bugs de résolution d'année
+    trouvés séparément en Épic 7 — SCHOOLYEAR-V2-01).
+    """
+    if not check_year_is_open(school_year):
+        raise SchoolYearError()
+
+
+def close_school_year(school_year: SchoolYear) -> SchoolYear:
+    """
+    Clôture une année scolaire (status -> CLOSED).
+
+    Ne modifie jamais is_current : la bascule vers une autre année "courante"
+    reste une action explicite et distincte du Directeur (set_current_school_year).
+    Aucune contrainte sur is_current n'est imposée ici : une année abandonnée
+    en PREPARATION, jamais rendue courante, doit pouvoir être clôturée.
+    """
+    if school_year.status == SchoolYear.Status.CLOSED:
+        raise SchoolYearError("Cette année scolaire est déjà clôturée.")
+
+    periods = list(AcademicPeriod.objects.filter(school_year=school_year))
+    if not periods:
+        raise SchoolYearError(
+            "Aucune période académique n'est configurée pour cette année — "
+            "vérifiez la configuration avant de clôturer."
+        )
+
+    unclosed = [p for p in periods if not p.is_closed]
+    if unclosed:
+        names = ", ".join(p.name for p in unclosed)
+        raise SchoolYearError(
+            f"{len(unclosed)} période(s) académique(s) ne sont pas encore "
+            f"clôturée(s) ({names})."
+        )
+
+    school_year.status = SchoolYear.Status.CLOSED
+    school_year.save(update_fields=["status", "updated_at"])
+    return school_year
 
 
 STANDARD_LEVELS = [

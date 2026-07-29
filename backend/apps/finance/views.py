@@ -21,6 +21,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 from core.permissions import HasPermission
 from core.utils import success_response, created_response
+from apps.pedagogy.services.school_year_service import assert_school_year_open
 from .models import FeeCategory, StudentFee, Payment, OrangeMoneyTransaction, Invoice
 from .providers.orange_money import OrangeMoneyProvider
 from core.retry import ProviderNetworkError, retry_with_backoff
@@ -71,7 +72,15 @@ class FeeCategoryViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(tenant=self.request.tenant)
 
+    def perform_update(self, serializer):
+        # Assignation/correction de frais bloquée sur année clôturée (décision
+        # PO 2026-07-29) : les paiements restent ouverts, pas la structure des
+        # frais — une correction tardive doit rouvrir l'année explicitement.
+        assert_school_year_open(serializer.instance.school_year)
+        serializer.save()
+
     def perform_destroy(self, instance):
+        assert_school_year_open(instance.school_year)
         if instance.student_fees.exists():
             from rest_framework.exceptions import PermissionDenied
             raise PermissionDenied(
@@ -82,6 +91,7 @@ class FeeCategoryViewSet(viewsets.ModelViewSet):
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        assert_school_year_open(serializer.validated_data["school_year"])
         self.perform_create(serializer)
         return created_response(FeeCategorySerializer(serializer.instance).data)
 

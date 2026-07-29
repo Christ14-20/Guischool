@@ -8,6 +8,7 @@ from django.core.files.base import ContentFile
 from django.db import transaction
 from django.template.loader import render_to_string
 from .models import FeeCategory, StudentFee, Payment, ReceiptSequence, Invoice
+from apps.pedagogy.services.school_year_service import assert_school_year_open
 
 
 class FeeCategorySerializer(serializers.ModelSerializer):
@@ -59,7 +60,9 @@ class StudentFeeCreateSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         fee_category_id = validated_data.pop("fee_category_id")
-        validated_data["fee_category"] = FeeCategory.objects.get(id=fee_category_id)
+        fee_category = FeeCategory.objects.get(id=fee_category_id)
+        assert_school_year_open(fee_category.school_year)
+        validated_data["fee_category"] = fee_category
         total = validated_data["total_amount"]
         discount = validated_data.get("discount_amount", 0)
         validated_data["balance_due"] = total - discount

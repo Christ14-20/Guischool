@@ -1,6 +1,7 @@
 from django.db import transaction
 
 from apps.pedagogy.models import Attendance, SchoolClass, Student
+from apps.pedagogy.services.school_year_service import assert_school_year_open
 
 
 class AttendanceError(Exception):
@@ -43,6 +44,8 @@ def create_batch_attendance(*, tenant, classe: SchoolClass, date, records, creat
     Retourne (created_attendances, sms_queued_for) où sms_queued_for est la liste
     des student_id (str) marqués ABSENT et disposant d'un responsable joignable.
     """
+    assert_school_year_open(classe.school_year)
+
     student_ids = [r["student_id"] for r in records]
 
     students = {
@@ -101,6 +104,8 @@ def update_attendance_record(*, attendance: Attendance, status=None, minutes_lat
 
     Lève AttendanceError 422 si la présence est verrouillée (is_locked=True).
     """
+    assert_school_year_open(attendance.classe.school_year)
+
     if attendance.is_locked:
         raise AttendanceError(
             "Cette présence est verrouillée et ne peut plus être modifiée.",
@@ -129,6 +134,8 @@ def justify_attendance(*, attendance: Attendance, justification_text: str):
 
     Lève AttendanceError 422 si la présence est verrouillée (is_locked=True).
     """
+    assert_school_year_open(attendance.classe.school_year)
+
     if attendance.is_locked:
         raise AttendanceError(
             "Modification impossible : cet enregistrement est verrouillé "
