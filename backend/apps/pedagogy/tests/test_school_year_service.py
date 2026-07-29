@@ -9,6 +9,7 @@ from apps.pedagogy.services.school_year_service import (
     check_year_is_open,
     assert_school_year_open,
     close_school_year,
+    get_current_school_year,
     SchoolYearError,
 )
 from apps.superadmin.models import Tenant, Plan
@@ -289,3 +290,41 @@ class TestCloseSchoolYear:
         with pytest.raises(SchoolYearError) as exc:
             close_school_year(school_year_a)
         assert "déjà clôturée" in str(exc.value)
+
+
+@pytest.mark.django_db
+class TestGetCurrentSchoolYear:
+    def test_returns_current_school_year(self, tenant, school_year_a, school_year_b):
+        set_current_school_year(school_year_b)
+        resolved = get_current_school_year(tenant)
+        assert resolved.id == school_year_b.id
+
+    def test_raises_422_when_no_current_year(self, tenant, school_year_a, school_year_b):
+        # Ni school_year_a ni school_year_b n'ont is_current=True par défaut.
+        with pytest.raises(SchoolYearError) as exc:
+            get_current_school_year(tenant)
+        assert exc.value.status_code == 422
+        assert "Aucune année scolaire courante" in str(exc.value)
+
+    def test_isolated_per_tenant(self, tenant, plan, school_year_a):
+        tenant_b = Tenant.objects.create(
+            name="École B",
+            slug="ecole-b-get-current",
+            school_type=Tenant.SchoolType.LYCEE,
+            status=Tenant.Status.ACTIVE,
+            plan=plan,
+            contact_name="Directeur B",
+            contact_phone="+224620000003",
+            contact_email="directeur@ecole-b-get-current.gn",
+        )
+        sy_b = SchoolYear.objects.create(
+            tenant=tenant_b,
+            label="2025-2026",
+            start_date="2025-09-15",
+            end_date="2026-07-10",
+        )
+        set_current_school_year(sy_b)
+        # tenant (celui de school_year_a) n'a toujours aucune année courante.
+        with pytest.raises(SchoolYearError):
+            get_current_school_year(tenant)
+        assert get_current_school_year(tenant_b).id == sy_b.id

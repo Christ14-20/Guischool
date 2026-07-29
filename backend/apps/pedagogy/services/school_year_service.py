@@ -111,6 +111,25 @@ def assert_school_year_open(school_year: SchoolYear) -> None:
         raise SchoolYearError()
 
 
+def get_current_school_year(tenant) -> SchoolYear:
+    """
+    Point de résolution central de l'année scolaire courante d'un tenant
+    (SCHOOLYEAR-V2-02). Toute vue qui a besoin de résoudre l'année courante
+    par défaut doit passer par ici — jamais de requête `is_current=True`
+    réimplémentée localement (cf. les trois bugs de résolution d'année
+    trouvés séparément en Épic 7, avant SCHOOLYEAR-V2-01/02).
+
+    Lève SchoolYearError (422) si aucune année n'est marquée courante,
+    plutôt que de laisser un None se propager silencieusement.
+    """
+    school_year = SchoolYear.objects.filter(tenant=tenant, is_current=True).first()
+    if school_year is None:
+        raise SchoolYearError(
+            "Aucune année scolaire courante n'est définie — contactez votre Directeur."
+        )
+    return school_year
+
+
 def close_school_year(school_year: SchoolYear) -> SchoolYear:
     """
     Clôture une année scolaire (status -> CLOSED).

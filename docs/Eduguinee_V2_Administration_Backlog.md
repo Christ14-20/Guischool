@@ -1,6 +1,6 @@
 # Eduguinée — Backlog V2 : Administration (Super Admin + École) & Chantiers Transversaux
 
-> **Statut :** en cours — SCHOOLYEAR-V2-01 livré (2026-07-29), SCHOOLYEAR-V2-02 à cadrer.
+> **Statut :** en cours — SCHOOLYEAR-V2-01 livré (2026-07-29), SCHOOLYEAR-V2-02 en cours (fondation livrée, découpée en sous-tickets A→F).
 > **Périmètre :** ce backlog complète le MVP V1 (Épics 0 à 8, terminés) sur deux axes d'administration, plus deux chantiers transversaux indispensables à leur bon fonctionnement.
 > **Ordre de traitement validé (PO) :** Chantier année scolaire → Module A (Super Admin) → Module B (Personnel) → Infra MinIO. L'ordre ci-dessous reflète cette priorité, pas l'ordre de rédaction.
 > **Sources :** `Eduguinee_CDC_Complet.md` §4.4-4.6, §5, §6, §10, §21.1, §21.3 ; retour d'expérience V1 (Épics 2, 6.1, 7).
@@ -42,17 +42,25 @@
 ### 🃏 [SCHOOLYEAR-V2-02] Application automatique de l'année courante (refactor transversal)
 **Priorité :** 🔴 Bloquant, gros chantier — à découper en sous-tickets par module lors du cadrage
 - [ ] **Principe** : partout où `school_year`/`school_year_id` est un champ **obligatoire** saisi manuellement, il devient **optionnel**, avec comme valeur par défaut `SchoolYear.objects.get(tenant=tenant, is_current=True)`. Possibilité de le surcharger explicitement, réservée à `DIRECTOR`.
-- [ ] **Un seul point de résolution centralisé** : fonction `get_current_school_year(tenant)` unique (module `core` ou `pedagogy`), importée partout où l'année courante est nécessaire — **jamais** de logique de résolution dupliquée à plusieurs endroits (rappel direct des trois bugs de résolution d'année trouvés en Épic 7).
+- [x] **Un seul point de résolution centralisé** : fonction `get_current_school_year(tenant)` unique (`apps/pedagogy/services/school_year_service.py`, à côté de `assert_school_year_open`), importée partout où l'année courante est nécessaire — **jamais** de logique de résolution dupliquée à plusieurs endroits (rappel direct des trois bugs de résolution d'année trouvés en Épic 7). *(Sous-ticket A — livré.)*
 - [ ] **Endpoints à auditer et corriger un par un** (vérifier chacun, ne pas supposer) :
-  - [ ] `POST /students/` (Épic 4) — `school_year_id` actuellement obligatoire.
-  - [ ] `POST /pedagogy/classes/` (Épic 3) — `school_year` actuellement un champ du payload.
-  - [ ] `POST /students/{id}/reinscription/` (Épic 4) — `school_year_id` obligatoire.
-  - [ ] `POST /pedagogy/evaluations/` (Épic 6) — indirect via `period` ; le sélecteur de période côté frontend doit filtrer sur l'année courante par défaut.
-  - [ ] `POST /finance/feecategories/` (Épic 7) — `school_year` actuellement un champ obligatoire du payload.
-- [ ] **Cas limite à traiter explicitement** : aucune année n'a `is_current=True` au moment de l'appel → `422` avec message clair ("Aucune année scolaire courante n'est définie — contactez votre Directeur"), jamais un crash ou un comportement silencieux.
+  - [ ] `POST /students/` (Épic 4) — `school_year_id` actuellement obligatoire. *(Sous-ticket B)*
+  - [ ] `POST /pedagogy/classes/` (Épic 3) — `school_year` actuellement un champ du payload. *(Sous-ticket C)*
+  - [ ] `POST /students/{id}/reinscription/` (Épic 4) — `school_year_id` obligatoire. *(Sous-ticket B)*
+  - [ ] `POST /pedagogy/evaluations/` (Épic 6) — indirect via `period` ; le sélecteur de période côté frontend doit filtrer sur l'année courante par défaut. Audit confirmé : aucun champ `school_year` en payload, rien à rendre optionnel côté backend — traitement 100% frontend. *(Sous-ticket E)*
+  - [ ] `POST /finance/feecategories/` (Épic 7) — `school_year` actuellement un champ obligatoire du payload. *(Sous-ticket D)*
+  - [ ] `POST /pedagogy/year-end-decisions/` et `POST /pedagogy/promotions/bulk/` — ajoutés au périmètre (hors liste initiale, trouvés à l'audit, confirmés par le PO). *(Sous-ticket F)*
+- [x] **Cas limite à traiter explicitement** : aucune année n'a `is_current=True` au moment de l'appel → `422` avec message clair ("Aucune année scolaire courante n'est définie — contactez votre Directeur"), jamais un crash ou un comportement silencieux. *(Sous-ticket A — livré, `SchoolYearError` réutilisée.)*
 - [ ] **Documentation** : chaque endpoint dont le payload change (champ obligatoire → optionnel) doit être mis à jour dans le contrat d'API avec une note explicite de migration.
 - [ ] Frontend : les formulaires concernés perdent leur sélecteur d'année scolaire par défaut (ou le masquent en mode "avancé", visible seulement pour `DIRECTOR`).
 **Labels :** `schoolyear` `backend` `frontend` `priorité-critique` `refactor`
+**Découpage validé (PO, 2026-07-29) :** A. `get_current_school_year()` + tests service (fondation) → B. Élèves (enroll + réinscription) → C. Classes (pedagogy) → D. Frais (finance feecategories) → E. Évaluations (frontend seul) → F. Décisions de fin d'année + promotions en masse. Un commit par lettre.
+**Décisions complémentaires (PO, 2026-07-29) :**
+- Permission d'override : nouveau codename `pedagogy:override:schoolyear` (`DIRECTOR` uniquement), plutôt qu'un check de rôle en dur — cohérent avec `custom_permissions` (STAFF-V2-03).
+- Un non-`DIRECTOR` envoyant explicitement une valeur **identique** à l'année courante résolue n'est pas bloqué (pas un vrai contournement) ; seul un écart réel déclenche `403`.
+- `PromotionsBulkSerializer.school_year_cible_id` : nom du champ **non renommé** dans ce ticket malgré la confusion sémantique identifiée (désigne en réalité l'année dont on traite les décisions, pas une "cible" d'inscription) — clarifié par docstring/contrat uniquement.
+- `finance/fees` : le champ `school_year` est verrouillé pour non-`DIRECTOR` en création **et** en modification (une réattribution a posteriori désynchroniserait des `Invoice` déjà calculées).
+- Sélecteurs de **consultation** (ex. `syId` dans `GradeEntryClient`) : seule leur valeur par défaut est pré-remplie sur l'année courante, ils restent librement changeables pour tous les rôles (lecture ≠ écriture).
 
 ---
 
