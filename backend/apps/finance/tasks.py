@@ -74,8 +74,9 @@ def reconcile_orange_money_transactions():
             payment.status = Payment.Status.COMPLETED
             payment.save(update_fields=["status", "updated_at"])
 
-            from .serializers import generate_receipt_for_payment, sync_invoice, resolve_payment_school_year
+            from .serializers import generate_receipt_for_payment, sync_invoice, resolve_payment_school_year, send_payment_confirmation_sms
             generate_receipt_for_payment(payment)
+            send_payment_confirmation_sms(payment)
 
             school_year = resolve_payment_school_year(payment)
             if school_year:

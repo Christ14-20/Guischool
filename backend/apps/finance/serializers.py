@@ -147,6 +147,9 @@ class PaymentCreateSerializer(serializers.ModelSerializer):
 
         generate_receipt_for_payment(payment)
 
+        # Notification SMS après commit (COMM-MVP-02) — idempotent
+        transaction.on_commit(lambda: send_payment_confirmation_sms(payment))
+
         return payment
 
 
@@ -166,6 +169,23 @@ def resolve_payment_school_year(payment):
         tenant=payment.tenant, is_current=True,
     ).first()
     return sy
+
+
+def send_payment_confirmation_sms(payment):
+    """
+    COMM-MVP-02 — Notifie le responsable par SMS qu'un paiement a été confirmé.
+
+    Appelée par les 3 chemins : CASH, webhook OM, réconciliation nocturne.
+    Vérifie le flag sms_notification_sent pour éviter les doublons.
+    """
+    if payment.sms_notification_sent:
+        return
+
+    from apps.communication.services import notify_payment
+    notify_payment(str(payment.id), str(payment.tenant_id))
+
+    payment.sms_notification_sent = True
+    payment.save(update_fields=["sms_notification_sent"])
 
 
 def generate_receipt_for_payment(payment):

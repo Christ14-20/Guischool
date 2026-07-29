@@ -23,7 +23,7 @@ from core.permissions import HasPermission
 from core.utils import success_response, created_response
 from .models import FeeCategory, StudentFee, Payment, OrangeMoneyTransaction, Invoice
 from .providers.orange_money import OrangeMoneyProvider
-from .providers.base import ProviderNetworkError, retry_with_backoff
+from core.retry import ProviderNetworkError, retry_with_backoff
 from .serializers import (
     FeeCategorySerializer,
     FeeCategoryCreateSerializer,
@@ -37,6 +37,7 @@ from .serializers import (
     generate_receipt_for_payment,
     resolve_payment_school_year,
     sync_invoice,
+    send_payment_confirmation_sms,
 )
 
 logger = logging.getLogger(__name__)
@@ -431,6 +432,9 @@ def orange_money_webhook(request):
             payment.student_fee.save(update_fields=["balance_due", "updated_at"])
 
         generate_receipt_for_payment(payment)
+
+        # Notification SMS (COMM-MVP-02)
+        send_payment_confirmation_sms(payment)
 
         school_year = resolve_payment_school_year(payment)
         if school_year:

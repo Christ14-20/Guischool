@@ -16,6 +16,7 @@ from decimal import Decimal
 from unittest.mock import patch, MagicMock
 
 import pytest
+from django.test.utils import override_settings
 from django.urls import reverse
 from rest_framework.test import APIClient
 
@@ -381,6 +382,49 @@ class TestOrangeMoneyEndpoints:
         om_txn = OrangeMoneyTransaction.objects.get(payment=payment)
         assert om_txn.provider_status == "CONFIRMED"
         assert om_txn.raw_webhook_payload["status"] == "SUCCESS"
+
+    @override_settings(CELERY_TASK_ALWAYS_EAGER=True)
+    def test_webhook_success_triggers_sms(self, api_client, tenant, director_user,
+                                           director_role, student):
+        """Un paiement OM confirmé via webhook crée un SMSLog PAIEMENT."""
+        from apps.pedagogy.models import Guardian
+        Guardian.objects.create(
+            tenant=tenant, student=student,
+            nom_complet="Parent Test", telephone="+224655112233",
+            lien="TUTEUR",
+        )
+
+        _ensure_permissions(director_role, ["finance:read", "finance:create"])
+        _auth(api_client, director_user)
+
+        init_resp = api_client.post(
+            reverse("payment-om-initiate"),
+            {"student_id": str(student.id), "amount": "30000",
+             "payer_phone": "+224655112233"},
+            format="json",
+        )
+        txn_id = init_resp.json()["data"]["provider_transaction_id"]
+
+        payload = {"transaction_id": txn_id, "status": "SUCCESS", "amount": "30000"}
+        provider = OrangeMoneyProvider()
+        sig = _compute_signature(payload, provider.secret)
+        body = json.dumps(payload, separators=(",", ":"), sort_keys=True)
+
+        api_client.post(
+            reverse("payment-om-webhook"),
+            body, content_type="application/json",
+            HTTP_X_ORANGE_SIGNATURE=sig,
+        )
+
+        from apps.communication.models import SMSLog
+        logs = SMSLog.objects.filter(
+            recipient_phone="+224655112233", trigger_type="PAIEMENT",
+        )
+        assert logs.count() == 1
+        assert logs.first().status == "SENT"
+
+        payment = Payment.objects.get(id=init_resp.json()["data"]["payment_id"])
+        assert payment.sms_notification_sent is True
 
     def test_webhook_failure_updates_payment(self, api_client, tenant, director_user,
                                               director_role, student):

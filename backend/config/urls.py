@@ -31,8 +31,9 @@ urlpatterns = [
     # Versioning de l'API (SETUP-01)
     path("api/v1/", include(api_v1_patterns)),
 
-    # Webhooks (hors /api/v1/ — Orange Money n'utilise pas notre versioning)
+    # Webhooks (hors /api/v1/ — les providers externes n'utilisent pas notre versioning)
     path("webhooks/", include("apps.finance.webhook_urls")),
+    path("webhooks/", include("apps.communication.webhook_urls")),
 
     # Documentation de l'API (drf-spectacular + Swagger UI)
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),

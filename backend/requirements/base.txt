@@ -36,5 +36,8 @@ boto3==1.35.95
 # Rate limiting
 django-ratelimit==4.1.0
 
+# HTTP client (provider externes — Orange Money, Africa's Talking)
+requests==2.32.3
+
 # Utilities
 Pillow==11.1.0

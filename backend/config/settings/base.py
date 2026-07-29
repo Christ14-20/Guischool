@@ -46,6 +46,7 @@ LOCAL_APPS = [
     "apps.superadmin",
     "apps.pedagogy",
     "apps.finance",
+    "apps.communication",
     "apps.monitoring",
 ]
 
@@ -222,3 +223,13 @@ AWS_STORAGE_BUCKET_NAME = config("AWS_STORAGE_BUCKET_NAME", default="eduguinee-d
 AWS_S3_ENDPOINT_URL = config("AWS_S3_ENDPOINT_URL", default="http://localhost:9000")
 AWS_S3_FILE_OVERWRITE = False
 AWS_DEFAULT_ACL = None
+
+# ── Africa's Talking (SMS — COMM-MVP-01) ───────────────────────────────────────
+AFRICASTALKING_MOCK = config("AFRICASTALKING_MOCK", default=True, cast=bool)
+AFRICASTALKING_API_KEY = config("AFRICASTALKING_API_KEY", default="")
+AFRICASTALKING_USERNAME = config("AFRICASTALKING_USERNAME", default="sandbox")
+AFRICASTALKING_WEBHOOK_SECRET = config("AFRICASTALKING_WEBHOOK_SECRET", default="")
+AFRICASTALKING_API_URL = config(
+    "AFRICASTALKING_API_URL",
+    default="https://api.africastalking.com/version1/messaging",
+)

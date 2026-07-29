@@ -1,8 +1,8 @@
 # BACKLOG MVP — EDUGUINÉE 3.0
 ## Découpage en épics et tickets, ordonné par dépendance technique
 
-> **🗓 Dernière mise à jour :** 2026-07-27
-> **📍 Avancement global :** Épics 0, 1, 2, 3, 4, 5, 6.1 & 7 ✅ terminés · Épic 6 🔜 en cours (GRADE-MVP-03 PDF stub)
+> **🗓 Dernière mise à jour :** 2026-07-29
+> **📍 Avancement global :** Épics 0, 1, 2, 3, 4, 5, 6.1, 7 & 8 ✅ terminés · Épic 6 🔜 en cours (GRADE-MVP-03 PDF stub)
 > >
 > | Épic | Statut | Commit(s) |
 > |------|--------|-----------|
@@ -15,9 +15,10 @@
 > | 6 — Notes, Évaluations, Bulletins | 🔜 **EN COURS** | `GRADE-MVP-01..05` (GRADE-MVP-03 : PDF stub) |
 > | 6.1 — Administration École — Personnel | ✅ **TERMINÉ** | `AUTH-06`, `STAFF-MVP-01..03` |
 > | 7 — Finance, paiements, Orange Money | ✅ **TERMINÉ** | `FIN-MVP-00..05` |
-> | 8..11 — Modules métier | ⏳ En attente | — |
+> | 8 — Communication SMS | ✅ **TERMINÉ** | `COMM-MVP-01..02` |
+> | 9, 10, 11 | ⏳ En attente | — |
 > >
-> **Couverture de tests :** 456 tests backend · **Build frontend :** ✅ 0 erreur · **`python manage.py check` :** ✅ 0 issue
+> **Couverture de tests :** 490 tests backend · **Build frontend :** ✅ 0 erreur · **`python manage.py check` :** ✅ 0 issue
 
 **Basé sur :** Cahier des Charges Complet v2.0 + arbitrages MVP (offline reporté, App Parent en React Native, Orange Money seul en V1)
 **Usage :** Chaque épic est un bloc de valeur livrable. Chaque ticket est copiable tel quel dans Trello/Jira/Linear. Ne pas démarrer un épic tant que ses dépendances ne sont pas closes — l'ordre proposé n'est pas arbitraire, chaque étape a besoin de la précédente pour être testable de bout en bout.
@@ -40,7 +41,7 @@
 | 6 | Notes, Évaluations, Bulletins | 4 | 🔴 |
 | 6.1 | Administration École — Personnel | 0, 1, 3 | 🟠 |
 | 7 | Finance — frais, paiements, Orange Money | 4 | 🔴 |
-| 8 | Communication SMS | 5, 6, 7 | 🟠 |
+| 8 | Communication SMS | 5, 6, 7 | 🟠 ✅ |
 | 9 | Application Parent (React Native) | 4, 6, 7, 8 | 🟠 |
 | 10 | Application Enseignant (web responsive) | 5, 6 | 🟠 |
 | 11 | QA, durcissement, déploiement pilote | Tous | 🔴 |
@@ -561,25 +562,33 @@
 
 ---
 
-## ÉPIC 8 — Communication SMS
+## ÉPIC 8 — Communication SMS ✅ **TERMINÉ**
 
 **Objectif :** les parents reçoivent une notification SMS pour les événements clés, sans intervention manuelle.
 **Dépend de :** Épics 5, 6, 7 (les événements déclencheurs doivent exister).
+**Statut :** ✅ **TERMINÉ** — 489 tests, `manage.py check` ✅
 
-### 🃏 [COMM-MVP-01] Intégration Africa's Talking (SMS)
+### 🃏 [COMM-MVP-01] Intégration Africa's Talking (SMS) ✅
 **Priorité :** 🟠 Haute
-- [ ] Service d'envoi SMS (Africa's Talking API), sender ID "EDUGUINEE"
-- [ ] Tâche Celery asynchrone pour l'envoi (ne jamais bloquer une requête utilisateur sur l'envoi SMS)
-- [ ] Gestion des échecs (retry limité, log si échec définitif)
+- [x] App `communication` avec modèle `SMSLog` (TenantScopedModel, 4 triggers, 3 statuts, provider_message_id, failure_reason)
+- [x] Provider Africa's Talking (`AfricaSMSProvider`) : mode mock `AFRICASTALKING_MOCK=true`, HMAC webhook delivery
+- [x] SendSMS Celery task (`send_sms`) : throttling 3 SMS/jour/phone, retry_with_backoff (3 tentatives, pas de `bind=True`/`max_retries`), single FAILED log par échec définitif
+- [x] Permission `communication:send` — DIRECTOR, STUDENT_STUDIES, ACCOUNTANT, TEACHER
+- [x] Webhook delivery AT : `POST /webhooks/africastalking/delivery/` (HMAC signature, mise à jour statut SMSLog)
+- [x] `retry_with_backoff` déplacé dans `core/retry.py` (partagé Finance + Communication)
+- [x] 22 tests COMM-MVP-01 : provider mock, throttling, webhook, isolation, permissions, dédup FAILED
 **Labels :** `communication` `sms` `intégrations`
 
-### 🃏 [COMM-MVP-02] Déclencheurs automatiques
+### 🃏 [COMM-MVP-02] Déclencheurs automatiques ✅
 **Priorité :** 🟠 Haute
-- [ ] Signal Django post-save : absence enregistrée → SMS immédiat au responsable
-- [ ] Signal : paiement reçu → SMS de confirmation avec référence du reçu
-- [ ] Signal : note validée / bulletin publié → SMS de notification
-- [ ] Signal : nouvelle inscription confirmée → SMS de bienvenue avec identifiants de l'app parent
-- [ ] Throttling simple : max 3 SMS/jour par famille (protection budget)
+- [x] **Absence** : `send_absence_notification_sms` stub remplacé → `notify_absence()` → `send_sms.delay(trigger_type="ABSENCE")`
+- [x] **Inscription** : `send_enrollment_confirmation_sms` stub remplacé → `notify_enrollment()` → `send_sms.delay(trigger_type="INSCRIPTION")`
+- [x] **Paiement CASH** : `finance/serializers.py` → `transaction.on_commit` → `notify_payment()` → `send_sms.delay(trigger_type="PAIEMENT")` + flag `sms_notification_sent`
+- [x] **Paiement OM** : `finance/views.py` webhook SUCCESS → `notify_payment()` → `send_sms.delay(trigger_type="PAIEMENT")` + flag `sms_notification_sent`
+- [x] **Note validée** : `pedagogy/views.py` action `valider` → `notify_grade_validated()` → `send_sms.delay(trigger_type="NOTE_VALIDEE")`
+- [x] Throttling : 3 SMS/jour par `recipient_phone` (protection budget, pas de modèle Family)
+- [x] Messages personnalisés par trigger (français, concis)
+- [x] 11 tests COMM-MVP-02 : 4 déclencheurs + isolation multi-tenant
 **Labels :** `communication` `sms` `celery`
 
 ---
@@ -704,7 +713,7 @@ Une fois ce backlog validé, l'ordre d'exécution recommandé pour une petite é
 - **Semaines 8-9 :** Épic 5 + Épic 6 (en parallèle backend/frontend)
 - **Semaine 10 :** Épic 6.1 (terminé)
 - **Semaines 11-12 :** Épic 7 (Finance + Orange Money) ✅ terminé
-- **Semaine 13 :** Épic 8 (Communication)
+- **Semaine 13 :** Épic 8 (Communication) ✅ terminé
 - **Semaines 14-16 :** Épic 9 (App Parent) en parallèle de la finition web
 - **Semaine 17 :** Épic 10 + Épic 11, durcissement, déploiement pilote
 

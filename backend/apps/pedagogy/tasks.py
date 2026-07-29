@@ -13,36 +13,27 @@ logger = logging.getLogger(__name__)
 @shared_task(name="apps.pedagogy.tasks.send_enrollment_confirmation_sms")
 def send_enrollment_confirmation_sms(student_id: str, guardian_phone: str):
     """
-    STUB Épic 8 — Confirmation d'inscription par SMS au responsable.
+    Confirmation d'inscription par SMS au responsable.
 
-    L'intégration SMS réelle (Africa's Talking) est livrée à l'Épic 8 (COMM-MVP-01).
-    Ici on se contente de journaliser l'intention d'envoi, de façon asynchrone et
-    non bloquante pour la réponse 201, sur le même modèle que
-    send_tenant_status_notification (TENANT-04).
+    Délègue à apps.communication.services.notify_enrollment qui construit
+    le message et appelle send_sms.delay.
     """
-    logger.info(
-        "STUB SMS inscription — élève %s, destinataire %s "
-        "(intégration réelle à l'Épic 8)",
-        student_id,
-        guardian_phone,
-    )
+    from apps.communication.services import notify_enrollment
+
+    notify_enrollment(student_id=student_id, guardian_phone=guardian_phone, tenant_id=None)
 
 
 @shared_task(name="apps.pedagogy.tasks.send_absence_notification_sms")
 def send_absence_notification_sms(student_id: str, guardian_phone: str):
     """
-    STUB Épic 8 — Notification d'absence par SMS au responsable.
+    Notification d'absence par SMS au responsable.
 
-    Déclenchée depuis la saisie de présence (ATT-01) pour chaque élève marqué
-    ABSENT ayant un responsable joignable. L'envoi réel (Africa's Talking) est
-    livré à l'Épic 8 ; ici on journalise seulement l'intention.
+    Délègue à apps.communication.services.notify_absence qui construit
+    le message et appelle send_sms.delay.
     """
-    logger.info(
-        "STUB SMS absence — élève %s, destinataire %s "
-        "(intégration réelle à l'Épic 8)",
-        student_id,
-        guardian_phone,
-    )
+    from apps.communication.services import notify_absence
+
+    notify_absence(student_id=student_id, guardian_phone=guardian_phone, tenant_id=None)
 
 
 @shared_task(name="apps.pedagogy.tasks.lock_stale_attendances")

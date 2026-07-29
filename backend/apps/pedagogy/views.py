@@ -1157,6 +1157,11 @@ class GradeViewSet(
             target_id=grade.id,
             ip_address=get_client_ip(request),
         )
+
+        # Notification SMS au responsable (COMM-MVP-02)
+        from apps.communication.services import notify_grade_validated
+        notify_grade_validated(str(grade.id), str(request.tenant.id))
+
         return success_response({
             "id": str(grade.id),
             "is_validated": True,
