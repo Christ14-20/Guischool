@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { auth } from "@/auth";
 import { getBackendClient } from "@/lib/api/client";
 import FeesClient from "./FeesClient";
 
@@ -37,6 +39,9 @@ async function fetchSchoolYears() {
 }
 
 export default async function FeesPage() {
+  const session = await auth();
+  const role = (session as any)?.user?.role;
+
   const [categories, studentFees, schoolYears] = await Promise.all([
     fetchFeeCategories(),
     fetchStudentFees(),
@@ -50,6 +55,7 @@ export default async function FeesPage() {
         categories={JSON.parse(JSON.stringify(categories))}
         studentFees={JSON.parse(JSON.stringify(studentFees))}
         schoolYears={JSON.parse(JSON.stringify(schoolYears))}
+        role={role}
       />
     </div>
   );

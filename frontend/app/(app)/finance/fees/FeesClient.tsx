@@ -53,11 +53,17 @@ export default function FeesClient({
   categories: initialCategories,
   studentFees: initialStudentFees,
   schoolYears,
+  role,
 }: {
   categories: FeeCategory[];
   studentFees: StudentFee[];
   schoolYears: SchoolYear[];
+  role?: string;
 }) {
+  // SCHOOLYEAR-V2-02 (décision PO 2026-07-30) : verrouillé pour non-DIRECTOR
+  // à la création ET à la modification (réattribution d'année désynchronise
+  // potentiellement des factures déjà calculées).
+  const canOverrideSchoolYear = role === "DIRECTOR";
   const [categories, setCategories] = useState<FeeCategory[]>(initialCategories);
   const [studentFees, setStudentFees] = useState<StudentFee[]>(initialStudentFees);
   const [activeTab, setActiveTab] = useState<"categories" | "assign">("categories");
@@ -103,18 +109,30 @@ export default function FeesClient({
   };
 
   const handleSaveCategory = async () => {
-    if (!formData.school_year || !formData.name || !formData.amount) {
+    // L'année scolaire n'est obligatoire à saisir que si le sélecteur est
+    // affiché (DIRECTOR) et qu'on crée une nouvelle catégorie ; en édition,
+    // formData.school_year porte toujours la valeur existante même masquée.
+    if ((canOverrideSchoolYear && !editId && !formData.school_year) || !formData.name || !formData.amount) {
       showFeedback("Veuillez remplir tous les champs obligatoires.", null);
       return;
     }
-    const payload = {
-      school_year: formData.school_year,
+    const payload: {
+      school_year?: string;
+      name: string;
+      type: string;
+      amount: number;
+      is_mandatory: boolean;
+      due_date: string | null;
+    } = {
       name: formData.name,
       type: formData.type,
       amount: Number(formData.amount),
       is_mandatory: formData.is_mandatory,
       due_date: formData.due_date || null,
     };
+    // Omis si non renseigné (création, non-DIRECTOR) : le backend défaut sur
+    // l'année courante.
+    if (formData.school_year) payload.school_year = formData.school_year;
 
     if (editId) {
       const res = await updateFeeCategoryAction(editId, payload);
@@ -449,22 +467,26 @@ export default function FeesClient({
               {editId ? "Modifier la catégorie" : "Nouvelle catégorie"}
             </h3>
             <div className="space-y-4">
-              <div>
-                <label className="block text-xs font-medium text-slate-400 mb-1">Année scolaire *</label>
-                <select
-                  value={formData.school_year}
-                  onChange={(e) => setFormData({ ...formData, school_year: e.target.value })}
-                  className={INPUT_CLASS}
-                >
-                  <option value="">Sélectionner...</option>
-                  {schoolYears.map((sy) => (
-                    <option key={sy.id} value={sy.id}>{sy.label}</option>
-                  ))}
-                </select>
-                {schoolYears.length === 0 && (
-                  <p className="mt-1 text-xs text-red-400">Aucune année scolaire disponible.</p>
-                )}
-              </div>
+              {canOverrideSchoolYear && (
+                <div>
+                  <label className="block text-xs font-medium text-slate-400 mb-1">
+                    Année scolaire {!editId && <span className="normal-case text-slate-500">(par défaut : année courante)</span>}
+                  </label>
+                  <select
+                    value={formData.school_year}
+                    onChange={(e) => setFormData({ ...formData, school_year: e.target.value })}
+                    className={INPUT_CLASS}
+                  >
+                    <option value="">Année courante (par défaut)</option>
+                    {schoolYears.map((sy) => (
+                      <option key={sy.id} value={sy.id}>{sy.label}</option>
+                    ))}
+                  </select>
+                  {schoolYears.length === 0 && (
+                    <p className="mt-1 text-xs text-red-400">Aucune année scolaire disponible.</p>
+                  )}
+                </div>
+              )}
               <div>
                 <label className="block text-xs font-medium text-slate-400 mb-1">Nom *</label>
                 <input

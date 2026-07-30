@@ -25,7 +25,8 @@ export async function listFeeCategoriesAction(): Promise<{ success: boolean; dat
 }
 
 export async function createFeeCategoryAction(data: {
-  school_year: string;
+  // SCHOOLYEAR-V2-02 : optionnel — défaut = année courante côté backend.
+  school_year?: string;
   name: string;
   type: string;
   amount: number;
@@ -35,11 +36,11 @@ export async function createFeeCategoryAction(data: {
   try {
     const client = await getBackendClient();
     const payload: Record<string, unknown> = {
-      school_year: data.school_year,
       name: data.name,
       type: data.type,
       amount: data.amount,
     };
+    if (data.school_year) payload.school_year = data.school_year;
     if (data.is_mandatory !== undefined) payload.is_mandatory = data.is_mandatory;
     if (data.due_date) payload.due_date = data.due_date;
     const resp = await client.post("/finance/feecategories/", payload);
@@ -51,7 +52,9 @@ export async function createFeeCategoryAction(data: {
 }
 
 export async function updateFeeCategoryAction(id: string, data: {
-  school_year: string;
+  // Verrouillé côté UI pour non-DIRECTOR (formData porte toujours la valeur
+  // existante même quand le sélecteur est masqué) — cf. FeesClient.tsx.
+  school_year?: string;
   name: string;
   type: string;
   amount: number;
@@ -61,11 +64,11 @@ export async function updateFeeCategoryAction(id: string, data: {
   try {
     const client = await getBackendClient();
     const payload: Record<string, unknown> = {
-      school_year: data.school_year,
       name: data.name,
       type: data.type,
       amount: data.amount,
     };
+    if (data.school_year) payload.school_year = data.school_year;
     if (data.is_mandatory !== undefined) payload.is_mandatory = data.is_mandatory;
     if (data.due_date) payload.due_date = data.due_date;
     const resp = await client.put(`/finance/feecategories/${id}/`, payload);

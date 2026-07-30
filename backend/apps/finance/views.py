@@ -19,9 +19,11 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
+from rest_framework.exceptions import PermissionDenied
 from core.permissions import HasPermission
-from core.utils import success_response, created_response
-from apps.pedagogy.services.school_year_service import assert_school_year_open
+from core.utils import success_response, created_response, error_response
+from apps.pedagogy.models import SchoolYear
+from apps.pedagogy.services.school_year_service import assert_school_year_open, resolve_school_year
 from .models import FeeCategory, StudentFee, Payment, OrangeMoneyTransaction, Invoice
 from .providers.orange_money import OrangeMoneyProvider
 from core.retry import ProviderNetworkError, retry_with_backoff
@@ -77,21 +79,56 @@ class FeeCategoryViewSet(viewsets.ModelViewSet):
         # PO 2026-07-29) : les paiements restent ouverts, pas la structure des
         # frais — une correction tardive doit rouvrir l'année explicitement.
         assert_school_year_open(serializer.instance.school_year)
+        # SCHOOLYEAR-V2-02 (décision PO 2026-07-30) : réattribuer une catégorie
+        # de frais à une autre année est verrouillé au même titre qu'à la
+        # création — un ACCOUNTANT qui ne peut pas choisir l'année en création
+        # ne doit pas pouvoir la changer après coup (désynchronisation possible
+        # des Invoice déjà calculées sur l'ancienne année).
+        new_school_year = serializer.validated_data.get("school_year")
+        if (
+            new_school_year is not None
+            and new_school_year.id != serializer.instance.school_year_id
+            and not self.request.user.can("pedagogy:override:schoolyear")
+        ):
+            raise PermissionDenied(
+                "Seul un Directeur peut réattribuer une catégorie de frais à "
+                "une autre année scolaire."
+            )
         serializer.save()
 
     def perform_destroy(self, instance):
         assert_school_year_open(instance.school_year)
         if instance.student_fees.exists():
-            from rest_framework.exceptions import PermissionDenied
             raise PermissionDenied(
                 "Impossible de supprimer cette catégorie : des frais y sont déjà rattachés."
             )
         instance.delete()
 
     def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
+        # SCHOOLYEAR-V2-02 : school_year résolu (défaut/override) AVANT la
+        # construction du serializer — même piège que ClassViewSet.create()
+        # (FeeCategory a une contrainte unique (tenant, school_year, name),
+        # le UniqueTogetherValidator auto-généré par DRF exige les deux
+        # champs dès to_internal_value(), avant validate()).
+        raw_school_year_id = request.data.get("school_year")
+        explicit_school_year = None
+        if raw_school_year_id:
+            explicit_school_year = SchoolYear.objects.filter(
+                id=raw_school_year_id, tenant=request.tenant
+            ).first()
+            if explicit_school_year is None:
+                return error_response(
+                    "Ressource non trouvée", status_code=status.HTTP_404_NOT_FOUND
+                )
+        school_year = resolve_school_year(
+            tenant=request.tenant, user=request.user, explicit=explicit_school_year
+        )
+        assert_school_year_open(school_year)
+
+        data = dict(request.data)
+        data["school_year"] = str(school_year.id)
+        serializer = self.get_serializer(data=data)
         serializer.is_valid(raise_exception=True)
-        assert_school_year_open(serializer.validated_data["school_year"])
         self.perform_create(serializer)
         return created_response(FeeCategorySerializer(serializer.instance).data)
 

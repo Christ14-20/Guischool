@@ -48,7 +48,7 @@
   - [x] `POST /pedagogy/classes/` (Épic 3) — `school_year` actuellement un champ du payload. *(Sous-ticket C — livré.)*
   - [x] `POST /students/{id}/reinscription/` (Épic 4) — `school_year_id` obligatoire. *(Sous-ticket B — livré.)*
   - [ ] `POST /pedagogy/evaluations/` (Épic 6) — indirect via `period` ; le sélecteur de période côté frontend doit filtrer sur l'année courante par défaut. Audit confirmé : aucun champ `school_year` en payload, rien à rendre optionnel côté backend — traitement 100% frontend. *(Sous-ticket E)*
-  - [ ] `POST /finance/feecategories/` (Épic 7) — `school_year` actuellement un champ obligatoire du payload. *(Sous-ticket D)*
+  - [x] `POST /finance/feecategories/` (Épic 7) — `school_year` actuellement un champ obligatoire du payload. *(Sous-ticket D — livré.)*
   - [ ] `POST /pedagogy/year-end-decisions/` et `POST /pedagogy/promotions/bulk/` — ajoutés au périmètre (hors liste initiale, trouvés à l'audit, confirmés par le PO). *(Sous-ticket F)*
 - [x] **Cas limite à traiter explicitement** : aucune année n'a `is_current=True` au moment de l'appel → `422` avec message clair ("Aucune année scolaire courante n'est définie — contactez votre Directeur"), jamais un crash ou un comportement silencieux. *(Sous-ticket A — livré, `SchoolYearError` réutilisée.)*
 - [ ] **Documentation** : chaque endpoint dont le payload change (champ obligatoire → optionnel) doit être mis à jour dans le contrat d'API avec une note explicite de migration.
@@ -70,6 +70,11 @@
 - Incohérence contrat/code corrigée : le contrat documentait `school_year_id`, le code et le frontend ont toujours utilisé `school_year`.
 - Hors périmètre, signalé sans être corrigé : `level_id` sur ce même endpoint n'est pas vérifié comme appartenant au tenant avant `Level.objects.get(...)` dans `ClassSerializer.create()` — un `level_id` d'un autre tenant provoque un `500` (`Level.DoesNotExist` non catché), pas un `404`. Bug pré-existant, indépendant de `school_year`, à traiter séparément.
 - Frontend : `ClassSheet.tsx` — sélecteur d'année masqué pour non-`DIRECTOR` ; `role` propagé depuis `pedagogy/classes/page.tsx`.
+**Sous-ticket D — notes de livraison (2026-07-30) :**
+- Même piège que le sous-ticket C : `FeeCategory` a une contrainte unique `(tenant, school_year, name)` — résolution défaut/override faite dans la vue avant construction du serializer, valeur injectée dans le payload.
+- Verrouillage étendu à la modification (décision PO) : `perform_update` refuse (`403`) toute réattribution de `school_year` différente de la valeur existante sans `pedagogy:override:schoolyear` ; les autres champs restent librement modifiables.
+- Incohérence contrat/code corrigée (même nature qu'en C) : `school_year_id` documenté → `school_year` réel.
+- Frontend : `FeesClient.tsx` — sélecteur masqué pour non-`DIRECTOR` en création **et** en modification (`role` propagé depuis `finance/fees/page.tsx`) ; `formData.school_year` reste pré-rempli en édition même masqué, donc aucune régression sur la resoumission normale du formulaire.
 - `finance/fees` : le champ `school_year` est verrouillé pour non-`DIRECTOR` en création **et** en modification (une réattribution a posteriori désynchroniserait des `Invoice` déjà calculées).
 - Sélecteurs de **consultation** (ex. `syId` dans `GradeEntryClient`) : seule leur valeur par défaut est pré-remplie sur l'année courante, ils restent librement changeables pour tous les rôles (lecture ≠ écriture).
 

@@ -853,8 +853,12 @@ Champs en lecture seule (auto-remplis) :
 ### `GET/POST /finance/feecategories/`
 **Requête `POST` :**
 ```json
-{"name": "Scolarité 2025-2026", "type": "SCOLARITE", "amount": "1200000.00", "is_mandatory": true, "school_year_id": "1a2b3c4d-..."}
+{"name": "Scolarité 2025-2026", "type": "SCOLARITE", "amount": "1200000.00", "is_mandatory": true, "school_year": "1a2b3c4d-..."}
 ```
+> **Correction (2026-07-30) :** le champ documenté ici était `school_year_id`, le code (`FeeCategoryCreateSerializer`) a toujours utilisé `school_year` — incohérence pré-existante corrigée à l'occasion de cette note.
+>
+> **Note de migration (SCHOOLYEAR-V2-02, 2026-07-30) :** `school_year` passe d'**obligatoire** à **optionnel** en création (défaut = année courante, override `pedagogy:override:schoolyear` sinon `403`, `404` si l'année appartient à un autre tenant, `422` si aucune année courante). **`PUT/PATCH /finance/feecategories/{id}/`** : réattribuer `school_year` à une valeur différente de la valeur actuelle est verrouillé par la même permission — un `ACCOUNTANT` qui ne peut pas choisir l'année à la création ne peut pas non plus la changer après coup (risque de désynchronisation avec des `Invoice` déjà calculées).
+
 **Réponse `201` :** mêmes champs + `"id"`.
 
 ### `GET /finance/students/{id}/fees/`

@@ -145,6 +145,14 @@ class TestFeeCategoryEndpoints:
 
     def test_create_feecategory(self, api_client, tenant, director_user, director_role, school_year):
         _ensure_permissions(director_role, ["finance:read", "finance:create"])
+        # SCHOOLYEAR-V2-02 : ce test envoie un school_year explicite
+        # (comportement pré-V2-02) — nécessite désormais l'override.
+        director_role.permissions.add(
+            Permission.objects.get_or_create(
+                codename="pedagogy:override:schoolyear",
+                defaults={"module": "pedagogy"},
+            )[0]
+        )
         _auth(api_client, director_user)
 
         response = api_client.post(
@@ -219,6 +227,129 @@ class TestFeeCategoryEndpoints:
 
         response = api_client.get(reverse("feecategory-detail", args=[other.id]))
         assert response.status_code == 404
+
+
+@pytest.mark.django_db
+class TestFeeCategorySchoolYearDefaultAndOverride:
+    """SCHOOLYEAR-V2-02 : school_year devient optionnel, défaut = année courante."""
+
+    def test_omitted_defaults_to_current_year(self, api_client, tenant, ss_role, school_year):
+        SchoolYear.objects.filter(id=school_year.id).update(is_current=True)
+        user = User.objects.create_user(
+            username="ss-default", email="ss-default@ecole-test.gn",
+            password="SecurePass123!", role=ss_role, tenant=tenant,
+        )
+        _ensure_permissions(ss_role, ["finance:create"])
+        _auth(api_client, user)
+
+        response = api_client.post(
+            reverse("feecategory-list"),
+            {"name": "Cantine", "type": "SCOLARITE", "amount": 20000},
+            format="json",
+        )
+        assert response.status_code == 201, response.json()
+        cat = FeeCategory.objects.get(id=response.json()["data"]["id"])
+        assert cat.school_year_id == school_year.id
+
+    def test_omitted_raises_422_when_no_current_year(self, api_client, tenant, ss_role, school_year):
+        user = User.objects.create_user(
+            username="ss-nocurrent", email="ss-nocurrent@ecole-test.gn",
+            password="SecurePass123!", role=ss_role, tenant=tenant,
+        )
+        _ensure_permissions(ss_role, ["finance:create"])
+        _auth(api_client, user)
+
+        response = api_client.post(
+            reverse("feecategory-list"),
+            {"name": "Cantine", "type": "SCOLARITE", "amount": 20000},
+            format="json",
+        )
+        assert response.status_code == 422
+        assert "Aucune année scolaire courante" in response.json()["message"]
+
+    def test_explicit_different_from_current_denied_without_override(
+        self, api_client, tenant, ss_role, school_year
+    ):
+        SchoolYear.objects.filter(id=school_year.id).update(is_current=True)
+        other_year = SchoolYear.objects.create(
+            tenant=tenant, label="2026-2027", start_date="2026-10-01", end_date="2027-07-31",
+        )
+        user = User.objects.create_user(
+            username="ss-override", email="ss-override@ecole-test.gn",
+            password="SecurePass123!", role=ss_role, tenant=tenant,
+        )
+        _ensure_permissions(ss_role, ["finance:create"])
+        _auth(api_client, user)
+
+        response = api_client.post(
+            reverse("feecategory-list"),
+            {"school_year": str(other_year.id), "name": "Cantine", "type": "SCOLARITE", "amount": 20000},
+            format="json",
+        )
+        assert response.status_code == 403
+
+    def test_explicit_school_year_from_other_tenant_returns_404(
+        self, api_client, tenant, tenant2, director_user, director_role
+    ):
+        _ensure_permissions(director_role, ["finance:create"])
+        sy2 = SchoolYear.objects.create(
+            tenant=tenant2, label="2025-2026", start_date="2025-10-01", end_date="2026-07-31",
+        )
+        _auth(api_client, director_user)
+
+        response = api_client.post(
+            reverse("feecategory-list"),
+            {"school_year": str(sy2.id), "name": "Cantine", "type": "SCOLARITE", "amount": 20000},
+            format="json",
+        )
+        assert response.status_code == 404
+
+    def test_update_school_year_denied_without_override(
+        self, api_client, tenant, ss_role, school_year
+    ):
+        other_year = SchoolYear.objects.create(
+            tenant=tenant, label="2026-2027", start_date="2026-10-01", end_date="2027-07-31",
+        )
+        cat = FeeCategory.objects.create(
+            tenant=tenant, school_year=school_year, name="Scolarité", type="SCOLARITE", amount=250000,
+        )
+        user = User.objects.create_user(
+            username="ss-update", email="ss-update@ecole-test.gn",
+            password="SecurePass123!", role=ss_role, tenant=tenant,
+        )
+        _ensure_permissions(ss_role, ["finance:read", "finance:update"])
+        _auth(api_client, user)
+
+        response = api_client.patch(
+            reverse("feecategory-detail", args=[cat.id]),
+            {"school_year": str(other_year.id)},
+            format="json",
+        )
+        assert response.status_code == 403
+        cat.refresh_from_db()
+        assert cat.school_year_id == school_year.id
+
+    def test_update_other_fields_allowed_without_override(
+        self, api_client, tenant, ss_role, school_year
+    ):
+        cat = FeeCategory.objects.create(
+            tenant=tenant, school_year=school_year, name="Scolarité", type="SCOLARITE", amount=250000,
+        )
+        user = User.objects.create_user(
+            username="ss-update-ok", email="ss-update-ok@ecole-test.gn",
+            password="SecurePass123!", role=ss_role, tenant=tenant,
+        )
+        _ensure_permissions(ss_role, ["finance:read", "finance:update"])
+        _auth(api_client, user)
+
+        response = api_client.patch(
+            reverse("feecategory-detail", args=[cat.id]),
+            {"amount": 300000},
+            format="json",
+        )
+        assert response.status_code == 200, response.json()
+        cat.refresh_from_db()
+        assert cat.amount == 300000
 
 
 # ─── Tests StudentFee ─────────────────────────────────────────────────────────
