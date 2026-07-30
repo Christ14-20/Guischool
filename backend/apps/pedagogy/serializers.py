@@ -264,7 +264,7 @@ class StudentCreateSerializer(serializers.Serializer):
     )
     sexe = serializers.ChoiceField(choices=Student.Sexe.choices)
     classe_id = serializers.UUIDField()
-    school_year_id = serializers.UUIDField()
+    school_year_id = serializers.UUIDField(required=False, allow_null=True)
     type_inscription = serializers.ChoiceField(
         choices=Enrollment.TypeInscription.choices
     )
@@ -279,12 +279,25 @@ class StudentCreateSerializer(serializers.Serializer):
         return value
 
     def validate_school_year_id(self, value):
+        if value is None:
+            return value
         tenant = self.context["request"].tenant
         school_year = SchoolYear.objects.filter(id=value, tenant=tenant).first()
         if school_year is None:
             raise serializers.ValidationError("Année scolaire introuvable")
         self._school_year = school_year
         return value
+
+    def validate(self, attrs):
+        from apps.pedagogy.services.school_year_service import resolve_school_year
+
+        request = self.context["request"]
+        self._school_year = resolve_school_year(
+            tenant=request.tenant,
+            user=request.user,
+            explicit=getattr(self, "_school_year", None),
+        )
+        return attrs
 
 
 class EnrollmentNestedSerializer(serializers.ModelSerializer):
@@ -342,7 +355,7 @@ class StudentUpdateSerializer(serializers.ModelSerializer):
 
 class ReinscriptionSerializer(serializers.Serializer):
     classe_id = serializers.UUIDField()
-    school_year_id = serializers.UUIDField()
+    school_year_id = serializers.UUIDField(required=False, allow_null=True)
 
     def validate_classe_id(self, value):
         tenant = self.context["request"].tenant
@@ -353,12 +366,25 @@ class ReinscriptionSerializer(serializers.Serializer):
         return value
 
     def validate_school_year_id(self, value):
+        if value is None:
+            return value
         tenant = self.context["request"].tenant
         school_year = SchoolYear.objects.filter(id=value, tenant=tenant).first()
         if school_year is None:
             raise serializers.ValidationError("Année scolaire introuvable")
         self._school_year = school_year
         return value
+
+    def validate(self, attrs):
+        from apps.pedagogy.services.school_year_service import resolve_school_year
+
+        request = self.context["request"]
+        self._school_year = resolve_school_year(
+            tenant=request.tenant,
+            user=request.user,
+            explicit=getattr(self, "_school_year", None),
+        )
+        return attrs
 
 
 class ArchiverSerializer(serializers.Serializer):

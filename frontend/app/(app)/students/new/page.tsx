@@ -2,12 +2,16 @@
 import React from "react";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
+import { auth } from "@/auth";
 import { getBackendClient } from "@/lib/api/client";
 import EnrollStudentForm from "./EnrollStudentForm";
 
 export const dynamic = "force-dynamic";
 
 export default async function NewStudentPage() {
+  const session = await auth();
+  const role = (session as any)?.user?.role;
+
   let classes: any[] = [];
   let schoolYears: any[] = [];
   let errorMsg: string | null = null;
@@ -44,7 +48,7 @@ export default async function NewStudentPage() {
         </div>
       )}
 
-      <EnrollStudentForm classes={classes} schoolYears={schoolYears} />
+      <EnrollStudentForm classes={classes} schoolYears={schoolYears} role={role} />
     </div>
   );
 }

@@ -11,7 +11,8 @@ interface EnrollStudentInput {
   lieu_naissance?: string;
   sexe: "M" | "F";
   classe_id: string;
-  school_year_id: string;
+  // SCHOOLYEAR-V2-02 : optionnel — défaut = année courante côté backend.
+  school_year_id?: string;
   type_inscription: string;
   guardian: {
     lien: string;
@@ -66,7 +67,8 @@ export async function updateStudentAction(id: string, payload: Record<string, an
 
 export async function reinscriptionAction(
   id: string,
-  payload: { classe_id: string; school_year_id: string }
+  // SCHOOLYEAR-V2-02 : school_year_id optionnel — défaut = année courante.
+  payload: { classe_id: string; school_year_id?: string }
 ) {
   try {
     const client = await getBackendClient();

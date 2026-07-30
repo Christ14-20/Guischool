@@ -110,6 +110,7 @@ export default function StudentTabs({
           student={student}
           classes={classes}
           schoolYears={schoolYears}
+          role={role}
           onChanged={() => router.refresh()}
         />
       )}
@@ -226,11 +227,13 @@ function ProfilTab({
   student,
   classes,
   schoolYears,
+  role,
   onChanged,
 }: {
   student: any;
   classes: { id: string; name: string }[];
   schoolYears: { id: string; label: string }[];
+  role?: string;
   onChanged: () => void;
 }) {
   const [isPending, startTransition] = useTransition();
@@ -372,6 +375,7 @@ function ProfilTab({
             studentId={student.id}
             classes={classes}
             schoolYears={schoolYears}
+            canOverrideSchoolYear={role === "DIRECTOR"}
             onDone={() => {
               setShowReinscription(false);
               onChanged();
@@ -396,11 +400,13 @@ function ReinscriptionForm({
   studentId,
   classes,
   schoolYears,
+  canOverrideSchoolYear,
   onDone,
 }: {
   studentId: string;
   classes: { id: string; name: string }[];
   schoolYears: { id: string; label: string }[];
+  canOverrideSchoolYear?: boolean;
   onDone: () => void;
 }) {
   const [isPending, startTransition] = useTransition();
@@ -410,14 +416,15 @@ function ReinscriptionForm({
 
   const submit = () => {
     setError(null);
-    if (!classeId || !yearId) {
-      setError("Classe et année sont obligatoires.");
+    if (!classeId) {
+      setError("La classe est obligatoire.");
       return;
     }
     startTransition(async () => {
       const res = await reinscriptionAction(studentId, {
         classe_id: classeId,
-        school_year_id: yearId,
+        // Omis si non renseigné : le backend défaut sur l'année courante.
+        ...(yearId ? { school_year_id: yearId } : {}),
       });
       if (res.success) onDone();
       else setError(res.error);
@@ -427,14 +434,16 @@ function ReinscriptionForm({
   return (
     <div className="border border-slate-800/50 rounded-xl p-4 space-y-3 bg-slate-950/40">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        <select value={yearId} onChange={(e) => setYearId(e.target.value)} className={inputClass}>
-          <option value="">Année cible...</option>
-          {schoolYears.map((sy) => (
-            <option key={sy.id} value={sy.id}>
-              {sy.label}
-            </option>
-          ))}
-        </select>
+        {canOverrideSchoolYear && (
+          <select value={yearId} onChange={(e) => setYearId(e.target.value)} className={inputClass}>
+            <option value="">Année courante (par défaut)</option>
+            {schoolYears.map((sy) => (
+              <option key={sy.id} value={sy.id}>
+                {sy.label}
+              </option>
+            ))}
+          </select>
+        )}
         <select value={classeId} onChange={(e) => setClasseId(e.target.value)} className={inputClass}>
           <option value="">Classe...</option>
           {classes.map((c) => (

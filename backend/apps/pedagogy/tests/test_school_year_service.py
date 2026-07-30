@@ -1,4 +1,5 @@
 import pytest
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.exceptions import ValidationError as DRFValidationError
 from apps.pedagogy.models import SchoolYear, AcademicPeriod
 from apps.pedagogy.services.school_year_service import (
@@ -10,8 +11,10 @@ from apps.pedagogy.services.school_year_service import (
     assert_school_year_open,
     close_school_year,
     get_current_school_year,
+    resolve_school_year,
     SchoolYearError,
 )
+from apps.authentication.models import User, Role, Permission
 from apps.superadmin.models import Tenant, Plan
 
 
@@ -328,3 +331,73 @@ class TestGetCurrentSchoolYear:
         with pytest.raises(SchoolYearError):
             get_current_school_year(tenant)
         assert get_current_school_year(tenant_b).id == sy_b.id
+
+
+@pytest.mark.django_db
+class TestResolveSchoolYear:
+    @pytest.fixture
+    def director_no_override(self, tenant):
+        role = Role.objects.create(name="TEST_DIRECTOR_NO_OVERRIDE", label="Directeur (sans override)")
+        return User.objects.create_user(
+            username="dir-no-override", email="dir-no-override@ecole-test-svc.gn",
+            password="SecurePass123!", role=role, tenant=tenant,
+        )
+
+    @pytest.fixture
+    def director_with_override(self, tenant):
+        role = Role.objects.create(name="TEST_DIRECTOR_OVERRIDE", label="Directeur (avec override)")
+        perm, _ = Permission.objects.get_or_create(
+            codename="pedagogy:override:schoolyear",
+            defaults={"name": "Override", "module": "pedagogy"},
+        )
+        role.permissions.add(perm)
+        return User.objects.create_user(
+            username="dir-override", email="dir-override@ecole-test-svc.gn",
+            password="SecurePass123!", role=role, tenant=tenant,
+        )
+
+    def test_no_explicit_returns_current(self, tenant, school_year_a, director_no_override):
+        set_current_school_year(school_year_a)
+        resolved = resolve_school_year(tenant=tenant, user=director_no_override, explicit=None)
+        assert resolved.id == school_year_a.id
+
+    def test_no_explicit_raises_when_no_current(self, tenant, school_year_a, director_no_override):
+        with pytest.raises(SchoolYearError):
+            resolve_school_year(tenant=tenant, user=director_no_override, explicit=None)
+
+    def test_explicit_matching_current_allowed_without_override(
+        self, tenant, school_year_a, director_no_override
+    ):
+        set_current_school_year(school_year_a)
+        resolved = resolve_school_year(tenant=tenant, user=director_no_override, explicit=school_year_a)
+        assert resolved.id == school_year_a.id
+
+    def test_explicit_different_from_current_denied_without_override(
+        self, tenant, school_year_a, school_year_b, director_no_override
+    ):
+        set_current_school_year(school_year_a)
+        with pytest.raises(PermissionDenied):
+            resolve_school_year(tenant=tenant, user=director_no_override, explicit=school_year_b)
+
+    def test_explicit_different_from_current_allowed_with_override(
+        self, tenant, school_year_a, school_year_b, director_with_override
+    ):
+        set_current_school_year(school_year_a)
+        resolved = resolve_school_year(tenant=tenant, user=director_with_override, explicit=school_year_b)
+        assert resolved.id == school_year_b.id
+
+    def test_explicit_allowed_with_override_even_without_any_current_year(
+        self, tenant, school_year_a, director_with_override
+    ):
+        """
+        Un choix explicite déjà autorisé ne doit jamais être bloqué par
+        l'absence d'année courante — seule la résolution du défaut l'exige.
+        """
+        resolved = resolve_school_year(tenant=tenant, user=director_with_override, explicit=school_year_a)
+        assert resolved.id == school_year_a.id
+
+    def test_explicit_denied_without_override_when_no_current_year_either(
+        self, tenant, school_year_a, director_no_override
+    ):
+        with pytest.raises(PermissionDenied):
+            resolve_school_year(tenant=tenant, user=director_no_override, explicit=school_year_a)

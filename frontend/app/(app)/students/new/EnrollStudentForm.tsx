@@ -12,6 +12,7 @@ import { enrollStudentAction } from "../actions";
 interface Props {
   classes: { id: string; name: string; school_year?: string }[];
   schoolYears: { id: string; label: string; status?: string }[];
+  role?: string;
 }
 
 const schema = z.object({
@@ -21,7 +22,9 @@ const schema = z.object({
   lieu_naissance: z.string().optional(),
   sexe: z.enum(["M", "F"], { message: "Le sexe est obligatoire" }),
   classe_id: z.string().min(1, "La classe est obligatoire"),
-  school_year_id: z.string().min(1, "L'année scolaire est obligatoire"),
+  // SCHOOLYEAR-V2-02 : optionnel — défaut = année courante côté backend.
+  // Surcharge explicite réservée à DIRECTOR (pedagogy:override:schoolyear).
+  school_year_id: z.string().optional(),
   type_inscription: z.enum([
     "NOUVELLE_INSCRIPTION",
     "REINSCRIPTION",
@@ -43,7 +46,8 @@ type FormValues = z.infer<typeof schema>;
 const inputClass =
   "w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 transition-colors";
 
-export default function EnrollStudentForm({ classes, schoolYears }: Props) {
+export default function EnrollStudentForm({ classes, schoolYears, role }: Props) {
+  const canOverrideSchoolYear = role === "DIRECTOR";
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [serverError, setServerError] = useState<string | null>(null);
@@ -70,7 +74,8 @@ export default function EnrollStudentForm({ classes, schoolYears }: Props) {
     lieu_naissance: v.lieu_naissance || "",
     sexe: v.sexe,
     classe_id: v.classe_id,
-    school_year_id: v.school_year_id,
+    // Omis si non renseigné : le backend défaut sur l'année courante.
+    ...(v.school_year_id ? { school_year_id: v.school_year_id } : {}),
     type_inscription: v.type_inscription,
     guardian: {
       lien: v.guardian_lien,
@@ -192,20 +197,24 @@ export default function EnrollStudentForm({ classes, schoolYears }: Props) {
             Scolarité
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <label className="text-xs font-semibold text-slate-400 uppercase">Année scolaire *</label>
-              <select {...register("school_year_id")} className={inputClass} defaultValue="">
-                <option value="">Sélectionner...</option>
-                {schoolYears.map((sy) => (
-                  <option key={sy.id} value={sy.id}>
-                    {sy.label}
-                  </option>
-                ))}
-              </select>
-              {errors.school_year_id && (
-                <p className="text-xs text-destructive">{errors.school_year_id.message}</p>
-              )}
-            </div>
+            {canOverrideSchoolYear && (
+              <div className="space-y-2">
+                <label className="text-xs font-semibold text-slate-400 uppercase">
+                  Année scolaire <span className="normal-case text-slate-500">(par défaut : année courante)</span>
+                </label>
+                <select {...register("school_year_id")} className={inputClass} defaultValue="">
+                  <option value="">Année courante (par défaut)</option>
+                  {schoolYears.map((sy) => (
+                    <option key={sy.id} value={sy.id}>
+                      {sy.label}
+                    </option>
+                  ))}
+                </select>
+                {errors.school_year_id && (
+                  <p className="text-xs text-destructive">{errors.school_year_id.message}</p>
+                )}
+              </div>
+            )}
             <div className="space-y-2">
               <label className="text-xs font-semibold text-slate-400 uppercase">Classe *</label>
               <select {...register("classe_id")} className={inputClass} defaultValue="">

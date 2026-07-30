@@ -1,7 +1,7 @@
 from django.db import transaction
 from django.db.models import Q
 from rest_framework import status as drf_status
-from rest_framework.exceptions import APIException
+from rest_framework.exceptions import APIException, PermissionDenied
 from rest_framework.exceptions import ValidationError as DRFValidationError
 
 from apps.pedagogy.models import Level, SchoolYear, AcademicPeriod, Subject
@@ -128,6 +128,45 @@ def get_current_school_year(tenant) -> SchoolYear:
             "Aucune année scolaire courante n'est définie — contactez votre Directeur."
         )
     return school_year
+
+
+def resolve_school_year(*, tenant, user, explicit: SchoolYear | None = None) -> SchoolYear:
+    """
+    Point de résolution central « défaut année courante + override » utilisé
+    par tous les endpoints listés en SCHOOLYEAR-V2-02 dont le champ
+    `school_year`/`school_year_id` devient optionnel.
+
+    - `explicit` absent (None) → année courante (get_current_school_year,
+      lève SchoolYearError 422 si aucune année n'est courante — c'est le seul
+      chemin où l'absence d'année courante est bloquante).
+    - `explicit` fourni et identique à l'année courante → accepté silencieusement,
+      ce n'est pas un contournement réel (décision PO 2026-07-29).
+    - `explicit` fourni et différent (ou aucune année courante définie du tout)
+      → réservé aux utilisateurs disposant de la permission
+      `pedagogy:override:schoolyear` (403 sinon). Un DIRECTOR habilité peut
+      ainsi choisir explicitement une année même avant qu'aucune ne soit
+      marquée courante (ex. configuration initiale) — l'absence d'année
+      courante ne doit bloquer que la résolution du défaut, jamais un choix
+      explicite déjà autorisé.
+
+    La résolution de l'identifiant brut vers une instance SchoolYear (et son
+    scoping tenant) reste à la charge de chaque serializer appelant, cohérent
+    avec le style de validation déjà en place — cette fonction ne fait que la
+    politique défaut/override, pas le lookup.
+    """
+    if explicit is None:
+        return get_current_school_year(tenant)
+
+    current = SchoolYear.objects.filter(tenant=tenant, is_current=True).first()
+    if current is not None and explicit.id == current.id:
+        return explicit
+
+    if not user.can("pedagogy:override:schoolyear"):
+        raise PermissionDenied(
+            "Seul un Directeur peut choisir une année scolaire différente de "
+            "l'année scolaire courante."
+        )
+    return explicit
 
 
 def close_school_year(school_year: SchoolYear) -> SchoolYear:

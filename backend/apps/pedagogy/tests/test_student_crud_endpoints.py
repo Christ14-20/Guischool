@@ -24,6 +24,13 @@ def _add_eleves_perms(role):
             codename=codename, defaults={"name": name, "module": "eleves"}
         )
         role.permissions.add(perm)
+    # SCHOOLYEAR-V2-02 : ces tests envoient un school_year_id explicite
+    # (comportement pré-V2-02) — nécessite désormais la permission d'override.
+    override_perm, _ = Permission.objects.get_or_create(
+        codename="pedagogy:override:schoolyear",
+        defaults={"name": "Choisir une année scolaire différente de l'année courante", "module": "pedagogy"},
+    )
+    role.permissions.add(override_perm)
 
 
 @pytest.fixture
@@ -65,6 +72,28 @@ def teacher_role(db):
     return Role.objects.get_or_create(
         name="TEACHER", defaults={"description": "Enseignant"}
     )[0]
+
+
+@pytest.fixture
+def secretaire_role(db):
+    """eleves:update sans pedagogy:override:schoolyear — pas DIRECTOR."""
+    role = Role.objects.get_or_create(
+        name="STUDENT_STUDIES", defaults={"description": "Scolarité"}
+    )[0]
+    perm, _ = Permission.objects.get_or_create(
+        codename="eleves:update",
+        defaults={"name": "Modifier / réinscrire / archiver un élève", "module": "eleves"},
+    )
+    role.permissions.add(perm)
+    return role
+
+
+@pytest.fixture
+def secretaire_user(tenant, secretaire_role):
+    return User.objects.create_user(
+        username="secretaire-crud", email="secretaire-crud@ecole.gn",
+        password="SecurePass123!", role=secretaire_role, tenant=tenant,
+    )
 
 
 @pytest.fixture
@@ -391,6 +420,114 @@ class TestReinscription:
             format="json",
         )
         assert resp.status_code == 409
+
+
+@pytest.mark.django_db
+class TestReinscriptionSchoolYearDefaultAndOverride:
+    """SCHOOLYEAR-V2-02 : school_year_id devient optionnel, défaut = année courante."""
+
+    def test_omitted_defaults_to_current_year(self, director_user, student, tenant, level):
+        target_year = SchoolYear.objects.create(
+            tenant=tenant, label="2026-2027",
+            start_date=datetime.date(2026, 9, 15), end_date=datetime.date(2027, 7, 10),
+            status=SchoolYear.Status.ACTIVE, is_current=True,
+        )
+        target_class = SchoolClass.objects.create(
+            tenant=tenant, school_year=target_year, level=level, name="5ème A", capacity=50
+        )
+        client = login_client(APIClient(), director_user.email)
+        resp = client.post(
+            reverse("student-reinscription", args=[student.id]),
+            {"classe_id": str(target_class.id)},
+            format="json",
+        )
+        assert resp.status_code == 201, resp.content
+        assert resp.json()["data"]["school_year"]["label"] == "2026-2027"
+
+    def test_omitted_raises_422_when_no_current_year(self, director_user, student, tenant, level):
+        target_year = SchoolYear.objects.create(
+            tenant=tenant, label="2026-2027",
+            start_date=datetime.date(2026, 9, 15), end_date=datetime.date(2027, 7, 10),
+            status=SchoolYear.Status.ACTIVE,
+        )
+        target_class = SchoolClass.objects.create(
+            tenant=tenant, school_year=target_year, level=level, name="5ème A", capacity=50
+        )
+        client = login_client(APIClient(), director_user.email)
+        resp = client.post(
+            reverse("student-reinscription", args=[student.id]),
+            {"classe_id": str(target_class.id)},
+            format="json",
+        )
+        assert resp.status_code == 422
+        assert "Aucune année scolaire courante" in resp.json()["message"]
+
+    def test_explicit_matching_current_allowed_without_override(
+        self, secretaire_user, student, tenant, level
+    ):
+        target_year = SchoolYear.objects.create(
+            tenant=tenant, label="2026-2027",
+            start_date=datetime.date(2026, 9, 15), end_date=datetime.date(2027, 7, 10),
+            status=SchoolYear.Status.ACTIVE, is_current=True,
+        )
+        target_class = SchoolClass.objects.create(
+            tenant=tenant, school_year=target_year, level=level, name="5ème A", capacity=50
+        )
+        client = login_client(APIClient(), secretaire_user.email)
+        resp = client.post(
+            reverse("student-reinscription", args=[student.id]),
+            {"classe_id": str(target_class.id), "school_year_id": str(target_year.id)},
+            format="json",
+        )
+        assert resp.status_code == 201, resp.content
+
+    def test_explicit_different_from_current_denied_without_override(
+        self, secretaire_user, student, tenant, level
+    ):
+        SchoolYear.objects.create(
+            tenant=tenant, label="2026-2027",
+            start_date=datetime.date(2026, 9, 15), end_date=datetime.date(2027, 7, 10),
+            status=SchoolYear.Status.ACTIVE, is_current=True,
+        )
+        other_year = SchoolYear.objects.create(
+            tenant=tenant, label="2027-2028",
+            start_date=datetime.date(2027, 9, 15), end_date=datetime.date(2028, 7, 10),
+            status=SchoolYear.Status.PREPARATION,
+        )
+        other_class = SchoolClass.objects.create(
+            tenant=tenant, school_year=other_year, level=level, name="5ème Z", capacity=50
+        )
+        client = login_client(APIClient(), secretaire_user.email)
+        resp = client.post(
+            reverse("student-reinscription", args=[student.id]),
+            {"classe_id": str(other_class.id), "school_year_id": str(other_year.id)},
+            format="json",
+        )
+        assert resp.status_code == 403
+
+    def test_director_can_override_to_a_different_year(
+        self, director_user, student, tenant, level
+    ):
+        SchoolYear.objects.create(
+            tenant=tenant, label="2026-2027",
+            start_date=datetime.date(2026, 9, 15), end_date=datetime.date(2027, 7, 10),
+            status=SchoolYear.Status.ACTIVE, is_current=True,
+        )
+        other_year = SchoolYear.objects.create(
+            tenant=tenant, label="2027-2028",
+            start_date=datetime.date(2027, 9, 15), end_date=datetime.date(2028, 7, 10),
+            status=SchoolYear.Status.PREPARATION,
+        )
+        other_class = SchoolClass.objects.create(
+            tenant=tenant, school_year=other_year, level=level, name="5ème Z", capacity=50
+        )
+        client = login_client(APIClient(), director_user.email)
+        resp = client.post(
+            reverse("student-reinscription", args=[student.id]),
+            {"classe_id": str(other_class.id), "school_year_id": str(other_year.id)},
+            format="json",
+        )
+        assert resp.status_code == 201, resp.content
 
 
 @pytest.mark.django_db

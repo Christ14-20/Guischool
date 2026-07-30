@@ -516,6 +516,7 @@ Convention uniforme sur toutes les listes : `?champ=valeur` pour un filtre exact
   }
 }
 ```
+> **Note de migration (SCHOOLYEAR-V2-02, 2026-07-29) :** `school_year_id` est passé d'**obligatoire** à **optionnel**. Omis, il résout automatiquement l'année `is_current=True` du tenant (`422` si aucune n'est courante). Fourni et identique à l'année courante : accepté sans restriction. Fourni et différent de l'année courante : réservé aux utilisateurs disposant de la permission `pedagogy:override:schoolyear` (`DIRECTOR` par défaut) — `403` sinon.
 
 **Réponse `201` :**
 ```json
@@ -549,6 +550,8 @@ Convention uniforme sur toutes les listes : `?champ=valeur` pour un filtre exact
   *(Le frontend doit afficher ce candidat et proposer "Confirmer une nouvelle fiche quand même" via `?force=true` sur le même endpoint, ou "Voir la fiche existante".)*
 - `422` (capacité classe atteinte) : `{"message": "La classe 6ème A a atteint sa capacité maximale (50/50)"}`
 - `422` (année non ouverte) : `{"message": "L'inscription n'est possible que sur une année scolaire ouverte"}`
+- `422` (aucune année courante, `school_year_id` omis) : `{"message": "Aucune année scolaire courante n'est définie — contactez votre Directeur."}`
+- `403` (`school_year_id` fourni, différent de l'année courante, permission `pedagogy:override:schoolyear` manquante) : `{"message": "Seul un Directeur peut choisir une année scolaire différente de l'année scolaire courante."}`
 - `400` (téléphone tuteur invalide) : `{"errors": {"guardian": {"telephone": ["Format attendu : +224XXXXXXXXX"]}}}`
 
 ### `GET /students/`
@@ -578,11 +581,14 @@ Convention uniforme sur toutes les listes : `?champ=valeur` pour un filtre exact
 ```json
 {"school_year_id": "9e8d7c6b-...", "classe_id": "3a4b5c6d-..."}
 ```
+> **Note de migration (SCHOOLYEAR-V2-02, 2026-07-29) :** `school_year_id` est passé d'**obligatoire** à **optionnel**, même politique de résolution défaut/override que `POST /students/` ci-dessus (`pedagogy:override:schoolyear`).
+
 **Réponse `201` :** nouvel `Enrollment` :
 ```json
 {"id": "7b8c9d0e-...", "type_inscription": "REINSCRIPTION", "classe": {"id": "3a4b5c6d-...", "name": "5ème A"}, "school_year": {"id": "9e8d7c6b-...", "label": "2026-2027"}}
 ```
-**Erreur `422` :** `{"message": "La décision de fin d'année précédente n'a pas encore été validée"}`
+**Erreur `422` :** `{"message": "La décision de fin d'année précédente n'a pas encore été validée"}` (ou message d'année clôturée/absente, cf. `POST /students/`).
+**Erreur `403` :** cf. `POST /students/` — surcharge de `school_year_id` sans permission `pedagogy:override:schoolyear`.
 
 ### `POST /students/{id}/archiver/`
 **Requête :** `{"motif": "Fin de scolarité"}` — **Réponse `200` :** `{"data": {"id": "...", "statut": "ARCHIVE"}}`
