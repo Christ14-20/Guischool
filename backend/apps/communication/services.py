@@ -121,6 +121,53 @@ def notify_grade_validated(grade_id: str, tenant_id: str):
     )
 
 
+def notify_tenant_status(tenant_id: str, new_status: str):
+    """
+    SUPERADMIN-V2-01 : notifie par SMS le contact principal d'un établissement
+    lors d'un changement de statut (suspension soft/hard, réactivation).
+    Complète l'email déjà envoyé par apps.superadmin.tasks.send_tenant_status_notification
+    (TENANT-04) — ce n'était jusqu'ici qu'une notification email malgré le nom
+    générique de la tâche.
+    """
+    from apps.superadmin.models import Tenant
+
+    try:
+        tenant = Tenant.objects.get(id=tenant_id)
+    except Tenant.DoesNotExist:
+        logger.error("Tenant %s introuvable pour notification SMS de statut", tenant_id)
+        return
+
+    messages = {
+        Tenant.Status.SUSPENDED_SOFT: (
+            f"Eduguinee: L'acces de {tenant.name} a ete restreint en lecture seule. "
+            "Consultation et export restent disponibles. Contactez le support."
+        ),
+        Tenant.Status.SUSPENDED_HARD: (
+            f"Eduguinee: L'acces de {tenant.name} a ete entierement suspendu. "
+            "Contactez le support."
+        ),
+        Tenant.Status.ACTIVE: (
+            f"Eduguinee: L'acces de {tenant.name} est de nouveau pleinement operationnel."
+        ),
+    }
+    message = messages.get(new_status)
+    if not message:
+        # Pas de SMS pour les autres transitions (CANCELLED, TRIAL) — hors
+        # périmètre de ce ticket, uniquement suspension soft/hard + réactivation.
+        return
+
+    if not tenant.contact_phone:
+        logger.info("Aucun contact_phone pour le tenant %s, SMS non envoyé", tenant_id)
+        return
+
+    send_sms.delay(
+        recipient_phone=tenant.contact_phone,
+        message=message,
+        trigger_type="TENANT_STATUS",
+        tenant_id=tenant_id,
+    )
+
+
 def _get_guardian_phone(student):
     guardian = (
         student.guardians.filter(user__isnull=False).first()

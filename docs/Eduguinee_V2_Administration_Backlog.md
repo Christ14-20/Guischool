@@ -95,14 +95,19 @@
 
 **Déjà construit (Épic 2, V1) :** CRUD `Tenant`, `Plan` simplifié, `suspend`/`reactivate` (binaire), création automatique du compte Directeur, `AuditLog` de base.
 
-### 🃏 [SUPERADMIN-V2-01] Distinction suspension soft/hard
+### 🃏 [SUPERADMIN-V2-01] Distinction suspension soft/hard — ✅ Livré 2026-07-30
 **Priorité :** 🔴 Bloquant
-- [ ] `Tenant.status` : ajoute `SUSPENDED_SOFT`/`SUSPENDED_HARD` (ou champ `suspension_type` séparé si `SUSPENDED` générique est conservé — décision à signaler par l'agent avant de coder).
-- [ ] Soft : lecture seule (aucune création via API), consultation/export toujours accessibles.
-- [ ] Hard : blocage total, y compris lecture, sauf pour `SUPER_ADMIN`.
-- [ ] `TenantMiddleware` adapté pour appliquer la restriction soft (bloquer uniquement les méthodes d'écriture).
-- [ ] Notification email/SMS au contact principal à chaque changement (réutilise le pattern existant, Épic 2).
+- [x] `Tenant.status` : ajoute `SUSPENDED_SOFT`/`SUSPENDED_HARD`, **remplaçant** `SUSPENDED` (5 valeurs au total) — énumération auto-cohérente plutôt qu'un champ `suspension_type` séparé (décision PO 2026-07-30, cf. notes de livraison). Migration de données : les tenants `SUSPENDED` existants (dev/staging) remappés vers `SUSPENDED_HARD`, réversible.
+- [x] Soft : lecture seule (aucune création via API), consultation/export toujours accessibles. Connexion autorisée (nécessaire pour obtenir un token de lecture).
+- [x] Hard : blocage total, y compris lecture, sauf pour `SUPER_ADMIN`. Connexion refusée (comportement inchangé de l'ancien `SUSPENDED`).
+- [x] `TenantMiddleware` adapté pour appliquer la restriction soft (bloquer uniquement les méthodes d'écriture) — **et réellement actif désormais** (cf. correctif de sécurité ci-dessous).
+- [x] Notification email/SMS au contact principal à chaque changement (soft, hard, réactivation) — le SMS est un ajout réel, le pattern existant (TENANT-04) n'envoyait jusqu'ici qu'un email.
 **Labels :** `superadmin` `backend` `priorité-haute`
+**Notes de livraison :**
+- **Correctif de sécurité découvert et corrigé en marge du ticket** (même traitement que les failles de permission de SCHOOLYEAR-V2-01) : `TenantMiddleware` ne bloquait auparavant **aucune** requête — il posait `request._tenant_suspended = True` sans que rien ne lise ce flag ailleurs dans le code, malgré sa docstring qui affirmait le contraire. Un utilisateur déjà authentifié (JWT émis avant la suspension de son tenant) pouvait continuer à appeler n'importe quel endpoint, y compris en écriture. Le middleware applique désormais réellement la règle soft/hard à chaque requête. Test de régression dédié : `apps/superadmin/tests/test_tenant_middleware.py::TestSecurityRegression::test_hard_suspended_blocks_already_issued_token_regression` (connexion pendant que le tenant est `ACTIVE`, suspension après coup, réutilisation du même token → `403` désormais).
+- Décisions PO actées sans ambiguïté à l'implémentation : restriction applicable à tous les rôles du tenant (`DIRECTOR` compris, `SUPER_ADMIN` seul exempté — naturellement, il n'a pas de `tenant_id` dans son JWT) ; aucune mise en pause des tâches Celery Beat existantes (réconciliation Orange Money, verrouillage présences, factures en retard) ni pour SOFT ni pour HARD — ce sont des processus système, pas des écritures initiées par l'école, décision documentée dans le code (`apps/finance/tasks.py`, `apps/pedagogy/tasks.py` non modifiés intentionnellement).
+- `PATCH /superadmin/schools/{id}/suspend/` : nouveau champ **requis** `type` (`"SOFT"`/`"HARD"`) — conséquence mécanique du remplacement de `SUSPENDED`, `400` si absent/invalide. Contrat d'API mis à jour.
+- SMS : nouvelle valeur `TENANT_STATUS` sur `SMSLog.TriggerType` (migration `communication` dédiée, ne touchant que ce champ — la drift de migration pré-existante et non liée sur ce même modèle, déjà signalée en SCHOOLYEAR-V2-01, reste hors périmètre) ; nouvelle fonction `apps.communication.services.notify_tenant_status()` sur le modèle de `notify_payment()`.
 
 ### 🃏 [SUPERADMIN-V2-02] Tableau de bord Super Admin
 **Priorité :** 🟠 Haute

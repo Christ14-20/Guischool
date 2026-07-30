@@ -89,9 +89,13 @@ class TestTenantModel:
             assert hasattr(tenant, field), f"Champ manquant sur Tenant : {field}"
 
     def test_tenant_status_choices(self, tenant):
-        """Les 4 statuts du schéma §1.1 sont bien définis."""
+        """
+        SUPERADMIN-V2-01 : SUSPENDED remplacé par SUSPENDED_SOFT/SUSPENDED_HARD
+        (5 statuts au total désormais) — changement de contrat volontaire,
+        pas une régression (cf. commit SUPERADMIN-V2-01).
+        """
         choices = {c[0] for c in Tenant.Status.choices}
-        assert choices == {"TRIAL", "ACTIVE", "SUSPENDED", "CANCELLED"}
+        assert choices == {"TRIAL", "ACTIVE", "SUSPENDED_SOFT", "SUSPENDED_HARD", "CANCELLED"}
 
     def test_tenant_school_type_choices(self, tenant):
         """Les 4 types d'école §1.1 sont bien définis."""

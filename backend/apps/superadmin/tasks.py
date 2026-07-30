@@ -15,10 +15,16 @@ logger = logging.getLogger(__name__)
 @shared_task(name="apps.superadmin.tasks.send_tenant_status_notification")
 def send_tenant_status_notification(tenant_id: str, old_status: str, new_status: str):
     """
-    Envoie un email de notification au contact principal lors du changement de statut d'un Tenant.
-    RÈGLE : l'envoi de l'email doit rester asynchrone et ne jamais bloquer la requête HTTP.
+    Envoie une notification (email + SMS) au contact principal lors du
+    changement de statut d'un Tenant.
+    RÈGLE : l'envoi doit rester asynchrone et ne jamais bloquer la requête HTTP.
+
+    SUPERADMIN-V2-01 : le SMS (apps.communication.services.notify_tenant_status)
+    a été ajouté ici — jusqu'ici cette tâche n'envoyait qu'un email malgré son
+    nom générique.
     """
     from apps.superadmin.models import Tenant
+    from apps.communication.services import notify_tenant_status
 
     try:
         tenant = Tenant.objects.get(id=tenant_id)
@@ -27,14 +33,15 @@ def send_tenant_status_notification(tenant_id: str, old_status: str, new_status:
         return
 
     subject = f"Eduguinée — Statut de votre établissement mis à jour"
-    
+
     status_labels = {
         "ACTIVE": "Activé / Réactivé",
-        "SUSPENDED": "Suspendu",
+        "SUSPENDED_SOFT": "Suspendu (lecture seule)",
+        "SUSPENDED_HARD": "Suspendu (blocage total)",
         "CANCELLED": "Résilié",
         "TRIAL": "Période d'essai",
     }
-    
+
     label = status_labels.get(new_status, new_status)
     message = (
         f"Bonjour {tenant.contact_name},\n\n"
@@ -42,10 +49,16 @@ def send_tenant_status_notification(tenant_id: str, old_status: str, new_status:
         f"Nouveau statut : {label}.\n\n"
     )
 
-    if new_status == "SUSPENDED":
+    if new_status == "SUSPENDED_SOFT":
         message += (
-            "L'accès à votre espace a été temporairement suspendu. "
-            "Veuillez contacter le support ou régler vos factures en attente pour rétablir le service.\n\n"
+            "L'accès à votre espace a été restreint en lecture seule. La consultation et "
+            "l'export de vos données restent disponibles, mais toute nouvelle saisie est "
+            "bloquée jusqu'à régularisation. Contactez notre support pour rétablir l'accès complet.\n\n"
+        )
+    elif new_status == "SUSPENDED_HARD":
+        message += (
+            "L'accès à votre espace a été entièrement suspendu, y compris la consultation. "
+            "Contactez notre support pour rétablir le service.\n\n"
         )
     elif new_status == "ACTIVE":
         message += "Votre espace est de nouveau pleinement opérationnel.\n\n"
@@ -70,3 +83,5 @@ def send_tenant_status_notification(tenant_id: str, old_status: str, new_status:
         logger.error(
             f"Échec de l'envoi d'email de notification à {tenant.contact_email} : {str(e)}"
         )
+
+    notify_tenant_status(tenant_id, new_status)

@@ -233,27 +233,27 @@ class TestSchoolEndpoints:
         assert data["staff_count"] == 1
 
     def test_superadmin_can_suspend_and_reactivate_school(self, superadmin_user, director_user):
-        """Vérifie le workflow de suspension et de réactivation d'une école."""
+        """Vérifie le workflow de suspension (HARD) et de réactivation d'une école."""
         client = APIClient()
         token = login_user(client, superadmin_user.email)
         client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
 
         tenant = director_user.tenant
-        
+
         # 1. Suspension
         suspend_url = reverse("superadmin-schools-suspend", args=[str(tenant.id)])
-        payload = {"reason": "Impayé abonnement"}
-        
+        payload = {"reason": "Impayé abonnement", "type": "HARD"}
+
         with patch("apps.superadmin.tasks.send_tenant_status_notification.delay") as mock_notify:
             resp = client.patch(suspend_url, payload, format="json")
             assert resp.status_code == 200
-            assert resp.json()["data"]["status"] == "SUSPENDED"
-            
+            assert resp.json()["data"]["status"] == "SUSPENDED_HARD"
+
             tenant.refresh_from_db()
-            assert tenant.status == Tenant.Status.SUSPENDED
+            assert tenant.status == Tenant.Status.SUSPENDED_HARD
             assert tenant.settings.get("suspend_reason") == "Impayé abonnement"
             # Notification Celery asynchrone déclenchée (old_status=ACTIVE car la fixture crée un tenant ACTIVE)
-            mock_notify.assert_called_once_with(str(tenant.id), "ACTIVE", Tenant.Status.SUSPENDED)
+            mock_notify.assert_called_once_with(str(tenant.id), "ACTIVE", Tenant.Status.SUSPENDED_HARD)
 
         # 2. Réactivation
         reactivate_url = reverse("superadmin-schools-reactivate", args=[str(tenant.id)])
@@ -261,11 +261,55 @@ class TestSchoolEndpoints:
             resp = client.patch(reactivate_url, {}, format="json")
             assert resp.status_code == 200
             assert resp.json()["data"]["status"] == "ACTIVE"
-            
+
             tenant.refresh_from_db()
             assert tenant.status == Tenant.Status.ACTIVE
             assert "suspend_reason" not in tenant.settings
-            mock_notify.assert_called_once_with(str(tenant.id), "SUSPENDED", Tenant.Status.ACTIVE)
+            mock_notify.assert_called_once_with(str(tenant.id), "SUSPENDED_HARD", Tenant.Status.ACTIVE)
+
+    def test_superadmin_can_soft_suspend_school(self, superadmin_user, director_user):
+        """SUPERADMIN-V2-01 : suspension SOFT distincte de HARD."""
+        client = APIClient()
+        token = login_user(client, superadmin_user.email)
+        client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
+
+        tenant = director_user.tenant
+        suspend_url = reverse("superadmin-schools-suspend", args=[str(tenant.id)])
+        payload = {"reason": "Retard de paiement mineur", "type": "SOFT"}
+
+        with patch("apps.superadmin.tasks.send_tenant_status_notification.delay") as mock_notify:
+            resp = client.patch(suspend_url, payload, format="json")
+            assert resp.status_code == 200
+            assert resp.json()["data"]["status"] == "SUSPENDED_SOFT"
+
+            tenant.refresh_from_db()
+            assert tenant.status == Tenant.Status.SUSPENDED_SOFT
+            mock_notify.assert_called_once_with(str(tenant.id), "ACTIVE", Tenant.Status.SUSPENDED_SOFT)
+
+    def test_suspend_without_type_returns_400(self, superadmin_user, director_user):
+        client = APIClient()
+        token = login_user(client, superadmin_user.email)
+        client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
+
+        tenant = director_user.tenant
+        suspend_url = reverse("superadmin-schools-suspend", args=[str(tenant.id)])
+        resp = client.patch(suspend_url, {"reason": "Impayé"}, format="json")
+        assert resp.status_code == 400
+
+        tenant.refresh_from_db()
+        assert tenant.status == Tenant.Status.ACTIVE
+
+    def test_suspend_with_invalid_type_returns_400(self, superadmin_user, director_user):
+        client = APIClient()
+        token = login_user(client, superadmin_user.email)
+        client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
+
+        tenant = director_user.tenant
+        suspend_url = reverse("superadmin-schools-suspend", args=[str(tenant.id)])
+        resp = client.patch(
+            suspend_url, {"reason": "Impayé", "type": "MEDIUM"}, format="json"
+        )
+        assert resp.status_code == 400
 
     def test_director_cannot_manage_schools(self, director_user):
         """Un directeur ne peut pas accéder aux endpoints superadmin-schools."""

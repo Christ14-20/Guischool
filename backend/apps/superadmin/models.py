@@ -47,7 +47,11 @@ class Tenant(TimestampedModel):
     class Status(models.TextChoices):
         TRIAL = "TRIAL", "Essai"
         ACTIVE = "ACTIVE", "Active"
-        SUSPENDED = "SUSPENDED", "Suspendue"
+        # SUPERADMIN-V2-01 : SUSPENDED remplacé par deux valeurs distinctes
+        # (décision PO 2026-07-30) — énumération auto-cohérente plutôt qu'un
+        # champ suspension_type séparé qui pourrait diverger de status.
+        SUSPENDED_SOFT = "SUSPENDED_SOFT", "Suspendue (lecture seule)"
+        SUSPENDED_HARD = "SUSPENDED_HARD", "Suspendue (blocage total)"
         CANCELLED = "CANCELLED", "Résiliée"
 
     class SchoolType(models.TextChoices):

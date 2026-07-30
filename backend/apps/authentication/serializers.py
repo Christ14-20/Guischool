@@ -46,8 +46,13 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
             from rest_framework.exceptions import PermissionDenied
             raise PermissionDenied("Compte désactivé")
 
-        # Vérification tenant suspendu — message exact du contrat d'API §9
-        if user.tenant and user.tenant.status == "SUSPENDED":
+        # Vérification tenant suspendu — SUPERADMIN-V2-01 : seul SUSPENDED_HARD
+        # bloque la connexion (message exact du contrat d'API §9, inchangé).
+        # SUSPENDED_SOFT laisse la connexion passer : la consultation/export
+        # doit rester accessible, ce qui exige un token — l'écriture est
+        # bloquée séparément par TenantMiddleware (core/middleware.py).
+        from apps.superadmin.models import Tenant
+        if user.tenant and user.tenant.status == Tenant.Status.SUSPENDED_HARD:
             from rest_framework.exceptions import PermissionDenied
             raise PermissionDenied("Compte suspendu")
 

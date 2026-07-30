@@ -146,14 +146,16 @@ class TestTenantIsolation:
 
     def test_suspended_tenant_cannot_access_api(self, plan):
         """
-        Un utilisateur d'un tenant SUSPENDU ne peut pas se connecter.
+        Un utilisateur d'un tenant SUSPENDED_HARD ne peut pas se connecter.
         Le message exact du contrat est "Compte suspendu" (§9).
+        Pour le blocage des requêtes déjà authentifiées (token émis avant la
+        suspension), voir apps/superadmin/tests/test_tenant_middleware.py.
         """
         suspended_tenant = Tenant.objects.create(
             name="École Suspendue Iso",
             slug="ecole-suspendue-iso",
             school_type=Tenant.SchoolType.MIXTE,
-            status=Tenant.Status.SUSPENDED,
+            status=Tenant.Status.SUSPENDED_HARD,
             plan=plan,
             contact_name="Directeur Suspendu",
             contact_phone="+224620000003",

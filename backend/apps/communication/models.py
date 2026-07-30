@@ -24,6 +24,7 @@ class SMSLog(TenantScopedModel):
         PAIEMENT = "PAIEMENT", "Confirmation de paiement"
         NOTE_VALIDEE = "NOTE_VALIDEE", "Note validée"
         INSCRIPTION = "INSCRIPTION", "Confirmation d'inscription"
+        TENANT_STATUS = "TENANT_STATUS", "Changement de statut établissement"
 
     class Status(models.TextChoices):
         SENT = "SENT", "Envoyé"

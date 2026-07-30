@@ -115,10 +115,13 @@ class TenantViewSet(viewsets.ModelViewSet):
     def suspend(self, request, pk=None):
         """
         PATCH /superadmin/schools/{id}/suspend/
-        Suspend un établissement avec une raison.
+        Suspend un établissement avec une raison et un type (SUPERADMIN-V2-01) :
+        - SOFT : lecture seule (consultation/export toujours accessibles).
+        - HARD : blocage total, y compris lecture.
         """
         tenant = self.get_object()
         reason = request.data.get("reason", "")
+        suspension_type = request.data.get("type", "")
 
         if not reason:
             return error_response(
@@ -126,15 +129,26 @@ class TenantViewSet(viewsets.ModelViewSet):
                 status_code=status.HTTP_400_BAD_REQUEST,
             )
 
+        type_map = {
+            "SOFT": Tenant.Status.SUSPENDED_SOFT,
+            "HARD": Tenant.Status.SUSPENDED_HARD,
+        }
+        if suspension_type not in type_map:
+            return error_response(
+                "Le type de suspension est requis et doit être 'SOFT' ou 'HARD'.",
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+        new_status = type_map[suspension_type]
+
         old_status = tenant.status
-        tenant.status = Tenant.Status.SUSPENDED
+        tenant.status = new_status
         if not tenant.settings:
             tenant.settings = {}
         tenant.settings["suspend_reason"] = reason
         tenant.save(update_fields=["status", "settings", "updated_at"])
 
         # Envoi de la notification asynchrone (non bloquante)
-        send_tenant_status_notification.delay(str(tenant.id), old_status, Tenant.Status.SUSPENDED)
+        send_tenant_status_notification.delay(str(tenant.id), old_status, new_status)
 
         # AuditLog
         audit_log(

@@ -35,15 +35,31 @@ def tenant(plan):
 
 @pytest.fixture
 def suspended_tenant(plan):
+    """SUPERADMIN-V2-01 : HARD — bloque la connexion, comme l'ancien SUSPENDED."""
     return Tenant.objects.create(
         name="École Suspendue",
         slug="ecole-suspendue",
         school_type=Tenant.SchoolType.MIXTE,
-        status=Tenant.Status.SUSPENDED,
+        status=Tenant.Status.SUSPENDED_HARD,
         plan=plan,
         contact_name="Directeur Suspendu",
         contact_phone="+224620000002",
         contact_email="dir@ecole-suspendue.gn",
+    )
+
+
+@pytest.fixture
+def soft_suspended_tenant(plan):
+    """SUPERADMIN-V2-01 : SOFT — la connexion reste autorisée."""
+    return Tenant.objects.create(
+        name="École Suspendue Soft",
+        slug="ecole-suspendue-soft",
+        school_type=Tenant.SchoolType.MIXTE,
+        status=Tenant.Status.SUSPENDED_SOFT,
+        plan=plan,
+        contact_name="Directeur Suspendu Soft",
+        contact_phone="+224620000004",
+        contact_email="dir@ecole-suspendue-soft.gn",
     )
 
 
@@ -74,6 +90,17 @@ def suspended_user(suspended_tenant, director_role):
         password="SecurePass123!",
         role=director_role,
         tenant=suspended_tenant,
+    )
+
+
+@pytest.fixture
+def soft_suspended_user(soft_suspended_tenant, director_role):
+    return User.objects.create_user(
+        username="directeur-suspendu-soft",
+        email="dir@ecole-suspendue-soft.gn",
+        password="SecurePass123!",
+        role=director_role,
+        tenant=soft_suspended_tenant,
     )
 
 
@@ -119,8 +146,8 @@ class TestLoginView:
         assert data["status"] == "error"
         assert data["message"] == "Identifiants incorrects"
 
-    def test_login_suspended_tenant_returns_403(self, api_client, suspended_user):
-        """Tenant suspendu → 403 avec message 'Compte suspendu'."""
+    def test_login_hard_suspended_tenant_returns_403(self, api_client, suspended_user):
+        """Tenant SUSPENDED_HARD → 403 avec message 'Compte suspendu'."""
         url = reverse("auth-login")
         response = api_client.post(
             url,
@@ -130,6 +157,20 @@ class TestLoginView:
         assert response.status_code == 403
         data = response.json()
         assert data["message"] == "Compte suspendu"
+
+    def test_login_soft_suspended_tenant_succeeds(self, api_client, soft_suspended_user):
+        """
+        SUPERADMIN-V2-01 : SUSPENDED_SOFT laisse la connexion passer — la
+        consultation/export doit rester accessible, ce qui exige un token.
+        """
+        url = reverse("auth-login")
+        response = api_client.post(
+            url,
+            {"email": "dir@ecole-suspendue-soft.gn", "password": "SecurePass123!"},
+            format="json",
+        )
+        assert response.status_code == 200
+        assert response.json()["data"]["access_token"]
 
     def test_login_missing_fields_returns_401(self, api_client):
         """Login sans champs → 401."""

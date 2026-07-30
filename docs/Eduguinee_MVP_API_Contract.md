@@ -150,7 +150,13 @@ Convention uniforme sur toutes les listes : `?champ=valeur` pour un filtre exact
 
 **Erreurs :**
 - `401` : `{"status": "error", "message": "Identifiants incorrects"}`
-- `403` : `{"status": "error", "message": "Compte suspendu"}` (si `Tenant.status = SUSPENDED`)
+- `403` : `{"status": "error", "message": "Compte suspendu"}` (si `Tenant.status = SUSPENDED_HARD`)
+
+> **Changement de comportement (SUPERADMIN-V2-01, 2026-07-30) :** avant ce ticket, un seul statut `SUSPENDED` bloquait systématiquement la connexion. Il est remplacé par deux statuts distincts :
+> - `SUSPENDED_HARD` : connexion refusée comme ci-dessus (message et code inchangés).
+> - `SUSPENDED_SOFT` : **la connexion reste autorisée** (200) — la consultation/export doit rester accessible, ce qui exige un token. L'écriture (POST/PUT/PATCH/DELETE) est bloquée par `TenantMiddleware` sur chaque requête authentifiée, quel que soit l'endpoint, avec `403 {"message": "Cet établissement est en accès lecture seule — écriture non autorisée."}`.
+>
+> **Correctif de sécurité découvert en marge :** `TenantMiddleware` ne bloquait auparavant aucune requête (flag posé mais jamais lu) — un token émis avant la suspension du tenant restait utilisable indéfiniment, y compris en écriture. Le middleware applique désormais réellement la règle ci-dessus à chaque requête, pas seulement à la connexion.
 
 ### `POST /auth/refresh/`
 **Auth :** aucune (refresh token dans le body)
@@ -377,7 +383,11 @@ Convention uniforme sur toutes les listes : `?champ=valeur` pour un filtre exact
 **Réponse `200` :** objet complet `Tenant` (tous les champs listés dans le schéma de données §1.1) + `student_count`, `staff_count`.
 
 ### `PATCH /superadmin/schools/{id}/suspend/`
-**Requête :** `{"reason": "Impayé abonnement depuis 45 jours"}` — **Réponse `200` :** `{"status": "success", "data": {"id": "...", "status": "SUSPENDED"}}`
+**Requête :** `{"reason": "Impayé abonnement depuis 45 jours", "type": "SOFT"}` (`type` : `"SOFT"` ou `"HARD"`) — **Réponse `200` :** `{"status": "success", "data": {"id": "...", "status": "SUSPENDED_SOFT"}}`
+
+> **Note de migration (SUPERADMIN-V2-01, 2026-07-30) :** `type` est un **nouveau champ requis** de ce payload, conséquence mécanique du remplacement de `SUSPENDED` par `SUSPENDED_SOFT`/`SUSPENDED_HARD` — il faut désormais préciser lequel des deux appliquer. `400` si absent ou différent de `"SOFT"`/`"HARD"` : `{"message": "Le type de suspension est requis et doit être 'SOFT' ou 'HARD'."}`.
+>
+> Notification (email + **SMS**, contact principal) envoyée à chaque changement de statut (suspension soft/hard, réactivation) — le SMS est nouveau, la tâche `send_tenant_status_notification` (TENANT-04) n'envoyait jusqu'ici qu'un email malgré son nom générique.
 
 ### `PATCH /superadmin/schools/{id}/reactivate/`
 **Requête :** `{}` — **Réponse `200`** : `{"status": "success", "data": {"id": "...", "status": "ACTIVE"}}`
