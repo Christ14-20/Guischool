@@ -421,3 +421,25 @@ class TestClassSchoolYearDefaultAndOverride:
             format="json",
         )
         assert resp.status_code == 404
+
+    def test_explicit_level_from_other_tenant_returns_404(
+        self, director_user, tenant, plan, school_year
+    ):
+        tenant_b = Tenant.objects.create(
+            name="École B Cls Level", slug="ecole-b-cls-level",
+            school_type=Tenant.SchoolType.LYCEE, status=Tenant.Status.ACTIVE,
+            plan=plan, contact_name="Directeur B", contact_phone="+224620000004",
+            contact_email="directeur@ecole-b-cls-level.gn",
+        )
+        level_b = Level.objects.create(
+            tenant=tenant_b, cycle=Level.Cycle.COLLEGE, name="6ème", order_index=7,
+        )
+        SchoolYear.objects.filter(id=school_year.id).update(is_current=True)
+        client = login_client(APIClient(), director_user.email)
+        resp = client.post(
+            reverse("class-list"),
+            {"school_year": str(school_year.id), "level_id": str(level_b.id), "name": "6ème A"},
+            format="json",
+        )
+        assert resp.status_code == 404
+        assert not SchoolClass.objects.filter(tenant=tenant, name="6ème A").exists()

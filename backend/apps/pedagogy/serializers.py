@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from rest_framework.exceptions import NotFound
 from apps.pedagogy.models import (
     Level, SchoolClass, SchoolYear, AcademicPeriod, Subject, ClassSubject,
     Student, Guardian, Enrollment, Attendance, Evaluation, Grade,
@@ -68,9 +69,15 @@ class ClassSerializer(serializers.ModelSerializer):
         validated_data["tenant"] = self.context["request"].tenant
 
         level_id = validated_data.pop("level_id")
-        validated_data["level"] = Level.objects.get(
+        level = Level.objects.filter(
             id=level_id, tenant=self.context["request"].tenant
-        )
+        ).first()
+        if level is None:
+            # SCHOOLYEAR-V2-02 (correctif) : level_id d'un autre tenant (ou
+            # inexistant) provoquait un Level.DoesNotExist non catché -> 500.
+            # Isolation multi-tenant stricte : 404, jamais un crash.
+            raise NotFound("Ressource non trouvée")
+        validated_data["level"] = level
 
         main_teacher_id = validated_data.pop("main_teacher_id", None)
         if main_teacher_id:
