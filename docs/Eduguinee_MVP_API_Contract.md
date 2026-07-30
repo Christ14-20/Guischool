@@ -816,16 +816,20 @@ Le frontend fait un polling sur `GET /pedagogy/tasks/{task_id}/status/`.
 **Erreur `400` :** si `period_id` manquant → `{"message": "Le paramètre period_id est requis."}`
 **Erreur `404` :** si l'étudiant ou la période n'existe pas → `{"message": "Ressource non trouvée"}`
 
-### `POST /year-end-decisions/`
+### `POST /pedagogy/year-end-decisions/`
 **Requête :**
 ```json
 {
-  "student_id": "4d5e6f7a-...",
-  "school_year_id": "1a2b3c4d-...",
+  "student": "4d5e6f7a-...",
+  "school_year": "1a2b3c4d-...",
   "decision": "ADMIS",
-  "classe_destination_id": "3a4b5c6d-..."
+  "classe_destination": "3a4b5c6d-..."
 }
 ```
+> **Corrections (2026-07-30) :** chemin documenté `/year-end-decisions/` → réel `/pedagogy/year-end-decisions/` ; champs documentés `student_id`/`school_year_id`/`classe_destination_id` → réels `student`/`school_year`/`classe_destination` (`YearEndDecisionSerializer`, `ModelSerializer` sans suffixe `_id`). Incohérences pré-existantes corrigées à l'occasion de cette note. **Signalé sans être corrigé (hors périmètre SCHOOLYEAR-V2-02)** : le formulaire "Nouvelle décision" de `YearEndDecisionsClient.tsx` envoie actuellement `student_id`/`school_year_id`/`classe_destination_id` — désaccord avec le contrat réel qui semble pré-dater ce ticket (le sélecteur "Élève" du même formulaire n'est d'ailleurs pas non plus alimenté). À traiter comme un ticket séparé.
+>
+> **Note de migration (SCHOOLYEAR-V2-02, 2026-07-30) :** `school_year` passe d'**obligatoire** à **optionnel** (même politique `resolve_school_year` que les endpoints précédents : défaut = année courante, override `pedagogy:override:schoolyear` sinon `403`, `404` hors tenant, `422` si aucune année courante).
+
 **Réponse `201` :** objet `YearEndDecision` créé, avec `moyenne_annuelle` recalculée et gelée.
 
 Champs en lecture seule (auto-remplis) :
@@ -839,11 +843,17 @@ Champs en lecture seule (auto-remplis) :
 > À valider avec un directeur d'école avant la V2 — certaines écoles pourraient utiliser une pondération différente (ex. trimestre 3 plus lourd, ou pondération par nombre d'évaluations par période).
 > Cette dette technique est explicitement tracée dans la docstring du service (`grade_service.py:compute_moyenne_annuelle`).
 
-### `POST /promotions/bulk/`
+### `POST /pedagogy/promotions/bulk/`
 **Requête :**
 ```json
 {"classe_origine_id": "8c7d6e5f-...", "school_year_cible_id": "9e8d7c6b-...", "decisions_filter": "ADMIS"}
 ```
+> **Correction de chemin (2026-07-30) :** documenté `/promotions/bulk/` → réel `/pedagogy/promotions/bulk/`.
+>
+> **Clarification sémantique (2026-07-30) :** `school_year_cible_id` ne désigne **pas** une année d'inscription cible malgré son nom — c'est l'année dont on traite les décisions déjà prises (`YearEndDecision.school_year`), généralement déjà clôturée au moment de l'appel (le nom n'a volontairement pas été changé dans SCHOOLYEAR-V2-02, décision distincte à part entière). Ce endpoint ne fait aucune écriture rattachée à cette année (il modifie `Student.classe_actuelle`, non scopé à une année) : **aucune vérification `assert_school_year_open` n'y est appliquée**, contrairement aux autres endpoints de ce contrat.
+>
+> **Note de migration (SCHOOLYEAR-V2-02, 2026-07-30) :** `school_year_cible_id` passe d'**obligatoire** à **optionnel** (défaut = année courante, override `pedagogy:override:schoolyear` sinon `403`, `404` hors tenant, `422` si aucune année courante).
+
 **Réponse `200` :** `{"data": {"processed_count": 44, "skipped_count": 4, "skipped_reasons": [{"student_id": "...", "reason": "Décision non encore prise"}]}}`
 
 ---
@@ -1061,8 +1071,8 @@ Pour garder une expérience cohérente, le frontend doit afficher **exactement**
 | Notes | `/students/{id}/moyenne/` | GET |
 | Notes | `/classes/{id}/classement/` | GET |
 | Notes | `/students/{id}/bulletin/` | POST |
-| Notes | `/year-end-decisions/` | POST |
-| Notes | `/promotions/bulk/` | POST |
+| Notes | `/pedagogy/year-end-decisions/` | POST |
+| Notes | `/pedagogy/promotions/bulk/` | POST |
 | Finance | `/finance/feecategories/` | GET, POST |
 | Finance | `/finance/students/{id}/fees/` | GET |
 | Finance | `/finance/payments/` | GET, POST |

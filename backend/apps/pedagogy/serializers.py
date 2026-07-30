@@ -647,7 +647,18 @@ class YearEndDecisionSerializer(serializers.ModelSerializer):
 
 class PromotionsBulkSerializer(serializers.Serializer):
     classe_origine_id = serializers.UUIDField()
-    school_year_cible_id = serializers.UUIDField()
+    # Nom conservé tel quel (SCHOOLYEAR-V2-02, décision PO 2026-07-30) malgré
+    # la confusion sémantique : ce champ ne désigne PAS une année cible
+    # d'inscription. Il filtre les YearEndDecision déjà prises à traiter
+    # (decisions_qs.filter(school_year=school_year_cible) dans promotions_bulk)
+    # — c'est donc l'année qui se termine, celle dont on applique les
+    # décisions, généralement déjà clôturée au moment de l'appel. Renommer ce
+    # champ serait un changement de contrat à part, hors périmètre ici.
+    # Optionnel : défaut = année courante (résolution identique aux autres
+    # endpoints), override réservé à pedagogy:override:schoolyear — même si,
+    # vu la sémantique ci-dessus, l'usage réel fournira le plus souvent une
+    # valeur explicite (l'année à promouvoir n'est généralement plus courante).
+    school_year_cible_id = serializers.UUIDField(required=False, allow_null=True)
     decisions_filter = serializers.ChoiceField(
         choices=["ADMIS", "ADMIS_REDOUBLE"],
         default="ADMIS",

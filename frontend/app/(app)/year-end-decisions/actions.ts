@@ -22,7 +22,8 @@ export async function createYearEndDecisionAction(data: any) {
 
 export async function promotionsBulkAction(data: {
   classe_origine_id: string;
-  school_year_cible_id: string;
+  // SCHOOLYEAR-V2-02 : optionnel — défaut = année courante côté backend.
+  school_year_cible_id?: string;
   decisions_filter: string;
 }) {
   try {

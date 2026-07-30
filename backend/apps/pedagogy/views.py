@@ -1339,21 +1339,36 @@ class YearEndDecisionViewSet(
         return qs.select_related("student", "school_year", "classe_origine", "classe_destination", "prise_par")
 
     def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
+        # SCHOOLYEAR-V2-02 : school_year résolu (défaut/override) AVANT la
+        # construction du serializer — YearEndDecision a une contrainte
+        # unique (student, school_year), même piège UniqueTogetherValidator
+        # que ClassViewSet.create()/FeeCategoryViewSet.create().
+        raw_school_year_id = request.data.get("school_year")
+        explicit_school_year = None
+        if raw_school_year_id:
+            explicit_school_year = SchoolYear.objects.filter(
+                id=raw_school_year_id, tenant=request.tenant
+            ).first()
+            if explicit_school_year is None:
+                return error_response(
+                    "Année scolaire non trouvée.",
+                    status_code=status.HTTP_404_NOT_FOUND,
+                )
+        school_year = resolve_school_year(
+            tenant=request.tenant, user=request.user, explicit=explicit_school_year
+        )
+        assert_school_year_open(school_year)
+
+        data = dict(request.data)
+        data["school_year"] = str(school_year.id)
+        serializer = self.get_serializer(data=data)
         serializer.is_valid(raise_exception=True)
         student = serializer.validated_data.get("student")
-        school_year = serializer.validated_data.get("school_year")
         if student and student.tenant_id != request.tenant.pk:
             return error_response(
                 "Élève non trouvé.",
                 status_code=status.HTTP_404_NOT_FOUND,
             )
-        if school_year and school_year.tenant_id != request.tenant.pk:
-            return error_response(
-                "Année scolaire non trouvée.",
-                status_code=status.HTTP_404_NOT_FOUND,
-            )
-        assert_school_year_open(school_year)
         try:
             self.perform_create(serializer)
         except serializers.ValidationError as exc:
@@ -1379,7 +1394,7 @@ def promotions_bulk(request):
     serializer.is_valid(raise_exception=True)
 
     classe_origine_id = serializer.validated_data["classe_origine_id"]
-    school_year_cible_id = serializer.validated_data["school_year_cible_id"]
+    explicit_school_year_id = serializer.validated_data.get("school_year_cible_id")
     decisions_filter = serializer.validated_data["decisions_filter"]
 
     from apps.pedagogy.models import SchoolClass as SC, SchoolYear as SY
@@ -1392,14 +1407,26 @@ def promotions_bulk(request):
             "Classe d'origine non trouvée.",
             status_code=status.HTTP_404_NOT_FOUND,
         )
-    school_year_cible = SY.objects.filter(
-        id=school_year_cible_id, tenant=request.tenant
-    ).first()
-    if not school_year_cible:
-        return error_response(
-            "Année scolaire cible non trouvée.",
-            status_code=status.HTTP_404_NOT_FOUND,
-        )
+
+    explicit_school_year = None
+    if explicit_school_year_id:
+        explicit_school_year = SY.objects.filter(
+            id=explicit_school_year_id, tenant=request.tenant
+        ).first()
+        if explicit_school_year is None:
+            return error_response(
+                "Année scolaire cible non trouvée.",
+                status_code=status.HTTP_404_NOT_FOUND,
+            )
+    # SCHOOLYEAR-V2-02 : pas d'assert_school_year_open ici, volontairement —
+    # cet endpoint ne fait aucune écriture rattachée à school_year_cible (il
+    # met à jour Student.classe_actuelle, qui n'est pas scopé à une année) ;
+    # il ne fait que filtrer des YearEndDecision déjà prises. Bloquer sur une
+    # année clôturée casserait le flux normal : les promotions s'appliquent
+    # typiquement après la clôture de l'année dont on traite les décisions.
+    school_year_cible = resolve_school_year(
+        tenant=request.tenant, user=request.user, explicit=explicit_school_year
+    )
 
     decisions_qs = YearEndDecision.objects.filter(
         tenant=request.tenant,

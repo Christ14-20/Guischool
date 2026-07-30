@@ -20,6 +20,7 @@ interface Props {
   decisions: any[];
   schoolYears: any[];
   classes: any[];
+  role?: string;
 }
 
 const DECISION_LABELS: Record<string, string> = {
@@ -41,7 +42,9 @@ export default function YearEndDecisionsClient({
   decisions: initialDecisions,
   schoolYears,
   classes,
+  role,
 }: Props) {
+  const canOverrideSchoolYear = role === "DIRECTOR";
   const router = useRouter();
   const [, startTransition] = useTransition();
 
@@ -94,7 +97,7 @@ export default function YearEndDecisionsClient({
   };
 
   const handleCreateDecision = async () => {
-    if (!form.student_id || !form.school_year_id) {
+    if (!form.student_id || (canOverrideSchoolYear && !form.school_year_id)) {
       setModalError("Élève et année scolaire sont obligatoires.");
       return;
     }
@@ -105,7 +108,11 @@ export default function YearEndDecisionsClient({
     setModalLoading(true);
     setModalError(null);
     startTransition(async () => {
-      const res = await createYearEndDecisionAction(form);
+      // school_year_id omis si non renseigné : le backend défaut sur
+      // l'année courante (SCHOOLYEAR-V2-02).
+      const { school_year_id, ...rest } = form;
+      const payload = school_year_id ? form : rest;
+      const res = await createYearEndDecisionAction(payload);
       if (res.success) {
         setModalOpen(false);
         router.refresh();
@@ -124,7 +131,7 @@ export default function YearEndDecisionsClient({
   };
 
   const handleBulkPromotion = async () => {
-    if (!bulkForm.classe_origine_id || !bulkForm.school_year_cible_id) {
+    if (!bulkForm.classe_origine_id || (canOverrideSchoolYear && !bulkForm.school_year_cible_id)) {
       setBulkError("Classe d'origine et année cible sont obligatoires.");
       return;
     }
@@ -132,7 +139,11 @@ export default function YearEndDecisionsClient({
     setBulkError(null);
     setBulkSuccess(null);
     startTransition(async () => {
-      const res = await promotionsBulkAction(bulkForm);
+      // school_year_cible_id omis si non renseigné : le backend défaut sur
+      // l'année courante (SCHOOLYEAR-V2-02).
+      const { school_year_cible_id, ...rest } = bulkForm;
+      const payload = school_year_cible_id ? bulkForm : rest;
+      const res = await promotionsBulkAction(payload);
       if (res.success) {
         setBulkSuccess(
           `${res.data?.processed_count ?? 0} élèves traités, ${res.data?.skipped_count ?? 0} ignorés.`
@@ -277,19 +288,23 @@ export default function YearEndDecisionsClient({
                   </select>
                 </div>
 
-                <div className="space-y-1.5">
-                  <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider">Année scolaire</label>
-                  <select
-                    value={form.school_year_id}
-                    onChange={(e) => setForm((p) => ({ ...p, school_year_id: e.target.value }))}
-                    className={INPUT_CLASS}
-                  >
-                    <option value="">Sélectionner...</option>
-                    {schoolYears.map((sy: any) => (
-                      <option key={sy.id} value={sy.id}>{sy.label}</option>
-                    ))}
-                  </select>
-                </div>
+                {canOverrideSchoolYear && (
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                      Année scolaire <span className="normal-case text-slate-500">(par défaut : année courante)</span>
+                    </label>
+                    <select
+                      value={form.school_year_id}
+                      onChange={(e) => setForm((p) => ({ ...p, school_year_id: e.target.value }))}
+                      className={INPUT_CLASS}
+                    >
+                      <option value="">Année courante (par défaut)</option>
+                      {schoolYears.map((sy: any) => (
+                        <option key={sy.id} value={sy.id}>{sy.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
 
                 <div className="space-y-1.5">
                   <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider">Décision</label>
@@ -383,19 +398,26 @@ export default function YearEndDecisionsClient({
                   </select>
                 </div>
 
-                <div className="space-y-1.5">
-                  <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider">Année scolaire cible</label>
-                  <select
-                    value={bulkForm.school_year_cible_id}
-                    onChange={(e) => setBulkForm((p) => ({ ...p, school_year_cible_id: e.target.value }))}
-                    className={INPUT_CLASS}
-                  >
-                    <option value="">Sélectionner...</option>
-                    {schoolYears.map((sy: any) => (
-                      <option key={sy.id} value={sy.id}>{sy.label}</option>
-                    ))}
-                  </select>
-                </div>
+                {canOverrideSchoolYear && (
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                      Année scolaire cible
+                    </label>
+                    <p className="text-xs text-slate-500">
+                      L&apos;année dont les décisions doivent être appliquées (par défaut : année courante) — pas l&apos;année d&apos;inscription des élèves promus.
+                    </p>
+                    <select
+                      value={bulkForm.school_year_cible_id}
+                      onChange={(e) => setBulkForm((p) => ({ ...p, school_year_cible_id: e.target.value }))}
+                      className={INPUT_CLASS}
+                    >
+                      <option value="">Année courante (par défaut)</option>
+                      {schoolYears.map((sy: any) => (
+                        <option key={sy.id} value={sy.id}>{sy.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
 
                 <div className="space-y-1.5">
                   <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider">Filtrer par décision</label>

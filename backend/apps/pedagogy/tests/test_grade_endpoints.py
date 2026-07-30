@@ -64,6 +64,13 @@ def director_role(db):
     _add_notes_permissions(role, [
         "notes:create:evaluation", "notes:read", "notes:lock", "notes:validate",
     ])
+    # SCHOOLYEAR-V2-02 : ces tests envoient un school_year(_cible_id) explicite
+    # (comportement pré-V2-02) — nécessite désormais l'override.
+    perm, _ = Permission.objects.get_or_create(
+        codename="pedagogy:override:schoolyear",
+        defaults={"name": "pedagogy:override:schoolyear", "module": "pedagogy"},
+    )
+    role.permissions.add(perm)
     return role
 
 
@@ -138,6 +145,27 @@ def secretary(tenant, student_studies_role):
         username="sec_notes",
     )
     return user
+
+
+@pytest.fixture
+def director_no_override_role(db):
+    """Comme director_role mais sans pedagogy:override:schoolyear (SCHOOLYEAR-V2-02)."""
+    role = Role.objects.create(name="CUSTOM", label="Directeur (test, sans override)")
+    _add_notes_permissions(role, [
+        "notes:create:evaluation", "notes:read", "notes:lock", "notes:validate",
+    ])
+    return role
+
+
+@pytest.fixture
+def director_no_override(tenant, director_no_override_role):
+    return User.objects.create_user(
+        email="directeur-no-override@test.gn",
+        password=PASSWORD,
+        tenant=tenant,
+        role=director_no_override_role,
+        username="dir_no_override",
+    )
 
 
 @pytest.fixture
@@ -1013,6 +1041,51 @@ class TestYearEndDecisionCreate:
         assert response.status_code == status.HTTP_404_NOT_FOUND
 
 
+class TestYearEndDecisionSchoolYearDefaultAndOverride:
+    """SCHOOLYEAR-V2-02 : school_year devient optionnel, défaut = année courante."""
+
+    URL = "/api/v1/pedagogy/year-end-decisions/"
+
+    def test_omitted_defaults_to_current_year(
+        self, director_no_override, student, school_year, evaluation, grade
+    ):
+        SchoolYear.objects.filter(id=school_year.id).update(is_current=True)
+        evaluation.is_locked = True
+        evaluation.save(update_fields=["is_locked"])
+        client = jwt_client(director_no_override)
+        data = {"student": str(student.id), "decision": "REDOUBLE"}
+        response = client.post(self.URL, data, format="json")
+        assert response.status_code == status.HTTP_201_CREATED, response.data
+        decision = YearEndDecision.objects.get(id=response.data["data"]["id"])
+        assert decision.school_year_id == school_year.id
+
+    def test_omitted_raises_422_when_no_current_year(
+        self, director_no_override, student, school_year
+    ):
+        client = jwt_client(director_no_override)
+        data = {"student": str(student.id), "decision": "REDOUBLE"}
+        response = client.post(self.URL, data, format="json")
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+        assert "Aucune année scolaire courante" in response.data["message"]
+
+    def test_explicit_different_from_current_denied_without_override(
+        self, director_no_override, tenant, student, school_year
+    ):
+        SchoolYear.objects.filter(id=school_year.id).update(is_current=True)
+        other_year = SchoolYear.objects.create(
+            tenant=tenant, label="2026-2027",
+            start_date="2026-09-15", end_date="2027-07-10",
+        )
+        client = jwt_client(director_no_override)
+        data = {
+            "student": str(student.id),
+            "school_year": str(other_year.id),
+            "decision": "REDOUBLE",
+        }
+        response = client.post(self.URL, data, format="json")
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
 class TestYearEndDecisionList:
     URL = "/api/v1/pedagogy/year-end-decisions/"
 
@@ -1164,3 +1237,56 @@ class TestPromotionsBulk:
         }
         response = client.post(self.URL, data, format="json")
         assert response.status_code == status.HTTP_404_NOT_FOUND
+
+
+class TestPromotionsBulkSchoolYearDefaultAndOverride:
+    """SCHOOLYEAR-V2-02 : school_year_cible_id devient optionnel, défaut = année courante."""
+
+    URL = "/api/v1/pedagogy/promotions/bulk/"
+
+    def test_omitted_defaults_to_current_year_and_processes(
+        self, director_no_override, student, school_year, school_class
+    ):
+        SchoolYear.objects.filter(id=school_year.id).update(is_current=True)
+        classe_dest = SchoolClass.objects.create(
+            tenant=student.tenant, school_year=school_year,
+            level=school_class.level, name="5ème A", capacity=60,
+        )
+        YearEndDecision.objects.create(
+            tenant=student.tenant, student=student, school_year=school_year,
+            decision=YearEndDecision.Decision.ADMIS,
+            classe_origine=student.classe_actuelle, classe_destination=classe_dest,
+            moyenne_annuelle=Decimal("12.00"), prise_par=director_no_override,
+        )
+        client = jwt_client(director_no_override)
+        data = {"classe_origine_id": str(school_class.id), "decisions_filter": "ADMIS"}
+        response = client.post(self.URL, data, format="json")
+        assert response.status_code == status.HTTP_200_OK, response.data
+        assert response.data["data"]["processed_count"] == 1
+        student.refresh_from_db()
+        assert student.classe_actuelle_id == classe_dest.id
+
+    def test_omitted_raises_422_when_no_current_year(
+        self, director_no_override, school_class, school_year
+    ):
+        client = jwt_client(director_no_override)
+        data = {"classe_origine_id": str(school_class.id)}
+        response = client.post(self.URL, data, format="json")
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+        assert "Aucune année scolaire courante" in response.data["message"]
+
+    def test_explicit_different_from_current_denied_without_override(
+        self, director_no_override, tenant, school_class, school_year
+    ):
+        SchoolYear.objects.filter(id=school_year.id).update(is_current=True)
+        other_year = SchoolYear.objects.create(
+            tenant=tenant, label="2026-2027",
+            start_date="2026-09-15", end_date="2027-07-10",
+        )
+        client = jwt_client(director_no_override)
+        data = {
+            "classe_origine_id": str(school_class.id),
+            "school_year_cible_id": str(other_year.id),
+        }
+        response = client.post(self.URL, data, format="json")
+        assert response.status_code == status.HTTP_403_FORBIDDEN

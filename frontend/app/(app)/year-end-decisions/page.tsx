@@ -1,11 +1,15 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React from "react";
+import { auth } from "@/auth";
 import { getBackendClient } from "@/lib/api/client";
 import YearEndDecisionsClient from "./YearEndDecisionsClient";
 
 export const dynamic = "force-dynamic";
 
 export default async function YearEndDecisionsPage() {
+  const session = await auth();
+  const role = (session as any)?.user?.role;
+
   const client = await getBackendClient();
 
   let decisionsData: { results: any[]; count: number } = { results: [], count: 0 };
@@ -54,6 +58,7 @@ export default async function YearEndDecisionsPage() {
         decisions={decisionsData.results}
         schoolYears={schoolYears}
         classes={classes}
+        role={role}
       />
     </div>
   );
