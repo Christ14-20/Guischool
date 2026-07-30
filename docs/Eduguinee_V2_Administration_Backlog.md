@@ -47,7 +47,7 @@
   - [x] `POST /students/` (Épic 4) — `school_year_id` actuellement obligatoire. *(Sous-ticket B — livré.)*
   - [x] `POST /pedagogy/classes/` (Épic 3) — `school_year` actuellement un champ du payload. *(Sous-ticket C — livré.)*
   - [x] `POST /students/{id}/reinscription/` (Épic 4) — `school_year_id` obligatoire. *(Sous-ticket B — livré.)*
-  - [ ] `POST /pedagogy/evaluations/` (Épic 6) — indirect via `period` ; le sélecteur de période côté frontend doit filtrer sur l'année courante par défaut. Audit confirmé : aucun champ `school_year` en payload, rien à rendre optionnel côté backend — traitement 100% frontend. *(Sous-ticket E)*
+  - [x] `POST /pedagogy/evaluations/` (Épic 6) — indirect via `period` ; le sélecteur de période côté frontend doit filtrer sur l'année courante par défaut. Audit confirmé : aucun champ `school_year` en payload, rien à rendre optionnel côté backend — traitement 100% frontend. *(Sous-ticket E — livré, aucun changement de contrat.)*
   - [x] `POST /finance/feecategories/` (Épic 7) — `school_year` actuellement un champ obligatoire du payload. *(Sous-ticket D — livré.)*
   - [ ] `POST /pedagogy/year-end-decisions/` et `POST /pedagogy/promotions/bulk/` — ajoutés au périmètre (hors liste initiale, trouvés à l'audit, confirmés par le PO). *(Sous-ticket F)*
 - [x] **Cas limite à traiter explicitement** : aucune année n'a `is_current=True` au moment de l'appel → `422` avec message clair ("Aucune année scolaire courante n'est définie — contactez votre Directeur"), jamais un crash ou un comportement silencieux. *(Sous-ticket A — livré, `SchoolYearError` réutilisée.)*
@@ -75,6 +75,9 @@
 - Verrouillage étendu à la modification (décision PO) : `perform_update` refuse (`403`) toute réattribution de `school_year` différente de la valeur existante sans `pedagogy:override:schoolyear` ; les autres champs restent librement modifiables.
 - Incohérence contrat/code corrigée (même nature qu'en C) : `school_year_id` documenté → `school_year` réel.
 - Frontend : `FeesClient.tsx` — sélecteur masqué pour non-`DIRECTOR` en création **et** en modification (`role` propagé depuis `finance/fees/page.tsx`) ; `formData.school_year` reste pré-rempli en édition même masqué, donc aucune régression sur la resoumission normale du formulaire.
+**Sous-ticket E — notes de livraison (2026-07-30) :**
+- Frontend seul, aucun changement backend/contrat (confirmé à l'audit : `POST /pedagogy/evaluations/` n'a pas de champ `school_year`, seulement `period_id`).
+- `GradeEntryClient.tsx` : le sélecteur `syId` (filtre de classes/périodes, pas un champ d'écriture) est désormais pré-rempli sur l'année `is_current` au montage, via le même flux que la sélection manuelle (`handleFilterChange`) pour charger les périodes correspondantes. Reste librement changeable par tous les rôles — c'est un filtre de consultation, pas une écriture (distinction appliquée telle que validée par le PO).
 - `finance/fees` : le champ `school_year` est verrouillé pour non-`DIRECTOR` en création **et** en modification (une réattribution a posteriori désynchroniserait des `Invoice` déjà calculées).
 - Sélecteurs de **consultation** (ex. `syId` dans `GradeEntryClient`) : seule leur valeur par défaut est pré-remplie sur l'année courante, ils restent librement changeables pour tous les rôles (lecture ≠ écriture).
 

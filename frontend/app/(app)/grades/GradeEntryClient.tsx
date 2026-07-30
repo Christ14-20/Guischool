@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import React, { useState, useTransition, useCallback, useMemo } from "react";
+import React, { useState, useTransition, useCallback, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   Loader2,
@@ -192,6 +192,17 @@ export default function GradeEntryClient({
     },
     [classId, periodId, subjectId, evalType, loadGradeData]
   );
+
+  // SCHOOLYEAR-V2-02 : sélecteur de consultation pré-rempli sur l'année
+  // courante par défaut, mais reste librement changeable pour tous les
+  // rôles (filtre de lecture, pas une écriture — cf. décision PO).
+  useEffect(() => {
+    const current = schoolYears.find((sy: any) => sy.is_current);
+    if (current) {
+      handleFilterChange("sy_id", current.id);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleCreateEval = async () => {
     if (!newEval.title || !newEval.date) {
