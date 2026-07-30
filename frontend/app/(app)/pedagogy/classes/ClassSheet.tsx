@@ -8,9 +8,11 @@ interface Props {
   schoolYears: { id: string; label: string }[];
   levels: { id: string; name: string; cycle: string }[];
   teachers: { id: string; first_name: string; last_name: string }[];
+  role?: string;
 }
 
-export default function ClassSheet({ schoolYears, levels, teachers }: Props) {
+export default function ClassSheet({ schoolYears, levels, teachers, role }: Props) {
+  const canOverrideSchoolYear = role === "DIRECTOR";
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -73,23 +75,24 @@ export default function ClassSheet({ schoolYears, levels, teachers }: Props) {
                 />
               </div>
 
-              <div className="space-y-2">
-                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                  Année scolaire *
-                </label>
-                <select
-                  name="school_year"
-                  required
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors"
-                >
-                  <option value="">Sélectionner...</option>
-                  {schoolYears.map((sy) => (
-                    <option key={sy.id} value={sy.id}>
-                      {sy.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              {canOverrideSchoolYear && (
+                <div className="space-y-2">
+                  <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                    Année scolaire <span className="normal-case text-slate-500">(par défaut : année courante)</span>
+                  </label>
+                  <select
+                    name="school_year"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors"
+                  >
+                    <option value="">Année courante (par défaut)</option>
+                    {schoolYears.map((sy) => (
+                      <option key={sy.id} value={sy.id}>
+                        {sy.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               <div className="space-y-2">
                 <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider">

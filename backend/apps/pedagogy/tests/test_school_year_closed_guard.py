@@ -63,6 +63,9 @@ def director_role(db):
         ("finance:create", "finance"),
         ("finance:read", "finance"),
         ("finance:update", "finance"),
+        # SCHOOLYEAR-V2-02 : ces tests envoient des school_year/school_year_id
+        # explicites (comportement pré-V2-02) — nécessite l'override.
+        ("pedagogy:override:schoolyear", "pedagogy"),
     ]
     for codename, module in codenames:
         perm, _ = Permission.objects.get_or_create(

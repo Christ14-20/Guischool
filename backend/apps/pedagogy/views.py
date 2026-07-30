@@ -49,6 +49,7 @@ from apps.pedagogy.services.school_year_service import (
     close_period,
     close_school_year,
     assert_school_year_open,
+    resolve_school_year,
 )
 from apps.pedagogy.services.student_service import (
     enroll_student,
@@ -265,9 +266,31 @@ class ClassViewSet(
         return success_response(serializer.data)
 
     def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
+        # SCHOOLYEAR-V2-02 : school_year résolu (défaut/override) AVANT la
+        # construction du serializer, et non après is_valid(). SchoolClass a
+        # une contrainte unique (school_year, name) : DRF génère un
+        # UniqueTogetherValidator qui exige que les deux champs soient déjà
+        # présents dans le payload avant même d'atteindre validate() — un
+        # school_year résolu après coup ne serait jamais vu par ce validateur.
+        raw_school_year_id = request.data.get("school_year")
+        explicit_school_year = None
+        if raw_school_year_id:
+            explicit_school_year = SchoolYear.objects.filter(
+                id=raw_school_year_id, tenant=request.tenant
+            ).first()
+            if explicit_school_year is None:
+                return error_response(
+                    "Ressource non trouvée", status_code=status.HTTP_404_NOT_FOUND
+                )
+        school_year = resolve_school_year(
+            tenant=request.tenant, user=request.user, explicit=explicit_school_year
+        )
+        assert_school_year_open(school_year)
+
+        data = dict(request.data)
+        data["school_year"] = str(school_year.id)
+        serializer = self.get_serializer(data=data)
         serializer.is_valid(raise_exception=True)
-        assert_school_year_open(serializer.validated_data["school_year"])
         self.perform_create(serializer)
         return created_response(serializer.data)
 

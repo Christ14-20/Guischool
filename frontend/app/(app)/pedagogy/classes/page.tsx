@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React from "react";
 import Link from "next/link";
+import { auth } from "@/auth";
 import { getBackendClient } from "@/lib/api/client";
 import { GraduationCap, Users, DoorOpen } from "lucide-react";
 import ClassSheet from "./ClassSheet";
@@ -17,6 +18,8 @@ interface ClassesPageProps {
 export default async function ClassesPage({ searchParams }: ClassesPageProps) {
   const params = await searchParams;
   const levelFilter = params.level_id || "";
+  const session = await auth();
+  const role = (session as any)?.user?.role;
 
   let classes: any[] = [];
   let levels: any[] = [];
@@ -73,6 +76,7 @@ export default async function ClassesPage({ searchParams }: ClassesPageProps) {
             schoolYears={schoolYears}
             levels={levels}
             teachers={teachers}
+            role={role}
           />
         </div>
       </div>

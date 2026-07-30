@@ -8,7 +8,12 @@ from apps.pedagogy.models import Level, SchoolClass, SchoolYear
 
 
 def _add_pedagogy_permissions(role):
-    codenames = ["pedagogy:create:schoolyear", "pedagogy:create:period"]
+    # SCHOOLYEAR-V2-02 : ces tests envoient un school_year explicite
+    # (comportement pré-V2-02) — nécessite désormais la permission d'override.
+    codenames = [
+        "pedagogy:create:schoolyear", "pedagogy:create:period",
+        "pedagogy:override:schoolyear",
+    ]
     for codename in codenames:
         perm, _ = Permission.objects.get_or_create(
             codename=codename,
@@ -302,3 +307,117 @@ class TestClassEndpoints:
         resp = client.get(reverse("class-list"))
         assert resp.status_code == 200
         assert len(resp.json()["data"]["results"]) == 0
+
+
+@pytest.fixture
+def secretaire_role(db):
+    """pedagogy:create:schoolyear sans pedagogy:override:schoolyear — pas DIRECTOR."""
+    role = Role.objects.get_or_create(
+        name="STUDENT_STUDIES", defaults={"label": "Scolarité"}
+    )[0]
+    perm, _ = Permission.objects.get_or_create(
+        codename="pedagogy:create:schoolyear",
+        defaults={"name": "pedagogy:create:schoolyear", "module": "pedagogy"},
+    )
+    role.permissions.add(perm)
+    return role
+
+
+@pytest.fixture
+def secretaire_user(tenant, secretaire_role):
+    return User.objects.create_user(
+        username="secretaire-cls", email="secretaire-cls@ecole-test.gn",
+        password="SecurePass123!", role=secretaire_role, tenant=tenant,
+    )
+
+
+@pytest.mark.django_db
+class TestClassSchoolYearDefaultAndOverride:
+    """SCHOOLYEAR-V2-02 : school_year devient optionnel, défaut = année courante."""
+
+    def test_omitted_defaults_to_current_year(self, secretaire_user, tenant, school_year, level):
+        SchoolYear.objects.filter(id=school_year.id).update(is_current=True)
+        client = login_client(APIClient(), secretaire_user.email)
+        resp = client.post(
+            reverse("class-list"),
+            {"level_id": str(level.id), "name": "6ème A", "capacity": 50},
+            format="json",
+        )
+        assert resp.status_code == 201, resp.content
+        cls = SchoolClass.objects.get(id=resp.json()["data"]["id"])
+        assert cls.school_year_id == school_year.id
+
+    def test_omitted_raises_422_when_no_current_year(self, secretaire_user, level):
+        client = login_client(APIClient(), secretaire_user.email)
+        resp = client.post(
+            reverse("class-list"),
+            {"level_id": str(level.id), "name": "6ème A", "capacity": 50},
+            format="json",
+        )
+        assert resp.status_code == 422
+        assert "Aucune année scolaire courante" in resp.json()["message"]
+
+    def test_explicit_matching_current_allowed_without_override(
+        self, secretaire_user, school_year, level
+    ):
+        SchoolYear.objects.filter(id=school_year.id).update(is_current=True)
+        client = login_client(APIClient(), secretaire_user.email)
+        resp = client.post(
+            reverse("class-list"),
+            {"school_year": str(school_year.id), "level_id": str(level.id), "name": "6ème A"},
+            format="json",
+        )
+        assert resp.status_code == 201, resp.content
+
+    def test_explicit_different_from_current_denied_without_override(
+        self, secretaire_user, tenant, school_year, level
+    ):
+        SchoolYear.objects.filter(id=school_year.id).update(is_current=True)
+        other_year = SchoolYear.objects.create(
+            tenant=tenant, label="2026-2027",
+            start_date="2026-09-15", end_date="2027-07-10",
+        )
+        client = login_client(APIClient(), secretaire_user.email)
+        resp = client.post(
+            reverse("class-list"),
+            {"school_year": str(other_year.id), "level_id": str(level.id), "name": "6ème A"},
+            format="json",
+        )
+        assert resp.status_code == 403
+
+    def test_director_can_override_to_a_different_year(
+        self, director_user, tenant, school_year, level
+    ):
+        SchoolYear.objects.filter(id=school_year.id).update(is_current=True)
+        other_year = SchoolYear.objects.create(
+            tenant=tenant, label="2026-2027",
+            start_date="2026-09-15", end_date="2027-07-10",
+        )
+        client = login_client(APIClient(), director_user.email)
+        resp = client.post(
+            reverse("class-list"),
+            {"school_year": str(other_year.id), "level_id": str(level.id), "name": "6ème A"},
+            format="json",
+        )
+        assert resp.status_code == 201, resp.content
+
+    def test_explicit_school_year_from_other_tenant_returns_404(
+        self, director_user, plan, level
+    ):
+        tenant_b = Tenant.objects.create(
+            name="École B Cls SY", slug="ecole-b-cls-sy",
+            school_type=Tenant.SchoolType.LYCEE, status=Tenant.Status.ACTIVE,
+            plan=plan, contact_name="Directeur B", contact_phone="+224620000003",
+            contact_email="directeur@ecole-b-cls-sy.gn",
+        )
+        sy_b = SchoolYear.objects.create(
+            tenant=tenant_b, label="2025-2026",
+            start_date="2025-09-15", end_date="2026-07-10",
+        )
+        client = login_client(APIClient(), director_user.email)
+        resp = client.post(
+            reverse("class-list"),
+            {"school_year": str(sy_b.id), "level_id": str(level.id), "name": "6ème A"},
+            format="json",
+        )
+        assert resp.status_code == 404

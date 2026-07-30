@@ -7,14 +7,17 @@ import { revalidatePath } from "next/cache";
 export async function createClassAction(state: any, formData: FormData) {
   try {
     const client = await getBackendClient();
-    const payload = {
-      school_year: formData.get("school_year"),
+    const schoolYear = formData.get("school_year");
+    const payload: Record<string, any> = {
       level_id: formData.get("level_id"),
       name: formData.get("name"),
       capacity: formData.get("capacity") ? Number(formData.get("capacity")) : 60,
       room: formData.get("room") || "",
       main_teacher_id: formData.get("main_teacher_id") || null,
     };
+    // Omis si non renseigné (champ masqué pour non-DIRECTOR) : le backend
+    // défaut sur l'année courante — SCHOOLYEAR-V2-02.
+    if (schoolYear) payload.school_year = schoolYear;
     const response = await client.post("/pedagogy/classes/", payload);
     revalidatePath("/pedagogy/classes");
     return { success: true, data: response.data.data, error: null };

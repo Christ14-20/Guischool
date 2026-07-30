@@ -444,7 +444,7 @@ Convention uniforme sur toutes les listes : `?champ=valeur` pour un filtre exact
 **Requête `POST` :**
 ```json
 {
-  "school_year_id": "1a2b3c4d-...",
+  "school_year": "1a2b3c4d-...",
   "level_id": "5e6f7a8b-...",
   "name": "6ème A",
   "capacity": 50,
@@ -452,6 +452,9 @@ Convention uniforme sur toutes les listes : `?champ=valeur` pour un filtre exact
   "main_teacher_id": "3f1a2b4c-..."
 }
 ```
+> **Correction (2026-07-30) :** le nom de champ documenté ici était `school_year_id` alors que le code (`ClassSerializer`, `ClassSheet.tsx`) utilise `school_year` depuis l'Épic 3 — incohérence pré-existante entre le contrat et l'implémentation, corrigée à l'occasion de cette note plutôt que perpétuée.
+>
+> **Note de migration (SCHOOLYEAR-V2-02, 2026-07-30) :** `school_year` est passé d'**obligatoire** à **optionnel**. Même politique de résolution défaut/année courante + override que `POST /students/` (`pedagogy:override:schoolyear`). Particularité : un `school_year` fourni appartenant à un autre tenant renvoie `404` (et non `400`), cohérent avec l'isolation multi-tenant stricte du reste de l'API.
 
 **Réponse `201` :**
 ```json
@@ -468,6 +471,11 @@ Convention uniforme sur toutes les listes : `?champ=valeur` pour un filtre exact
   }
 }
 ```
+**Erreurs :**
+- `404` (`school_year` fourni, hors tenant) : `{"message": "Ressource non trouvée"}`
+- `422` (aucune année courante, `school_year` omis) : `{"message": "Aucune année scolaire courante n'est définie — contactez votre Directeur."}`
+- `422` (année clôturée) : cf. SCHOOLYEAR-V2-01.
+- `403` (`school_year` fourni, différent de l'année courante, sans `pedagogy:override:schoolyear`) : cf. `POST /students/`.
 
 ### `GET/POST /pedagogy/subjects/`
 **Requête `POST` :** `{"code": "MATH", "name": "Mathématiques", "category": "Scientifique", "is_official": true}`

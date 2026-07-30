@@ -45,7 +45,7 @@
 - [x] **Un seul point de résolution centralisé** : fonction `get_current_school_year(tenant)` unique (`apps/pedagogy/services/school_year_service.py`, à côté de `assert_school_year_open`), importée partout où l'année courante est nécessaire — **jamais** de logique de résolution dupliquée à plusieurs endroits (rappel direct des trois bugs de résolution d'année trouvés en Épic 7). *(Sous-ticket A — livré.)*
 - [ ] **Endpoints à auditer et corriger un par un** (vérifier chacun, ne pas supposer) :
   - [x] `POST /students/` (Épic 4) — `school_year_id` actuellement obligatoire. *(Sous-ticket B — livré.)*
-  - [ ] `POST /pedagogy/classes/` (Épic 3) — `school_year` actuellement un champ du payload. *(Sous-ticket C)*
+  - [x] `POST /pedagogy/classes/` (Épic 3) — `school_year` actuellement un champ du payload. *(Sous-ticket C — livré.)*
   - [x] `POST /students/{id}/reinscription/` (Épic 4) — `school_year_id` obligatoire. *(Sous-ticket B — livré.)*
   - [ ] `POST /pedagogy/evaluations/` (Épic 6) — indirect via `period` ; le sélecteur de période côté frontend doit filtrer sur l'année courante par défaut. Audit confirmé : aucun champ `school_year` en payload, rien à rendre optionnel côté backend — traitement 100% frontend. *(Sous-ticket E)*
   - [ ] `POST /finance/feecategories/` (Épic 7) — `school_year` actuellement un champ obligatoire du payload. *(Sous-ticket D)*
@@ -64,6 +64,12 @@
 - `StudentCreateSerializer.school_year_id` et `ReinscriptionSerializer.school_year_id` : `required=False, allow_null=True` + résolution dans `validate()`. `enroll_student()`/`reinscribe_student()` inchangés (reçoivent toujours une `SchoolYear` déjà résolue).
 - Frontend : `EnrollStudentForm.tsx` et `StudentTabs.tsx` (`ReinscriptionForm`) — sélecteur d'année masqué pour non-`DIRECTOR`, visible avec défaut "Année courante" pour `DIRECTOR` ; `role` propagé depuis `students/new/page.tsx` et `students/[id]/page.tsx`.
 - Contrat d'API mis à jour (`POST /students/`, `POST /students/{id}/reinscription/`) avec note de migration.
+**Sous-ticket C — notes de livraison (2026-07-30) :**
+- Piège découvert : `SchoolClass` a une contrainte unique `(school_year, name)` — DRF génère automatiquement un `UniqueTogetherValidator` qui exige que les deux champs soient déjà présents dans le payload **avant** `validate()`. Résoudre `school_year` après `serializer.is_valid()` (comme en sous-ticket B) échouait donc systématiquement avec « Ce champ est obligatoire. ». Fix : résolution défaut/override faite dans la vue **avant** la construction du serializer, valeur injectée dans le payload transmis.
+- Isolation multi-tenant corrigée à cette occasion : un `school_year` explicite appartenant à un autre tenant renvoie désormais `404` (auparavant non vérifié explicitement — la validation du champ ne filtrait pas par tenant).
+- Incohérence contrat/code corrigée : le contrat documentait `school_year_id`, le code et le frontend ont toujours utilisé `school_year`.
+- Hors périmètre, signalé sans être corrigé : `level_id` sur ce même endpoint n'est pas vérifié comme appartenant au tenant avant `Level.objects.get(...)` dans `ClassSerializer.create()` — un `level_id` d'un autre tenant provoque un `500` (`Level.DoesNotExist` non catché), pas un `404`. Bug pré-existant, indépendant de `school_year`, à traiter séparément.
+- Frontend : `ClassSheet.tsx` — sélecteur d'année masqué pour non-`DIRECTOR` ; `role` propagé depuis `pedagogy/classes/page.tsx`.
 - `finance/fees` : le champ `school_year` est verrouillé pour non-`DIRECTOR` en création **et** en modification (une réattribution a posteriori désynchroniserait des `Invoice` déjà calculées).
 - Sélecteurs de **consultation** (ex. `syId` dans `GradeEntryClient`) : seule leur valeur par défaut est pré-remplie sur l'année courante, ils restent librement changeables pour tous les rôles (lecture ≠ écriture).
 
