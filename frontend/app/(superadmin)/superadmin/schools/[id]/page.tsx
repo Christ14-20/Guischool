@@ -6,6 +6,7 @@ import { getBackendClient } from "@/lib/api/client";
 import { Building2, Calendar, Mail, Phone, MapPin, Award, User, ShieldAlert, ArrowLeft, Users } from "lucide-react";
 import SchoolActions from "../SchoolActions";
 import ChangePlanButton from "../ChangePlanButton";
+import { STATUS_STYLES, isSuspendedStatus } from "../../statusStyles";
 
 
 export const dynamic = "force-dynamic";
@@ -44,8 +45,9 @@ export default async function SchoolDetailPage({ params }: SchoolDetailPageProps
     notFound();
   }
 
-  const isSuspended = school.status === "SUSPENDED";
+  const isSuspended = isSuspendedStatus(school.status);
   const suspendReason = school.settings?.suspend_reason || "";
+  const statusStyle = STATUS_STYLES[school.status] || STATUS_STYLES.TRIAL;
 
   return (
     <div className="max-w-5xl mx-auto space-y-8 animate-fade-in">
@@ -60,28 +62,11 @@ export default async function SchoolDetailPage({ params }: SchoolDetailPageProps
         </Link>
         <div className="flex items-center gap-3">
           <span
-            className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${
-              school.status === "ACTIVE"
-                ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
-                : school.status === "SUSPENDED"
-                ? "bg-destructive/10 text-destructive border border-destructive/20"
-                : "bg-sky-500/10 text-sky-400 border border-sky-500/20"
-            }`}
+            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border"
+            style={{ background: statusStyle.bg, color: statusStyle.color, borderColor: statusStyle.color + "33" }}
           >
-            <span
-              className={`size-1.5 rounded-full ${
-                school.status === "ACTIVE"
-                  ? "bg-emerald-400"
-                  : school.status === "SUSPENDED"
-                  ? "bg-destructive"
-                  : "bg-sky-400"
-              }`}
-            />
-            {school.status === "ACTIVE"
-              ? "Actif"
-              : school.status === "SUSPENDED"
-              ? "Suspendu"
-              : "Essai"}
+            <span className="size-1.5 rounded-full" style={{ background: statusStyle.dot }} />
+            {statusStyle.label}
           </span>
         </div>
       </div>

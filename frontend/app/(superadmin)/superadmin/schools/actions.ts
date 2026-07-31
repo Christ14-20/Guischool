@@ -46,10 +46,10 @@ export async function createSchoolAction(state: any, formData: FormData) {
   }
 }
 
-export async function suspendSchoolAction(id: string, reason: string) {
+export async function suspendSchoolAction(id: string, reason: string, type: "SOFT" | "HARD") {
   try {
     const client = await getBackendClient();
-    await client.patch(`/superadmin/schools/${id}/suspend/`, { reason });
+    await client.patch(`/superadmin/schools/${id}/suspend/`, { reason, type });
     
     revalidatePath("/superadmin/dashboard");
     revalidatePath("/superadmin/schools");

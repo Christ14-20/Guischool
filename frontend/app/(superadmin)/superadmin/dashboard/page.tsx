@@ -7,6 +7,7 @@ import {
   Ban, XCircle, Banknote,
 } from "lucide-react";
 import MonthlyCreationsChart from "./MonthlyCreationsChart";
+import { STATUS_STYLES } from "../statusStyles";
 
 export const dynamic = "force-dynamic";
 
@@ -66,14 +67,6 @@ const KPI_DEFS: Record<
     iconBg: "rgba(100, 116, 139, 0.1)",
     iconColor: "#94A3B8",
   },
-};
-
-const STATUS_STYLES: Record<string, { bg: string; color: string; dot: string; label: string }> = {
-  ACTIVE: { bg: "rgba(16, 185, 129, 0.12)", color: "#10B981", dot: "#10B981", label: "Actif" },
-  TRIAL: { bg: "rgba(14, 165, 233, 0.12)", color: "#0EA5E9", dot: "#0EA5E9", label: "Essai" },
-  SUSPENDED_SOFT: { bg: "rgba(245, 158, 11, 0.12)", color: "#F59E0B", dot: "#F59E0B", label: "Suspendu (lecture seule)" },
-  SUSPENDED_HARD: { bg: "rgba(239, 68, 68, 0.12)", color: "#EF4444", dot: "#EF4444", label: "Suspendu (bloqué)" },
-  CANCELLED: { bg: "rgba(100, 116, 139, 0.12)", color: "#94A3B8", dot: "#94A3B8", label: "Résilié" },
 };
 
 function formatGNF(value: string) {

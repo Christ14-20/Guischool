@@ -4,6 +4,7 @@ import Link from "next/link";
 import { getBackendClient } from "@/lib/api/client";
 import { Plus, Search, SlidersHorizontal } from "lucide-react";
 import SchoolActions from "./SchoolActions";
+import { STATUS_STYLES } from "../statusStyles";
 
 
 export const dynamic = "force-dynamic";
@@ -128,9 +129,10 @@ export default async function SuperAdminSchoolsPage({ searchParams }: SchoolsPag
             >
               <option value="">Tous les statuts</option>
               <option value="ACTIVE">Actif</option>
-              <option value="SUSPENDED">Suspendu</option>
               <option value="TRIAL">Essai (Trial)</option>
-              <option value="CANCELLED">Annulé</option>
+              <option value="SUSPENDED_SOFT">Suspendu (lecture seule)</option>
+              <option value="SUSPENDED_HARD">Suspendu (bloqué)</option>
+              <option value="CANCELLED">Résilié</option>
             </select>
           </div>
 
@@ -223,30 +225,18 @@ export default async function SuperAdminSchoolsPage({ searchParams }: SchoolsPag
                     </td>
                     <td className="px-6 py-4 text-center">{school.student_count}</td>
                     <td className="px-6 py-4">
-                      <span
-                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${
-                          school.status === "ACTIVE"
-                            ? "bg-emerald-500/10 text-emerald-400"
-                            : school.status === "SUSPENDED"
-                            ? "bg-amber-500/10 text-amber-400"
-                            : "bg-sky-500/10 text-sky-400"
-                        }`}
-                      >
-                        <span
-                          className={`size-1.5 rounded-full ${
-                            school.status === "ACTIVE"
-                              ? "bg-emerald-400"
-                              : school.status === "SUSPENDED"
-                              ? "bg-amber-400"
-                              : "bg-sky-400"
-                          }`}
-                        />
-                        {school.status === "ACTIVE"
-                          ? "Actif"
-                          : school.status === "SUSPENDED"
-                          ? "Suspendu"
-                          : "Essai"}
-                      </span>
+                      {(() => {
+                        const st = STATUS_STYLES[school.status] || STATUS_STYLES.TRIAL;
+                        return (
+                          <span
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold"
+                            style={{ background: st.bg, color: st.color }}
+                          >
+                            <span className="size-1.5 rounded-full" style={{ background: st.dot }} />
+                            {st.label}
+                          </span>
+                        );
+                      })()}
                     </td>
                     <td className="px-6 py-4">
                       <SchoolActions

@@ -3,21 +3,26 @@
 
 
 import React, { useState, useTransition } from "react";
+import { createPortal } from "react-dom";
 import { suspendSchoolAction, reactivateSchoolAction } from "./actions";
+import { isSuspendedStatus } from "../statusStyles";
 import { ShieldAlert, PlayCircle, Eye, Loader2 } from "lucide-react";
 import Link from "next/link";
 
 interface SchoolActionsProps {
   schoolId: string;
   schoolName: string;
-  status: "ACTIVE" | "SUSPENDED" | "TRIAL";
+  status: "ACTIVE" | "TRIAL" | "SUSPENDED_SOFT" | "SUSPENDED_HARD" | "CANCELLED";
 }
 
 export default function SchoolActions({ schoolId, schoolName, status }: SchoolActionsProps) {
   const [isPending, startTransition] = useTransition();
   const [showSuspendModal, setShowSuspendModal] = useState(false);
   const [reason, setReason] = useState("");
+  const [suspensionType, setSuspensionType] = useState<"SOFT" | "HARD">("SOFT");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  const suspended = isSuspendedStatus(status);
 
   const handleReactivate = () => {
     if (confirm(`Voulez-vous vraiment réactiver l’établissement "${schoolName}" ?`)) {
@@ -39,10 +44,11 @@ export default function SchoolActions({ schoolId, schoolName, status }: SchoolAc
     }
     setErrorMsg(null);
     startTransition(async () => {
-      const res = await suspendSchoolAction(schoolId, reason);
+      const res = await suspendSchoolAction(schoolId, reason, suspensionType);
       if (res.success) {
         setShowSuspendModal(false);
         setReason("");
+        setSuspensionType("SOFT");
       } else {
         setErrorMsg(res.error);
       }
@@ -60,7 +66,7 @@ export default function SchoolActions({ schoolId, schoolName, status }: SchoolAc
           <Eye className="size-4" />
         </Link>
 
-        {status === "SUSPENDED" ? (
+        {suspended ? (
           <button
             onClick={handleReactivate}
             disabled={isPending}
@@ -85,7 +91,7 @@ export default function SchoolActions({ schoolId, schoolName, status }: SchoolAc
       </div>
 
       {/* Suspend Modal */}
-      {showSuspendModal && (
+      {showSuspendModal && createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm animate-fade-in">
           <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 w-full max-w-md shadow-2xl space-y-4">
             <div>
@@ -102,6 +108,42 @@ export default function SchoolActions({ schoolId, schoolName, status }: SchoolAc
             )}
 
             <form onSubmit={handleSuspendSubmit} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
+                  Type de suspension
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setSuspensionType("SOFT")}
+                    className={`px-3 py-2 rounded-xl text-xs font-semibold text-left transition-colors border ${
+                      suspensionType === "SOFT"
+                        ? "bg-amber-500/10 border-amber-500/40 text-amber-300"
+                        : "bg-slate-950 border-slate-800 text-slate-400 hover:text-slate-200"
+                    }`}
+                  >
+                    Lecture seule (soft)
+                    <span className="block font-normal text-[11px] opacity-80 mt-0.5">
+                      Consultation toujours possible
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSuspensionType("HARD")}
+                    className={`px-3 py-2 rounded-xl text-xs font-semibold text-left transition-colors border ${
+                      suspensionType === "HARD"
+                        ? "bg-destructive/10 border-destructive/40 text-destructive"
+                        : "bg-slate-950 border-slate-800 text-slate-400 hover:text-slate-200"
+                    }`}
+                  >
+                    Blocage total (hard)
+                    <span className="block font-normal text-[11px] opacity-80 mt-0.5">
+                      Accès entièrement coupé
+                    </span>
+                  </button>
+                </div>
+              </div>
+
               <div>
                 <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
                   Raison de la suspension
@@ -135,7 +177,8 @@ export default function SchoolActions({ schoolId, schoolName, status }: SchoolAc
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
