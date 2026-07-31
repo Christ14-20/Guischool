@@ -8,6 +8,7 @@ marquage payé, isolation cross-tenant.
 import pytest
 from datetime import date, timedelta
 from decimal import Decimal
+from unittest.mock import patch
 from django.urls import reverse
 from django.utils import timezone
 from rest_framework.test import APIClient
@@ -115,6 +116,56 @@ class TestBillingAnchor:
         next_due = get_next_billing_date(tenant, date(2026, 2, 20))
         assert next_due == date(2026, 2, 10)
 
+    def test_no_retroactive_billing_after_cancellation_and_reactivation(self, plan):
+        """
+        Régression : un tenant qui a déjà des factures, passe CANCELLED
+        (sort du filtre ELIGIBLE_STATUSES, invisible à la tâche), puis est
+        réactivé des mois plus tard, ne doit JAMAIS repartir de l'ancien
+        `period_end` de sa dernière facture (ça facturerait rétroactivement
+        la période CANCELLED, où le tenant ne payait rien et n'utilisait pas
+        le service) — même principe que la décision PO sur TRIAL, étendu à
+        CANCELLED. `billing_cycle_start` (repositionné par
+        TenantViewSet.suspend/reactivate à la réactivation) doit prévaloir
+        sur toute facture antérieure.
+        """
+        tenant = make_tenant(plan, status=Tenant.Status.CANCELLED)
+        # Dernière facture avant le passage CANCELLED : plusieurs mois dans le passé.
+        PlatformInvoice.objects.create(
+            tenant=tenant, invoice_number="PINV-2025-000050", amount=Decimal("100.00"),
+            plan_name=plan.name, period_start=date(2025, 10, 1), period_end=date(2025, 11, 1),
+            issued_date=date(2025, 10, 1), due_date=date(2025, 10, 16),
+        )
+        # Réactivation simulée le 2026-04-01 (ce que TenantViewSet.reactivate
+        # ferait réellement via timezone.now().date()).
+        reactivation_date = date(2026, 4, 1)
+        tenant.status = Tenant.Status.ACTIVE
+        tenant.billing_cycle_start = reactivation_date
+        tenant.save(update_fields=["status", "billing_cycle_start"])
+
+        next_due = get_next_billing_date(tenant, date(2026, 4, 1))
+        assert next_due == reactivation_date
+        assert next_due != date(2025, 11, 1)
+
+    def test_billing_cycle_start_ignored_when_after_a_current_invoice(self, plan):
+        """
+        Si `billing_cycle_start` est antérieur à la dernière facture (cas
+        normal : le tenant facture en continu depuis sa réactivation, sans
+        nouveau passage par TRIAL/CANCELLED), la facturation continue
+        normalement depuis `period_end` — `billing_cycle_start` ne doit
+        jamais bloquer un cycle de facturation déjà en cours.
+        """
+        tenant = make_tenant(plan, status=Tenant.Status.ACTIVE)
+        tenant.billing_cycle_start = date(2026, 1, 1)
+        tenant.save(update_fields=["billing_cycle_start"])
+
+        PlatformInvoice.objects.create(
+            tenant=tenant, invoice_number="PINV-2026-000060", amount=Decimal("100.00"),
+            plan_name=plan.name, period_start=date(2026, 2, 1), period_end=date(2026, 3, 1),
+            issued_date=date(2026, 2, 1), due_date=date(2026, 2, 16),
+        )
+        next_due = get_next_billing_date(tenant, date(2026, 3, 15))
+        assert next_due == date(2026, 3, 1)
+
     def test_variable_month_length_handled_via_relativedelta(self, plan):
         """Un cycle démarrant le 31 janvier se termine le 28 février (pas d'erreur)."""
         tenant = make_tenant(plan)
@@ -170,6 +221,106 @@ class TestGenerateDueInvoices:
         second = generate_due_invoices(today=date(2026, 5, 1))
         assert len(second) == 1
         assert PlatformInvoice.objects.filter(tenant=tenant).count() == 2
+
+
+# ─── API : suspend/reactivate positionnent billing_cycle_start ───────────────
+
+@pytest.mark.django_db
+class TestBillingCycleStartTransitions:
+    """
+    Régression : TenantViewSet.suspend/reactivate doivent repositionner
+    billing_cycle_start à aujourd'hui uniquement lors d'une rentrée en
+    éligibilité (ancien statut TRIAL ou CANCELLED), jamais lors d'une
+    transition entre deux statuts déjà éligibles.
+    """
+
+    def test_reactivate_from_cancelled_sets_billing_cycle_start(self, superadmin_user, plan):
+        tenant = make_tenant(plan, status=Tenant.Status.CANCELLED)
+        assert tenant.billing_cycle_start is None
+
+        client = APIClient()
+        token = login_user(client, superadmin_user.email)
+        client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
+
+        url = reverse("superadmin-schools-reactivate", args=[str(tenant.id)])
+        with patch("apps.superadmin.tasks.send_tenant_status_notification.delay"):
+            resp = client.patch(url, {}, format="json")
+        assert resp.status_code == 200
+
+        tenant.refresh_from_db()
+        assert tenant.status == Tenant.Status.ACTIVE
+        assert tenant.billing_cycle_start == date.today()
+
+    def test_suspend_from_trial_sets_billing_cycle_start(self, superadmin_user, plan):
+        tenant = make_tenant(plan, status=Tenant.Status.TRIAL)
+        assert tenant.billing_cycle_start is None
+
+        client = APIClient()
+        token = login_user(client, superadmin_user.email)
+        client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
+
+        url = reverse("superadmin-schools-suspend", args=[str(tenant.id)])
+        with patch("apps.superadmin.tasks.send_tenant_status_notification.delay"):
+            resp = client.patch(url, {"reason": "Test", "type": "SOFT"}, format="json")
+        assert resp.status_code == 200
+
+        tenant.refresh_from_db()
+        assert tenant.status == Tenant.Status.SUSPENDED_SOFT
+        assert tenant.billing_cycle_start == date.today()
+
+    def test_reactivate_between_eligible_statuses_does_not_reset(self, superadmin_user, plan):
+        """SUSPENDED_HARD -> ACTIVE : les deux sont éligibles, pas de nouvelle rentrée."""
+        tenant = make_tenant(plan, status=Tenant.Status.SUSPENDED_HARD)
+        earlier = date(2025, 1, 1)
+        tenant.billing_cycle_start = earlier
+        tenant.save(update_fields=["billing_cycle_start"])
+
+        client = APIClient()
+        token = login_user(client, superadmin_user.email)
+        client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
+
+        url = reverse("superadmin-schools-reactivate", args=[str(tenant.id)])
+        with patch("apps.superadmin.tasks.send_tenant_status_notification.delay"):
+            resp = client.patch(url, {}, format="json")
+        assert resp.status_code == 200
+
+        tenant.refresh_from_db()
+        assert tenant.billing_cycle_start == earlier
+
+    def test_full_flow_cancelled_reactivation_generates_no_retroactive_invoice(self, superadmin_user, plan):
+        """
+        Bout en bout : facture ancienne existante -> tenant CANCELLED ->
+        réactivé via l'API réelle -> generate_due_invoices ne doit produire
+        qu'UNE facture, dont la période démarre à la réactivation, jamais à
+        l'ancien period_end.
+        """
+        tenant = make_tenant(plan, status=Tenant.Status.CANCELLED)
+        PlatformInvoice.objects.create(
+            tenant=tenant, invoice_number="PINV-2025-000099", amount=Decimal("100.00"),
+            plan_name=plan.name, period_start=date(2025, 6, 1), period_end=date(2025, 7, 1),
+            issued_date=date(2025, 6, 1), due_date=date(2025, 6, 16),
+        )
+
+        client = APIClient()
+        token = login_user(client, superadmin_user.email)
+        client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
+        url = reverse("superadmin-schools-reactivate", args=[str(tenant.id)])
+        with patch("apps.superadmin.tasks.send_tenant_status_notification.delay"):
+            client.patch(url, {}, format="json")
+
+        tenant.refresh_from_db()
+        today = date.today()
+        created = generate_due_invoices(today=today)
+
+        new_invoices = [inv for inv in created if inv.tenant_id == tenant.id]
+        assert len(new_invoices) == 1
+        assert new_invoices[0].period_start == today
+        assert new_invoices[0].period_start != date(2025, 7, 1)
+
+        # Une seconde exécution le même jour ne doit rien produire de plus
+        # (pas de rattrapage en boucle).
+        second = generate_due_invoices(today=today)
+        assert [inv for inv in second if inv.tenant_id == tenant.id] == []
 
 
 # ─── API : liste + mark-paid ───────────────────────────────────────────────────

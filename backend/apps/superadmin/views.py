@@ -215,7 +215,13 @@ class TenantViewSet(
         if not tenant.settings:
             tenant.settings = {}
         tenant.settings["suspend_reason"] = reason
-        tenant.save(update_fields=["status", "settings", "updated_at"])
+        update_fields = ["status", "settings", "updated_at"]
+        if old_status in (Tenant.Status.TRIAL, Tenant.Status.CANCELLED):
+            # SUPERADMIN-V2-05 : rentrée en éligibilité facturation, cf.
+            # docstring de Tenant.billing_cycle_start.
+            tenant.billing_cycle_start = timezone.now().date()
+            update_fields.append("billing_cycle_start")
+        tenant.save(update_fields=update_fields)
 
         # Envoi de la notification asynchrone (non bloquante)
         send_tenant_status_notification.delay(str(tenant.id), old_status, new_status)
@@ -242,7 +248,13 @@ class TenantViewSet(
         tenant.status = Tenant.Status.ACTIVE
         if tenant.settings and "suspend_reason" in tenant.settings:
             tenant.settings.pop("suspend_reason")
-        tenant.save(update_fields=["status", "settings", "updated_at"])
+        update_fields = ["status", "settings", "updated_at"]
+        if old_status in (Tenant.Status.TRIAL, Tenant.Status.CANCELLED):
+            # SUPERADMIN-V2-05 : rentrée en éligibilité facturation, cf.
+            # docstring de Tenant.billing_cycle_start.
+            tenant.billing_cycle_start = timezone.now().date()
+            update_fields.append("billing_cycle_start")
+        tenant.save(update_fields=update_fields)
 
         # Envoi de la notification asynchrone (non bloquante)
         send_tenant_status_notification.delay(str(tenant.id), old_status, Tenant.Status.ACTIVE)

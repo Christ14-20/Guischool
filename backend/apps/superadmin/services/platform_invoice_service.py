@@ -23,6 +23,14 @@ Ancre de facturation (décision PO 2026-07-31) :
   effective est donc la date de première éligibilité, pas le 1er du mois
   civil (évite un pic de génération groupé le 1er de chaque mois, et reste
   cohérente avec la date réelle de souscription).
+- Même règle appliquée symétriquement (correctif trouvé en marge, pas dans
+  la décision PO initiale) à un tenant qui sort de l'éligibilité
+  (CANCELLED) puis y REVIENT (réactivé) : la prochaine facturation redémarre
+  au jour de la réactivation (`Tenant.billing_cycle_start`, repositionné par
+  `TenantViewSet.suspend`/`reactivate`), jamais sur le `period_end` d'une
+  facture antérieure au passage CANCELLED — sinon la génération suivante
+  facturerait rétroactivement la période où le tenant ne payait rien et
+  n'utilisait pas le service.
 - Pas de prorata sur le premier mois : la première période facturée est un
   mois plein.
 - `dateutil.relativedelta` gère le cas des mois de longueur variable (un
@@ -70,18 +78,29 @@ def get_next_billing_date(tenant: Tenant, today: date) -> date:
     """
     Date de départ de la prochaine période à facturer pour ce tenant.
 
-    S'il existe déjà une facture, on repart de son `period_end` (cycle
-    continu). Sinon, le tenant est vu pour la première fois en statut
-    éligible : le premier cycle démarre aujourd'hui (pas de rattrapage sur
-    `Tenant.created_at` si le tenant est resté en TRIAL avant de devenir
-    éligible — cf. docstring du module).
+    S'il existe déjà une facture ET qu'elle couvre bien le cycle de
+    facturation en cours (`period_end >= tenant.billing_cycle_start`), on
+    repart de son `period_end` (cycle continu). Sinon, le tenant est soit vu
+    pour la première fois en statut éligible, soit y REVIENT après un
+    passage par TRIAL/CANCELLED (`billing_cycle_start` repositionné par
+    TenantViewSet.suspend/reactivate) : le cycle redémarre à
+    `billing_cycle_start` (ou `today` si jamais positionné), jamais sur
+    l'ancienne `period_end` — sinon la prochaine facture couvrirait
+    rétroactivement une période où le tenant ne payait rien et n'utilisait
+    pas le service. Correctif SUPERADMIN-V2-05 trouvé en marge : la première
+    version ne traitait que le cas TRIAL -> ACTIVE (jamais de première
+    facture rétroactive sur `Tenant.created_at`), pas le cas symétrique
+    ACTIVE -> CANCELLED -> réactivé, où une facture existante rendait le
+    même bug de facturation rétroactive possible via `period_end`.
     """
     last_invoice = (
         PlatformInvoice.objects.filter(tenant=tenant).order_by("-period_end").first()
     )
-    if last_invoice:
+    if last_invoice and (
+        tenant.billing_cycle_start is None or last_invoice.period_end >= tenant.billing_cycle_start
+    ):
         return last_invoice.period_end
-    return today
+    return tenant.billing_cycle_start or today
 
 
 def generate_due_invoices(today: date | None = None) -> list[PlatformInvoice]:

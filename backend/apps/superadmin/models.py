@@ -99,6 +99,20 @@ class Tenant(TimestampedModel):
     settings = models.JSONField(default=dict, blank=True)   # configuration libre (V2)
     trial_ends_at = models.DateTimeField(null=True, blank=True)
 
+    # SUPERADMIN-V2-05 — correctif trouvé en marge (facturation rétroactive
+    # après CANCELLED -> réactivation) : date à partir de laquelle le cycle
+    # de facturation en cours est valide. Reposée à aujourd'hui par
+    # TenantViewSet.suspend/reactivate chaque fois que le statut PRÉCÉDENT
+    # était TRIAL ou CANCELLED (rentrée en éligibilité) — jamais lors d'une
+    # transition entre deux statuts déjà éligibles (ex. ACTIVE -> SUSPENDED).
+    # `PlatformInvoice` dont `period_end` précède cette date ne doit jamais
+    # servir d'ancre pour la prochaine facture (apps.superadmin.services.
+    # platform_invoice_service.get_next_billing_date) : sinon la prochaine
+    # génération couvrirait rétroactivement la période où le tenant était
+    # TRIAL/CANCELLED, donc ne payait rien et n'utilisait pas le service —
+    # même principe que la décision PO sur TRIAL, étendu à CANCELLED.
+    billing_cycle_start = models.DateField(null=True, blank=True)
+
     class Meta:
         # Conforme §1.1 — redondant avec db_index=True sur le champ status,
         # mais ajouté tel quel pour respecter le schéma au champ près.
