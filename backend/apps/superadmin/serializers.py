@@ -6,7 +6,7 @@ par le Super Administrateur.
 """
 
 from rest_framework import serializers
-from apps.superadmin.models import Plan, Tenant
+from apps.superadmin.models import Plan, PlatformInvoice, Tenant
 
 
 class PlanSerializer(serializers.ModelSerializer):
@@ -151,4 +151,29 @@ class TenantDetailSerializer(serializers.ModelSerializer):
 
     def get_staff_count(self, obj) -> int:
         return obj.get_staff_count()
+
+
+class PlatformInvoiceSerializer(serializers.ModelSerializer):
+    """
+    Serializer pour PlatformInvoice (SUPERADMIN-V2-05) — lecture seule,
+    aucun champ n'est censé être modifiable via l'API directement (mutation
+    exclusive via l'action nommée `mark-paid`, jamais via un PATCH générique
+    — même principe que TenantViewSet depuis SUPERADMIN-V2-03).
+    """
+
+    class Meta:
+        model = PlatformInvoice
+        fields = [
+            "id",
+            "invoice_number",
+            "amount",
+            "plan_name",
+            "period_start",
+            "period_end",
+            "issued_date",
+            "due_date",
+            "paid_date",
+            "status",
+        ]
+        read_only_fields = fields
 

@@ -503,6 +503,39 @@ Même invariant (et même implémentation, `apps/superadmin/services/plan_servic
 
 > **Pas de `DELETE`** (décision PO 2026-07-31, hors périmètre volontairement) : `Tenant.plan` est `on_delete=PROTECT` (la DB refuse déjà toute suppression tant qu'un tenant y est rattaché), et la désactivation (`is_active=false`, déjà bloquée à la création d'école par `tenant_service.py`) couvre le besoin de retirer un plan de la vente sans supprimer l'historique.
 
+### `GET /superadmin/schools/{id}/invoices/` — SUPERADMIN-V2-05
+Liste paginée (§0.4) des factures d'abonnement SaaS (`PlatformInvoice`, école → Eduguinée) de cet établissement — **à ne jamais confondre avec `apps.finance.Invoice`** (école → parents, Épic 7), modèle et endpoint entièrement distincts. `404` si `{id}` ne correspond à aucun tenant.
+
+**Réponse `200` (élément de liste) :**
+```json
+{
+  "id": "9c8d7e6f-...",
+  "invoice_number": "PINV-2026-000042",
+  "amount": "1500000.00",
+  "plan_name": "Pro",
+  "period_start": "2026-07-31",
+  "period_end": "2026-08-31",
+  "issued_date": "2026-07-31",
+  "due_date": "2026-08-15",
+  "paid_date": null,
+  "status": "PENDING"
+}
+```
+`amount`/`plan_name` sont des **instantanés** figés à l'émission (copiés depuis `Plan.price_monthly`/`Plan.name`), jamais recalculés — contrairement à `Tenant.plan` qui reste une référence live (SUPERADMIN-V2-03). `status` : `PENDING`/`PAID`/`OVERDUE`, mais **aucune transition automatique vers `OVERDUE` n'est implémentée par ce ticket** — posé pour SUPERADMIN-V2-04 (gestion des impayés), pas encore développé.
+
+### `PATCH /superadmin/schools/{id}/invoices/{invoice_id}/mark-paid/` — SUPERADMIN-V2-05
+**Requête :** `{}` — règlement hors plateforme (virement, mobile money), action manuelle du Super Admin.
+
+**Réponse `200` :** objet `PlatformInvoice` mis à jour (`status: "PAID"`, `paid_date` renseigné).
+
+**Erreurs :**
+- `404` si `invoice_id` n'existe pas **ou** n'appartient pas au tenant `{id}` de l'URL (isolation stricte : `PlatformInvoice` n'est pas filtrée par le middleware tenant, la vérification `tenant_id={id}` est explicite dans le code).
+- `422` si la facture est déjà `PAID` : `{"message": "Cette facture est déjà marquée comme payée."}`.
+
+Action tracée dans `AuditLog` (`action="platforminvoice:mark-paid"`).
+
+**Génération automatique** (tâche Celery Beat quotidienne, `apps.superadmin.tasks.generate_platform_invoices`) : seuls les tenants `ACTIVE`/`SUSPENDED_SOFT`/`SUSPENDED_HARD` génèrent des factures (`TRIAL`/`CANCELLED` jamais). Le premier cycle de facturation d'un tenant démarre le jour où il est vu pour la première fois en statut éligible par la tâche — **pas** `Tenant.created_at` littéralement : un tenant resté plusieurs mois en `TRIAL` avant de passer `ACTIVE` n'est jamais facturé rétroactivement pour ses mois d'essai (décision PO). Chaque facture suivante part de `period_end` de la précédente (cycle continu, pas calé sur le 1er du mois civil). Délai de paiement : 15 jours après émission (valeur assumée, documentée dans `platform_invoice_service.py`, aucun chiffre contractuel communiqué à ce jour).
+
 ---
 ## 3. Structure pédagogique (Épic 3)
 
@@ -1159,9 +1192,12 @@ Pour garder une expérience cohérente, le frontend doit afficher **exactement**
 | Auth (staff) | `/auth/staff/{id}/disable/`, `/auth/staff/{id}/enable/` | PATCH |
 | Super Admin | `/superadmin/schools/` | GET, POST |
 | Super Admin | `/superadmin/schools/{id}/` | GET |
-| Super Admin | `/superadmin/schools/{id}/suspend/`, `/reactivate/` | PATCH |
+| Super Admin | `/superadmin/schools/{id}/suspend/`, `/reactivate/`, `/change-plan/` | PATCH |
+| Super Admin | `/superadmin/schools/{id}/invoices/` | GET |
+| Super Admin | `/superadmin/schools/{id}/invoices/{invoice_id}/mark-paid/` | PATCH |
 | Super Admin | `/superadmin/dashboard/` | GET |
 | Super Admin | `/superadmin/plans/` | GET, POST |
+| Super Admin | `/superadmin/plans/{id}/` | PUT, PATCH |
 | Structure | `/pedagogy/schoolyears/` | GET, POST |
 | Structure | `/pedagogy/schoolyears/{id}/set-current/` | PATCH |
 | Structure | `/pedagogy/school-years/{id}/periods/` | GET, POST |

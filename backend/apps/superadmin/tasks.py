@@ -85,3 +85,24 @@ def send_tenant_status_notification(tenant_id: str, old_status: str, new_status:
         )
 
     notify_tenant_status(tenant_id, new_status)
+
+
+@shared_task(name="apps.superadmin.tasks.generate_platform_invoices")
+def generate_platform_invoices():
+    """
+    Tâche quotidienne Celery Beat — SUPERADMIN-V2-05.
+
+    Même pattern que apps.finance.tasks.flag_overdue_invoices : un niveau
+    au-dessus (facture plateforme, pas facture élève). Toute la logique
+    (tenants éligibles, ancre de facturation, numérotation) vit dans
+    apps.superadmin.services.platform_invoice_service — un seul point
+    d'entrée, pas dupliqué ici.
+    """
+    from apps.superadmin.services.platform_invoice_service import generate_due_invoices
+
+    created = generate_due_invoices()
+    if created:
+        logger.info(
+            "generate_platform_invoices — %s facture(s) plateforme générée(s)", len(created)
+        )
+    return len(created)

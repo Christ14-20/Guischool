@@ -84,6 +84,23 @@ export async function changePlanAction(id: string, planId: string) {
   }
 }
 
+export async function markInvoicePaidAction(schoolId: string, invoiceId: string) {
+  try {
+    const client = await getBackendClient();
+    await client.patch(`/superadmin/schools/${schoolId}/invoices/${invoiceId}/mark-paid/`, {});
+
+    revalidatePath(`/superadmin/schools/${schoolId}`);
+
+    return { success: true, error: null };
+  } catch (err: any) {
+    console.error("Error marking invoice paid:", err.response?.data || err.message);
+    return {
+      success: false,
+      error: err.response?.data?.message || "Impossible de marquer cette facture comme payée.",
+    };
+  }
+}
+
 export async function reactivateSchoolAction(id: string) {
   try {
     const client = await getBackendClient();

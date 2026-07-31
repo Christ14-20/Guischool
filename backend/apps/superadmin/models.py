@@ -128,3 +128,69 @@ class Tenant(TimestampedModel):
         Calculé dès maintenant (User existe depuis Épic 1).
         """
         return self.users.exclude(role__name="SUPER_ADMIN").count()
+
+
+class PlatformInvoiceSequence(models.Model):
+    """
+    SUPERADMIN-V2-05 — compteur de numérotation des factures plateforme
+    (école → Eduguinée), séquence GLOBALE par année (pas par tenant, décision
+    PO 2026-07-31) : Eduguinée est l'émetteur unique facturant plusieurs
+    écoles, contrairement à `apps.finance.ReceiptSequence` où chaque école
+    est sa propre entité émettant des reçus à ses parents. Même mécanisme de
+    verrouillage que `generate_receipt_for_payment`
+    (`select_for_update().get_or_create()`), simplement scopée par année
+    plutôt que par (tenant, année scolaire).
+    """
+
+    year = models.PositiveIntegerField(unique=True)
+    last_seq = models.PositiveIntegerField(default=0)
+
+
+class PlatformInvoice(TimestampedModel):
+    """
+    SUPERADMIN-V2-05 — Facture d'abonnement SaaS (école → Eduguinée).
+
+    À NE JAMAIS CONFONDRE avec `apps.finance.Invoice` (école → parents,
+    Épic 7) : modèle distinct, périmètre distinct. `TimestampedModel` (comme
+    `Tenant`/`Plan`) et non `TenantScopedModel` : entité globale consultée
+    uniquement par le Super Admin cross-tenant, jamais filtrée par le
+    middleware tenant.
+
+    `amount`/`plan_name` sont des INSTANTANÉS au moment de l'émission (copiés
+    depuis `Plan.price_monthly`/`Plan.name`) — décision PO explicite,
+    contraire à `Tenant.plan` qui reste une référence live (SUPERADMIN-V2-03) :
+    une facture déjà émise ne doit jamais changer de valeur si le Plan ou le
+    tenant change ensuite.
+    """
+
+    class Status(models.TextChoices):
+        PENDING = "PENDING", "En attente"
+        PAID = "PAID", "Payé"
+        # Jamais assignée par ce ticket (SUPERADMIN-V2-05) : la transition
+        # PENDING -> OVERDUE est du ressort de SUPERADMIN-V2-04, qui n'est
+        # pas encore implémenté. L'enum existe dès maintenant pour que le
+        # champ `status` de ce modèle n'ait pas besoin d'être retouché plus
+        # tard (décision PO explicite, à documenter comme non fait ici).
+        OVERDUE = "OVERDUE", "En retard"
+
+    tenant = models.ForeignKey(
+        "superadmin.Tenant", on_delete=models.PROTECT, related_name="platform_invoices"
+    )
+    invoice_number = models.CharField(max_length=30, unique=True)
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    plan_name = models.CharField(max_length=50)
+    period_start = models.DateField()
+    period_end = models.DateField()
+    issued_date = models.DateField()
+    due_date = models.DateField()
+    paid_date = models.DateField(null=True, blank=True)
+    status = models.CharField(
+        max_length=10, choices=Status.choices, default=Status.PENDING, db_index=True,
+    )
+
+    class Meta:
+        indexes = [models.Index(fields=["tenant", "status"])]
+        ordering = ["-period_start"]
+
+    def __str__(self):
+        return f"{self.invoice_number} — {self.tenant.name} ({self.get_status_display()})"

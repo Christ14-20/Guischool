@@ -13,9 +13,10 @@ from django_filters.rest_framework import DjangoFilterBackend
 
 from core.permissions import IsSuperAdmin
 from core.utils import success_response, created_response, error_response
-from apps.superadmin.models import Plan, Tenant
+from apps.superadmin.models import Plan, PlatformInvoice, Tenant
 from apps.superadmin.serializers import (
     PlanSerializer,
+    PlatformInvoiceSerializer,
     TenantCreateSerializer,
     TenantListSerializer,
     TenantDetailSerializer,
@@ -25,6 +26,7 @@ from apps.superadmin.services.dashboard_service import get_dashboard_data
 from apps.superadmin.services.plan_service import exceeds_limits, find_tenants_exceeding_limits
 from apps.superadmin.tasks import send_tenant_status_notification
 from apps.monitoring.services import audit_log, get_client_ip
+from django.utils import timezone
 
 
 class PlanViewSet(
@@ -107,6 +109,8 @@ class TenantViewSet(
     - PATCH /superadmin/schools/{id}/suspend/ -> Suspendre
     - PATCH /superadmin/schools/{id}/reactivate/ -> Réactiver
     - PATCH /superadmin/schools/{id}/change-plan/ -> Changer de plan
+    - GET   /superadmin/schools/{id}/invoices/ -> Liste des factures d'abonnement SaaS
+    - PATCH /superadmin/schools/{id}/invoices/{invoice_id}/mark-paid/ -> Marquer payée
 
     SUPERADMIN-V2-03 — CORRECTIF DE SÉCURITÉ découvert en marge du ticket :
     ce ViewSet héritait auparavant de `viewsets.ModelViewSet`, ce qui exposait
@@ -311,6 +315,72 @@ class TenantViewSet(
         return success_response(
             {"id": tenant.id, "plan": {"id": new_plan.id, "name": new_plan.name}}
         )
+
+    @action(detail=True, methods=["get"], url_path="invoices")
+    def invoices(self, request, pk=None):
+        """
+        GET /superadmin/schools/{id}/invoices/
+        Liste paginée des factures d'abonnement SaaS (PlatformInvoice) de cet
+        établissement — SUPERADMIN-V2-05. `self.get_object()` renvoie déjà
+        404 si `id` ne correspond à aucun tenant.
+        """
+        tenant = self.get_object()
+        queryset = PlatformInvoice.objects.filter(tenant=tenant).order_by("-period_start")
+
+        page = self.paginate_queryset(queryset)
+        serializer = PlatformInvoiceSerializer(page, many=True)
+        return self.get_paginated_response(serializer.data)
+
+    @action(
+        detail=True,
+        methods=["patch"],
+        url_path=r"invoices/(?P<invoice_id>[0-9a-f-]+)/mark-paid",
+    )
+    def mark_invoice_paid(self, request, pk=None, invoice_id=None):
+        """
+        PATCH /superadmin/schools/{id}/invoices/{invoice_id}/mark-paid/
+        Marque une facture d'abonnement comme payée (règlement hors
+        plateforme : virement, mobile money) — SUPERADMIN-V2-05, action
+        manuelle du Super Admin.
+
+        Isolation stricte : `PlatformInvoice` n'est pas `TenantScopedModel`
+        (entité globale), donc rien n'empêche par construction qu'un
+        `invoice_id` valide mais rattaché à un AUTRE tenant que `{id}` dans
+        l'URL soit accepté silencieusement — même famille de faille que le
+        `level_id` non filtré par tenant (SCHOOLYEAR-V2-02F) ou l'ancien
+        `TenantViewSet` sans restriction de méthode (SUPERADMIN-V2-03).
+        Filtrage explicite `tenant_id=pk` ci-dessous, `404` sinon (pas de
+        fuite d'existence cross-tenant). Test de régression dédié :
+        apps/superadmin/tests/test_platform_invoice.py.
+        """
+        tenant = self.get_object()
+        invoice = PlatformInvoice.objects.filter(id=invoice_id, tenant_id=tenant.id).first()
+        if invoice is None:
+            return error_response(
+                "Facture non trouvée pour cet établissement.",
+                status_code=status.HTTP_404_NOT_FOUND,
+            )
+
+        if invoice.status == PlatformInvoice.Status.PAID:
+            return error_response(
+                "Cette facture est déjà marquée comme payée.",
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            )
+
+        invoice.status = PlatformInvoice.Status.PAID
+        invoice.paid_date = timezone.now().date()
+        invoice.save(update_fields=["status", "paid_date", "updated_at"])
+
+        audit_log(
+            user=request.user,
+            tenant=tenant,
+            action="platforminvoice:mark-paid",
+            target_model="PlatformInvoice",
+            target_id=invoice.id,
+            ip_address=get_client_ip(request),
+        )
+
+        return success_response(PlatformInvoiceSerializer(invoice).data)
 
 
 @api_view(["GET"])

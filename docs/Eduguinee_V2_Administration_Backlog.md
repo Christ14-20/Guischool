@@ -1,6 +1,6 @@
 # Eduguinée — Backlog V2 : Administration (Super Admin + École) & Chantiers Transversaux
 
-> **Statut :** en cours — Chantier année scolaire terminé : SCHOOLYEAR-V2-01 livré (2026-07-29), SCHOOLYEAR-V2-02 livré (2026-07-30, sous-tickets A→F). Module A (Super Admin) en cours : SUPERADMIN-V2-01 livré (2026-07-30), SUPERADMIN-V2-02 livré (2026-07-31), SUPERADMIN-V2-03 livré (2026-07-31), SUPERADMIN-V2-03B (nettoyage résidus statut) livré (2026-07-31). Prochain : SUPERADMIN-V2-04 ou Module B (Personnel).
+> **Statut :** en cours — Chantier année scolaire terminé : SCHOOLYEAR-V2-01 livré (2026-07-29), SCHOOLYEAR-V2-02 livré (2026-07-30, sous-tickets A→F). Module A (Super Admin) en cours : SUPERADMIN-V2-01 livré (2026-07-30), SUPERADMIN-V2-02 livré (2026-07-31), SUPERADMIN-V2-03 livré (2026-07-31), SUPERADMIN-V2-03B (nettoyage résidus statut) livré (2026-07-31), SUPERADMIN-V2-05 (facturation SaaS) livré (2026-07-31). Prochain : SUPERADMIN-V2-04 (dépend désormais de V2-05, livré) ou Module B (Personnel).
 > **Périmètre :** ce backlog complète le MVP V1 (Épics 0 à 8, terminés) sur deux axes d'administration, plus deux chantiers transversaux indispensables à leur bon fonctionnement.
 > **Ordre de traitement validé (PO) :** Chantier année scolaire → Module A (Super Admin) → Module B (Personnel) → Infra MinIO. L'ordre ci-dessous reflète cette priorité, pas l'ordre de rédaction.
 > **Sources :** `Eduguinee_CDC_Complet.md` §4.4-4.6, §5, §6, §10, §21.1, §21.3 ; retour d'expérience V1 (Épics 2, 6.1, 7).
@@ -161,12 +161,24 @@
 - [ ] Escalade progressive paramétrable : `ACTIVE` → `SUSPENDED_SOFT` → `SUSPENDED_HARD`.
 **Labels :** `superadmin` `backend` `priorité-moyenne`
 
-### 🃏 [SUPERADMIN-V2-05] Facturation SaaS écoles → plateforme
+### 🃏 [SUPERADMIN-V2-05] Facturation SaaS écoles → plateforme — ✅ Livré 2026-07-31
 **Priorité :** 🟡 Moyenne
-- [ ] Nouveau modèle **`PlatformInvoice`** — bien distinct de `apps.finance.Invoice` (celui-ci facture les parents ; `PlatformInvoice` facture l'établissement pour son abonnement). Nom à choisir avec soin pour éviter toute confusion avec le modèle existant.
-- [ ] Génération automatique à chaque échéance d'abonnement (mensuel, basé sur `Plan.price_monthly`).
-- [ ] `GET /superadmin/schools/{id}/invoices/`.
-**Labels :** `superadmin` `backend`
+- [x] Nouveau modèle **`PlatformInvoice`** — bien distinct de `apps.finance.Invoice` (celui-ci facture les parents ; `PlatformInvoice` facture l'établissement pour son abonnement).
+- [x] Génération automatique à chaque échéance d'abonnement (tâche Celery Beat quotidienne `generate_platform_invoices`, basé sur `Plan.price_monthly`, snapshot figé à l'émission).
+- [x] `GET /superadmin/schools/{id}/invoices/` (paginé).
+- [x] `PATCH /superadmin/schools/{id}/invoices/{invoice_id}/mark-paid/` — ajouté explicitement au périmètre (décision PO 2026-07-31) : sans lui, SUPERADMIN-V2-04 n'aurait aucun moyen de distinguer une facture payée d'une impayée.
+- [x] Frontend : carte « Facturation » sur `schools/[id]/page.tsx` (liste, lecture seule + bouton « Marquer payée »).
+**Labels :** `superadmin` `backend` `frontend`
+**Notes de livraison :**
+- **Nommage des champs** : incohérence relevée avant codage — le cadrage initial utilisait des noms français (`montant`, `periode_debut/fin`, `statut`, `numero`) ; alignés sur la convention 100% anglaise déjà en place partout ailleurs (`amount`, `period_start`/`period_end`, `status`, `invoice_number`), le français restant réservé aux labels/choices.
+- **Numérotation** : séquence **globale** par année (`PINV-{année}-{seq:06d}`), pas par tenant — décision PO après comparaison explicite avec `apps.finance.ReceiptSequence` (scopée par tenant parce que chaque école est sa propre entité émettrice de reçus ; ici Eduguinée est l'émetteur unique facturant plusieurs écoles, ce qui correspond à une séquence continue par émetteur). Même verrouillage (`select_for_update()` + transaction atomique) que `generate_receipt_for_payment`.
+- **Ancre de facturation** : `dateutil.relativedelta` pour gérer les mois de longueur variable (aucune nouvelle dépendance — déjà présente en transitif). Point clarifié avec le PO en cours de cadrage : le premier cycle de facturation démarre le jour où le tenant est vu pour la première fois en statut éligible (`ACTIVE`/`SUSPENDED_SOFT`/`SUSPENDED_HARD`), **pas** `Tenant.created_at` littéralement — un tenant resté plusieurs mois en `TRIAL` avant de passer `ACTIVE` n'est jamais facturé rétroactivement pour ses mois d'essai. Chaque facture suivante repart de `period_end` de la précédente (pas de rattrapage multi-mois en une seule exécution si la tâche a manqué plusieurs jours — remise à niveau progressive, un cycle par exécution).
+- **Délai de paiement** (`due_date`) : 15 jours après émission — valeur assumée en l'absence de chiffre contractuel communiqué, isolée dans une seule constante (`PAYMENT_TERM_DAYS`, `platform_invoice_service.py`) pour rester facilement ajustable.
+- **Isolation cross-tenant sur `mark-paid`** : point de sécurité soulevé explicitement par le PO avant codage (`PlatformInvoice` n'étant pas `TenantScopedModel`, rien n'empêche par construction qu'un `invoice_id` valide mais rattaché à un autre tenant que `{id}` dans l'URL soit accepté) — filtrage explicite `tenant_id={id}` implémenté dès la première version, avec test de régression dédié (`test_mark_invoice_paid_cross_tenant_returns_404`), pas une correction après coup.
+- **Frontière de périmètre avec SUPERADMIN-V2-04, actée explicitement** : `OVERDUE` existe dans l'enum `PlatformInvoice.Status` mais **aucune tâche de ce ticket n'y assigne jamais une facture** — la transition `PENDING` → `OVERDUE` est entièrement du ressort de SUPERADMIN-V2-04, pas encore implémenté. À ne pas considérer comme « fait » par erreur en abordant 04.
+- Routage `GET/PATCH .../invoices/{invoice_id}/mark-paid/` via deux `@action` sur `TenantViewSet` (dont une avec `url_path` regex capturant `invoice_id`) plutôt qu'un routeur imbriqué — pas de dépendance `drf-nested-routers` ajoutée, cohérent avec `change_plan` (SUPERADMIN-V2-03).
+- Doc API et récapitulatif §10 mis à jour — au passage, corrigé un retard déjà présent sur ce tableau récapitulatif (`change-plan` et `PUT/PATCH /superadmin/plans/{id}/` de SUPERADMIN-V2-03 n'y avaient jamais été ajoutés).
+- Vérifié en conditions réelles (navigateur headless, compte Super Admin temporaire créé puis supprimé, factures de test générées via le service puis supprimées après vérification) : génération, listing, marquage payé, aucune erreur console. 628 tests backend passants (+18 nouveaux), aucune régression.
 
 **Notes pour plus tard (V3) :** coupons/codes promo, politique de rétention post-résiliation (12 mois puis suppression), tickets de support, alertes système (500, stockage plein, sauvegarde), multi-campus, 2FA.
 

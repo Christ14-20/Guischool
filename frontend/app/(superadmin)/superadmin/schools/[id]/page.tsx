@@ -6,6 +6,7 @@ import { getBackendClient } from "@/lib/api/client";
 import { Building2, Calendar, Mail, Phone, MapPin, Award, User, ShieldAlert, ArrowLeft, Users } from "lucide-react";
 import SchoolActions from "../SchoolActions";
 import ChangePlanButton from "../ChangePlanButton";
+import InvoicesCard from "../InvoicesCard";
 import { STATUS_STYLES, isSuspendedStatus } from "../../statusStyles";
 
 
@@ -21,6 +22,8 @@ export default async function SchoolDetailPage({ params }: SchoolDetailPageProps
   const { id } = await params;
   let school: any = null;
   let activePlans: any[] = [];
+  let invoices: any[] = [];
+  let invoiceCount = 0;
 
   try {
     const client = await getBackendClient();
@@ -33,6 +36,12 @@ export default async function SchoolDetailPage({ params }: SchoolDetailPageProps
     if (plansResp.data?.status === "success") {
       const payload = plansResp.data.data;
       activePlans = Array.isArray(payload) ? payload : payload?.results || [];
+    }
+
+    const invoicesResp = await client.get(`/superadmin/schools/${id}/invoices/`);
+    if (invoicesResp.data?.status === "success") {
+      invoices = invoicesResp.data.data?.results || [];
+      invoiceCount = invoicesResp.data.data?.count || 0;
     }
   } catch (err: any) {
     console.error("School detail fetch error:", err.message);
@@ -294,6 +303,9 @@ export default async function SchoolDetailPage({ params }: SchoolDetailPageProps
         </div>
 
       </div>
+
+      {/* Facturation SaaS (école -> Eduguinée) — SUPERADMIN-V2-05 */}
+      <InvoicesCard schoolId={school.id} invoices={invoices} count={invoiceCount} />
     </div>
   );
 }
