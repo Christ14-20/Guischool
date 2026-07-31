@@ -109,14 +109,20 @@
 - `PATCH /superadmin/schools/{id}/suspend/` : nouveau champ **requis** `type` (`"SOFT"`/`"HARD"`) — conséquence mécanique du remplacement de `SUSPENDED`, `400` si absent/invalide. Contrat d'API mis à jour.
 - SMS : nouvelle valeur `TENANT_STATUS` sur `SMSLog.TriggerType` (migration `communication` dédiée, ne touchant que ce champ — la drift de migration pré-existante et non liée sur ce même modèle, déjà signalée en SCHOOLYEAR-V2-01, reste hors périmètre) ; nouvelle fonction `apps.communication.services.notify_tenant_status()` sur le modèle de `notify_payment()`.
 
-### 🃏 [SUPERADMIN-V2-02] Tableau de bord Super Admin
+### 🃏 [SUPERADMIN-V2-02] Tableau de bord Super Admin — ✅ Livré 2026-07-31
 **Priorité :** 🟠 Haute
-- [ ] `GET /superadmin/dashboard/` : nb écoles totales/actives/suspendues/en essai, MRR estimé (Σ `Plan.price_monthly` des tenants actifs).
-- [ ] Graphique d'évolution des créations d'écoles dans le temps.
-- [ ] Liste des dernières écoles créées.
-- [ ] Frontend : `/app/superadmin/dashboard`.
+- [x] `GET /superadmin/dashboard/` : nb écoles totales/actives/`TRIAL`/`SUSPENDED_SOFT`/`SUSPENDED_HARD`/`CANCELLED`, MRR estimé (Σ `Plan.price_monthly` des tenants `ACTIVE` uniquement).
+- [x] Graphique d'évolution des créations d'écoles dans le temps — 12 mois glissants, zero-paddé, toutes créations comptées indépendamment du statut actuel (historique d'événements, pas un indicateur d'actifs nets).
+- [x] Liste des dernières écoles créées — 5, réutilise `TenantListSerializer` (même forme que `GET /superadmin/schools/`, pas de format dupliqué).
+- [x] Frontend : `/app/superadmin/dashboard` — reconstruit pour consommer le nouvel endpoint en un seul appel (au lieu de 4 appels vers `/superadmin/schools/` précédemment) ; graphique via `recharts` (nouvelle dépendance).
 - [ ] Cartographie interactive — **hors périmètre**, reportée en V3.
+- [ ] Churn — explicitement laissé de côté pour ce ticket (dette V3), signalé plutôt qu'ajouté silencieusement.
 **Labels :** `superadmin` `backend` `frontend`
+**Notes de livraison :**
+- Pas de cache pour cette version (décision PO 2026-07-31) : agrégats `COUNT`/`SUM` bon marché à l'échelle actuelle. Documenté explicitement en commentaire dans `apps/superadmin/services/dashboard_service.py` (Redis déjà configuré au niveau infra, non utilisé ici — point d'extension prévu via `cache.get_or_set()` si le besoin apparaît, fonction d'agrégation volontairement isolée pour ça).
+- **Résidu corrigé en marge** : le frontend affichait encore `STATUS_STYLES` limité à 3 statuts (`ACTIVE`/`SUSPENDED`/`TRIAL`) depuis `SUPERADMIN-V2-01` (qui a introduit `SUSPENDED_SOFT`/`SUSPENDED_HARD`) sans que l'UI soit mise à jour — corrigé ici pour les 5 vrais statuts. Le tableau "Dernières écoles créées" affichait aussi des tendances (`trend`) codées en dur et fictives (`"+1 ce mois"`, `"8 jours restants"`) — supprimées plutôt que conservées comme fausses données.
+- **Signalé sans être corrigé (hors périmètre de ce ticket, page différente)** : `app/(superadmin)/superadmin/schools/page.tsx` a le même résidu (filtre/affichage encore sur `SUSPENDED` seul, pas `SUSPENDED_SOFT`/`HARD`) — à corriger séparément.
+- Vérifié en conditions réelles (navigateur headless, serveurs dev existants, compte Super Admin temporaire créé puis supprimé après vérification) : agrégats corrects sur données réelles, tooltip du graphique fonctionnel. Au passage, le serveur frontend déjà en écoute sur le port 3000 s'est avéré être un build de production figé de deux jours (`next start`, antérieur à ce ticket et au précédent), déjà en erreur 500 — remplacé par un `next dev` à jour pour la vérification.
 
 ### 🃏 [SUPERADMIN-V2-03] Gestion des plans (UI complète)
 **Priorité :** 🟠 Haute

@@ -5,7 +5,7 @@ Vues DRF pour la gestion des Plans et des Tenants par le Super Administrateur.
 """
 
 from rest_framework import viewsets, mixins, status
-from rest_framework.decorators import action
+from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.filters import SearchFilter, OrderingFilter
@@ -21,6 +21,7 @@ from apps.superadmin.serializers import (
     TenantDetailSerializer,
 )
 from apps.superadmin.services.tenant_service import create_school
+from apps.superadmin.services.dashboard_service import get_dashboard_data
 from apps.superadmin.tasks import send_tenant_status_notification
 from apps.monitoring.services import audit_log, get_client_ip
 
@@ -186,4 +187,21 @@ class TenantViewSet(viewsets.ModelViewSet):
         )
 
         return success_response({"id": tenant.id, "status": tenant.status})
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated, IsSuperAdmin])
+def dashboard(request):
+    """
+    GET /superadmin/dashboard/ — SUPERADMIN-V2-02
+    Tableau de bord plateforme : décompte des écoles par statut, MRR estimé
+    (ACTIVE uniquement), évolution des créations sur 12 mois glissants
+    (zero-paddée), 5 dernières écoles créées. Vue globale plateforme, aucune
+    notion de tenant ici — IsSuperAdmin uniquement.
+    """
+    data = get_dashboard_data()
+    data["recent_schools"] = TenantListSerializer(
+        data["recent_schools"], many=True, context={"request": request}
+    ).data
+    return success_response(data)
 

@@ -2,7 +2,11 @@
 import React from "react";
 import Link from "next/link";
 import { getBackendClient } from "@/lib/api/client";
-import { Building2, CheckCircle2, AlertTriangle, PlayCircle, Plus, Eye } from "lucide-react";
+import {
+  Building2, CheckCircle2, AlertTriangle, PlayCircle, Plus, Eye,
+  Ban, XCircle, Banknote,
+} from "lucide-react";
+import MonthlyCreationsChart from "./MonthlyCreationsChart";
 
 export const dynamic = "force-dynamic";
 
@@ -12,89 +16,95 @@ const RAISED_CARD_STYLE = {
   borderRadius: "12px",
 };
 
-const KPI_TOP_BORDER: Record<string, string> = {
-  total: "linear-gradient(90deg, #6366f1, #818cf8)",
-  active: "linear-gradient(90deg, #10B981, #34d399)",
-  suspended: "linear-gradient(90deg, #F59E0B, #fbbf24)",
-  trial: "linear-gradient(90deg, #0EA5E9, #38bdf8)",
+// SUPERADMIN-V2-02 : 6 tuiles (Total + les 5 valeurs réelles de Tenant.Status),
+// remplace les 4 tuiles précédentes (total/active/suspended/trial) qui ne
+// connaissaient pas la distinction SUSPENDED_SOFT/SUSPENDED_HARD introduite
+// par SUPERADMIN-V2-01 — résidu resté non corrigé côté UI jusqu'ici.
+const KPI_DEFS: Record<
+  string,
+  { title: string; icon: any; border: string; iconBg: string; iconColor: string }
+> = {
+  total: {
+    title: "Total établissements",
+    icon: Building2,
+    border: "linear-gradient(90deg, #6366f1, #818cf8)",
+    iconBg: "rgba(99, 102, 241, 0.1)",
+    iconColor: "#818cf8",
+  },
+  ACTIVE: {
+    title: "Actives",
+    icon: CheckCircle2,
+    border: "linear-gradient(90deg, #10B981, #34d399)",
+    iconBg: "rgba(16, 185, 129, 0.1)",
+    iconColor: "#10B981",
+  },
+  TRIAL: {
+    title: "Périodes d'essai",
+    icon: PlayCircle,
+    border: "linear-gradient(90deg, #0EA5E9, #38bdf8)",
+    iconBg: "rgba(14, 165, 233, 0.1)",
+    iconColor: "#0EA5E9",
+  },
+  SUSPENDED_SOFT: {
+    title: "Suspendues (lecture seule)",
+    icon: AlertTriangle,
+    border: "linear-gradient(90deg, #F59E0B, #fbbf24)",
+    iconBg: "rgba(245, 158, 11, 0.1)",
+    iconColor: "#F59E0B",
+  },
+  SUSPENDED_HARD: {
+    title: "Suspendues (bloquées)",
+    icon: Ban,
+    border: "linear-gradient(90deg, #EF4444, #f87171)",
+    iconBg: "rgba(239, 68, 68, 0.1)",
+    iconColor: "#EF4444",
+  },
+  CANCELLED: {
+    title: "Résiliées",
+    icon: XCircle,
+    border: "linear-gradient(90deg, #64748B, #94A3B8)",
+    iconBg: "rgba(100, 116, 139, 0.1)",
+    iconColor: "#94A3B8",
+  },
 };
 
-const KPI_ICON_STYLE: Record<string, { bg: string; color: string }> = {
-  total: { bg: "rgba(99, 102, 241, 0.1)", color: "#818cf8" },
-  active: { bg: "rgba(16, 185, 129, 0.1)", color: "#10B981" },
-  suspended: { bg: "rgba(245, 158, 11, 0.1)", color: "#F59E0B" },
-  trial: { bg: "rgba(14, 165, 233, 0.1)", color: "#0EA5E9" },
+const STATUS_STYLES: Record<string, { bg: string; color: string; dot: string; label: string }> = {
+  ACTIVE: { bg: "rgba(16, 185, 129, 0.12)", color: "#10B981", dot: "#10B981", label: "Actif" },
+  TRIAL: { bg: "rgba(14, 165, 233, 0.12)", color: "#0EA5E9", dot: "#0EA5E9", label: "Essai" },
+  SUSPENDED_SOFT: { bg: "rgba(245, 158, 11, 0.12)", color: "#F59E0B", dot: "#F59E0B", label: "Suspendu (lecture seule)" },
+  SUSPENDED_HARD: { bg: "rgba(239, 68, 68, 0.12)", color: "#EF4444", dot: "#EF4444", label: "Suspendu (bloqué)" },
+  CANCELLED: { bg: "rgba(100, 116, 139, 0.12)", color: "#94A3B8", dot: "#94A3B8", label: "Résilié" },
 };
 
-const STATUS_STYLES: Record<string, { bg: string; color: string; dot: string }> = {
-  ACTIVE: { bg: "rgba(16, 185, 129, 0.12)", color: "#10B981", dot: "#10B981" },
-  SUSPENDED: { bg: "rgba(239, 68, 68, 0.12)", color: "#EF4444", dot: "#EF4444" },
-  TRIAL: { bg: "rgba(245, 158, 11, 0.12)", color: "#F59E0B", dot: "#F59E0B" },
-};
+function formatGNF(value: string) {
+  return `${Number(value).toLocaleString("fr-FR")} GNF`;
+}
 
 export default async function SuperAdminDashboard() {
-  let schoolsData = { results: [], count: 0 };
-  let activeCount = 0;
-  let suspendedCount = 0;
-  let trialCount = 0;
-  let errorMsg = null;
+  let totals: Record<string, number> = {
+    total: 0, TRIAL: 0, ACTIVE: 0, SUSPENDED_SOFT: 0, SUSPENDED_HARD: 0, CANCELLED: 0,
+  };
+  let mrrEstimated = "0.00";
+  let monthlyCreations: { month: string; count: number }[] = [];
+  let recentSchools: any[] = [];
+  let errorMsg: string | null = null;
 
   try {
     const client = await getBackendClient();
-
-    const schoolsResp = await client.get("/superadmin/schools/?page_size=5");
-    if (schoolsResp.data?.status === "success") {
-      schoolsData = schoolsResp.data.data;
+    const resp = await client.get("/superadmin/dashboard/");
+    if (resp.data?.status === "success") {
+      const data = resp.data.data;
+      totals = data.totals;
+      mrrEstimated = data.mrr_estimated;
+      monthlyCreations = data.monthly_creations;
+      recentSchools = data.recent_schools;
     }
-
-    const [activeResp, suspendedResp, trialResp] = await Promise.all([
-      client.get("/superadmin/schools/?status=ACTIVE&page_size=1"),
-      client.get("/superadmin/schools/?status=SUSPENDED&page_size=1"),
-      client.get("/superadmin/schools/?status=TRIAL&page_size=1"),
-    ]);
-
-    activeCount = activeResp.data?.data?.count || 0;
-    suspendedCount = suspendedResp.data?.data?.count || 0;
-    trialCount = trialResp.data?.data?.count || 0;
   } catch (err: any) {
     console.error("Dashboard data fetch error:", err.message);
     errorMsg = "Impossible de récupérer les données du tableau de bord. Veuillez vérifier la connexion au serveur.";
   }
 
-  const kpis = [
-    {
-      key: "total",
-      title: "Total Établissements",
-      value: schoolsData.count,
-      icon: Building2,
-      trend: "+1 ce mois",
-      trendDir: "up",
-    },
-    {
-      key: "active",
-      title: "Écoles Actives",
-      value: activeCount,
-      icon: CheckCircle2,
-      trend: "— stable",
-      trendDir: "flat",
-    },
-    {
-      key: "suspended",
-      title: "Écoles Suspendues",
-      value: suspendedCount,
-      icon: AlertTriangle,
-      trend: "— stable",
-      trendDir: "flat",
-    },
-    {
-      key: "trial",
-      title: "Périodes d'Essai",
-      value: trialCount,
-      icon: PlayCircle,
-      trend: "8 jours restants",
-      trendDir: "down",
-    },
-  ];
+  const kpiOrder = ["total", "ACTIVE", "TRIAL", "SUSPENDED_SOFT", "SUSPENDED_HARD", "CANCELLED"];
 
   return (
     <div className="space-y-7">
@@ -131,43 +141,65 @@ export default async function SuperAdminDashboard() {
         </div>
       )}
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {kpis.map((kpi, idx) => {
-          const Icon = kpi.icon;
-          const iconStyle = KPI_ICON_STYLE[kpi.key];
+      {/* MRR hero card */}
+      <div className="relative overflow-hidden p-6" style={RAISED_CARD_STYLE}>
+        <div
+          className="absolute top-0 left-0 right-0 h-[3px]"
+          style={{ background: "linear-gradient(90deg, #10B981, #34d399)" }}
+        />
+        <div className="flex items-center gap-4">
+          <div
+            className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0"
+            style={{ background: "rgba(16, 185, 129, 0.1)", color: "#10B981" }}
+          >
+            <Banknote className="w-6 h-6" />
+          </div>
+          <div>
+            <div className="text-xs text-[#64748B] mb-1">
+              MRR estimé <span className="text-[#475569]">(établissements actifs uniquement)</span>
+            </div>
+            <div className="text-[32px] font-semibold text-white leading-none">
+              {formatGNF(mrrEstimated)}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* KPI Cards — 6 tuiles (total + 5 statuts) */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        {kpiOrder.map((key) => {
+          const def = KPI_DEFS[key];
+          const Icon = def.icon;
           return (
             <div
-              key={idx}
-              className="relative overflow-hidden transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_4px_12px_rgba(0,0,0,0.3)] p-5"
+              key={key}
+              className="relative overflow-hidden transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_4px_12px_rgba(0,0,0,0.3)] p-4"
               style={RAISED_CARD_STYLE}
             >
               <div
                 className="absolute top-0 left-0 right-0 h-[3px] rounded-t-[12px]"
-                style={{ background: KPI_TOP_BORDER[kpi.key] }}
+                style={{ background: def.border }}
               />
               <div
-                className="absolute top-4 right-4 w-9 h-9 rounded-[6px] flex items-center justify-center"
-                style={{ background: iconStyle.bg, color: iconStyle.color }}
+                className="w-8 h-8 rounded-[6px] flex items-center justify-center mb-3"
+                style={{ background: def.iconBg, color: def.iconColor }}
               >
-                <Icon className="w-[18px] h-[18px]" />
+                <Icon className="w-4 h-4" />
               </div>
-              <div className="text-xs text-[#64748B] mb-2">{kpi.title}</div>
-              <div className="text-[32px] font-semibold text-white leading-none tabular-nums">{kpi.value}</div>
-              <div className={`flex items-center gap-1 mt-2 text-xs font-medium ${
-                kpi.trendDir === "up" ? "text-[#10B981]" : kpi.trendDir === "down" ? "text-[#EF4444]" : "text-[#475569]"
-              }`}>
-                {kpi.trendDir === "up" && (
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="18 15 12 9 6 15"/></svg>
-                )}
-                {kpi.trendDir === "down" && (
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="6 9 12 15 18 9"/></svg>
-                )}
-                {kpi.trend}
+              <div className="text-[11px] text-[#64748B] mb-1.5 leading-tight">{def.title}</div>
+              <div className="text-2xl font-semibold text-white leading-none tabular-nums">
+                {totals[key] ?? 0}
               </div>
             </div>
           );
         })}
+      </div>
+
+      {/* Monthly creations chart */}
+      <div className="p-5" style={RAISED_CARD_STYLE}>
+        <h2 className="text-base font-semibold text-white mb-1">Créations d&apos;écoles par mois</h2>
+        <p className="text-xs text-[#64748B] mb-4">12 derniers mois, toutes créations confondues</p>
+        <MonthlyCreationsChart data={monthlyCreations} />
       </div>
 
       {/* Table */}
@@ -198,14 +230,14 @@ export default async function SuperAdminDashboard() {
               </tr>
             </thead>
             <tbody>
-              {schoolsData.results.length === 0 ? (
+              {recentSchools.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="px-3.5 py-10 text-center text-[#475569]">
                     Aucun établissement enregistré pour le moment.
                   </td>
                 </tr>
               ) : (
-                schoolsData.results.map((school: any) => {
+                recentSchools.map((school: any) => {
                   const status = STATUS_STYLES[school.status] || STATUS_STYLES.TRIAL;
                   return (
                     <tr
@@ -227,7 +259,7 @@ export default async function SuperAdminDashboard() {
                           style={{ background: status.bg, color: status.color }}
                         >
                           <span className="w-1.5 h-1.5 rounded-full" style={{ background: status.dot }} />
-                          {school.status === "ACTIVE" ? "Actif" : school.status === "SUSPENDED" ? "Suspendu" : "Essai"}
+                          {status.label}
                         </span>
                       </td>
                       <td className="px-3.5 py-3.5 text-xs text-[#475569]">

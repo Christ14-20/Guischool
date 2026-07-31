@@ -392,6 +392,54 @@ Convention uniforme sur toutes les listes : `?champ=valeur` pour un filtre exact
 ### `PATCH /superadmin/schools/{id}/reactivate/`
 **Requête :** `{}` — **Réponse `200`** : `{"status": "success", "data": {"id": "...", "status": "ACTIVE"}}`
 
+### `GET /superadmin/dashboard/` — SUPERADMIN-V2-02
+**Auth :** JWT, `IsSuperAdmin` uniquement (403 sinon) — vue globale plateforme, aucune notion de tenant.
+
+**Réponse `200` :**
+```json
+{
+  "status": "success",
+  "data": {
+    "totals": {
+      "total": 12,
+      "TRIAL": 3,
+      "ACTIVE": 7,
+      "SUSPENDED_SOFT": 1,
+      "SUSPENDED_HARD": 0,
+      "CANCELLED": 1
+    },
+    "mrr_estimated": "10500000.00",
+    "monthly_creations": [
+      {"month": "2025-08", "count": 0},
+      {"month": "2025-09", "count": 1},
+      "...",
+      {"month": "2026-07", "count": 3}
+    ],
+    "recent_schools": [
+      {
+        "id": "9c8d7e6f-...",
+        "name": "Groupe Scolaire Les Palmiers",
+        "slug": "les-palmiers",
+        "status": "ACTIVE",
+        "plan": {"id": "7a1b2c3d-...", "name": "Pro"},
+        "student_count": 342,
+        "created_at": "2026-07-28T10:00:00Z"
+      }
+    ]
+  }
+}
+```
+
+**Détail des champs :**
+- `totals` : décompte des tenants par statut (les 5 valeurs de `Tenant.Status`, toujours présentes même à 0) + `total`.
+- `mrr_estimated` : `Σ Plan.price_monthly` des tenants **`ACTIVE` uniquement** — `TRIAL` ne facture rien, `SUSPENDED_SOFT`/`SUSPENDED_HARD` sont typiquement en défaut de paiement, ni l'un ni l'autre ne représente un revenu récurrent réellement comptable.
+- `monthly_creations` : 12 mois glissants (mois courant inclus), **zero-paddés** (chaque mois de la fenêtre apparaît même à 0, pour un graphique sans trou silencieux). Compte **toutes** les créations de tenants du mois, quel que soit leur statut actuel — c'est un historique d'événements de création, pas un indicateur de tenants actifs nets (un tenant depuis résilié a bien été créé ce mois-là).
+- `recent_schools` : les **5** dernières écoles créées (`-created_at`), même forme que `TenantListSerializer` (liste `GET /superadmin/schools/`) — pas de nouveau format dupliqué.
+
+**Hors périmètre de ce ticket (dette V3 explicitement actée)** : churn, cartographie interactive.
+
+**Performance :** pas de cache pour cette version (agrégats bon marché à l'échelle actuelle de la plateforme — `COUNT`/`SUM` sur colonne indexée). Redis est configuré au niveau infra mais non utilisé par ce endpoint ; voir `apps/superadmin/services/dashboard_service.py` pour la justification détaillée et le point d'extension prévu si le besoin apparaît.
+
 ### `GET /superadmin/plans/` / `POST /superadmin/plans/`
 **Réponse `GET` (élément de liste) :**
 ```json
@@ -1056,6 +1104,7 @@ Pour garder une expérience cohérente, le frontend doit afficher **exactement**
 | Super Admin | `/superadmin/schools/` | GET, POST |
 | Super Admin | `/superadmin/schools/{id}/` | GET |
 | Super Admin | `/superadmin/schools/{id}/suspend/`, `/reactivate/` | PATCH |
+| Super Admin | `/superadmin/dashboard/` | GET |
 | Super Admin | `/superadmin/plans/` | GET, POST |
 | Structure | `/pedagogy/schoolyears/` | GET, POST |
 | Structure | `/pedagogy/schoolyears/{id}/set-current/` | PATCH |
