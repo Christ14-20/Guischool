@@ -150,6 +150,115 @@ class TestPlanEndpoints:
         assert resp.status_code == 400
         assert "price_monthly" in resp.json()["errors"]
 
+    def test_superadmin_can_edit_plan(self, superadmin_user):
+        """SUPERADMIN-V2-03 : PATCH édite un plan existant."""
+        client = APIClient()
+        token = login_user(client, superadmin_user.email)
+        client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
+
+        plan = Plan.objects.create(
+            name="Plan Éditable", max_students=200, max_staff=20,
+            price_monthly=Decimal("500000.00"), is_active=True,
+        )
+        url = reverse("superadmin-plans-detail", args=[str(plan.id)])
+        resp = client.patch(url, {"price_monthly": "600000.00"}, format="json")
+
+        assert resp.status_code == 200, resp.json()
+        assert resp.json()["data"]["price_monthly"] == "600000.00"
+        plan.refresh_from_db()
+        assert plan.price_monthly == Decimal("600000.00")
+
+    def test_deactivate_plan_via_edit(self, superadmin_user):
+        """is_active=False via l'endpoint d'édition — pas besoin de DELETE."""
+        client = APIClient()
+        token = login_user(client, superadmin_user.email)
+        client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
+
+        plan = Plan.objects.create(name="Plan À Désactiver", is_active=True)
+        url = reverse("superadmin-plans-detail", args=[str(plan.id)])
+        resp = client.patch(url, {"is_active": False}, format="json")
+
+        assert resp.status_code == 200
+        plan.refresh_from_db()
+        assert plan.is_active is False
+
+    def test_edit_plan_blocked_when_downgrade_exceeds_attached_tenant(
+        self, superadmin_user, director_role
+    ):
+        """
+        Réduire max_students sous l'effectif d'un tenant déjà rattaché au
+        plan est bloqué (422), avec la liste des tenants affectés.
+        """
+        client = APIClient()
+        token = login_user(client, superadmin_user.email)
+        client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
+
+        plan = Plan.objects.create(name="Plan Partagé", max_students=200, max_staff=20)
+        tenant = Tenant.objects.create(
+            name="École Sur Plan Partagé", slug="ecole-plan-partage",
+            school_type=Tenant.SchoolType.MIXTE, plan=plan,
+            contact_name="Dir", contact_phone="+224620000020",
+            contact_email="dir-plan-partage@ecole.gn",
+        )
+        from unittest.mock import patch as mock_patch
+        with mock_patch.object(Tenant, "get_student_count", return_value=150):
+            url = reverse("superadmin-plans-detail", args=[str(plan.id)])
+            resp = client.patch(url, {"max_students": 100}, format="json")
+
+        assert resp.status_code == 422
+        affected = resp.json()["errors"]["affected_tenants"]
+        assert len(affected) == 1
+        assert affected[0]["id"] == str(tenant.id)
+        assert affected[0]["student_count"] == 150
+        plan.refresh_from_db()
+        assert plan.max_students == 200  # inchangé
+
+    def test_edit_plan_allowed_when_no_tenant_exceeds(self, superadmin_user):
+        """Réduction de limite acceptée si aucun tenant rattaché n'est affecté."""
+        client = APIClient()
+        token = login_user(client, superadmin_user.email)
+        client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
+
+        plan = Plan.objects.create(name="Plan Sans Impact", max_students=200, max_staff=20)
+        Tenant.objects.create(
+            name="École Petit Effectif", slug="ecole-petit-effectif",
+            school_type=Tenant.SchoolType.MIXTE, plan=plan,
+            contact_name="Dir", contact_phone="+224620000021",
+            contact_email="dir-petit-effectif@ecole.gn",
+        )
+        # get_student_count() réel = 0 (aucun Student créé) : bien sous la nouvelle limite.
+        url = reverse("superadmin-plans-detail", args=[str(plan.id)])
+        resp = client.patch(url, {"max_students": 10}, format="json")
+
+        assert resp.status_code == 200
+        plan.refresh_from_db()
+        assert plan.max_students == 10
+
+    def test_director_cannot_edit_plan(self, director_user):
+        client = APIClient()
+        token = login_user(client, director_user.email)
+        client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
+
+        plan = Plan.objects.create(name="Plan Protégé")
+        url = reverse("superadmin-plans-detail", args=[str(plan.id)])
+        resp = client.patch(url, {"price_monthly": "1.00"}, format="json")
+        assert resp.status_code == 403
+
+    def test_filter_plans_by_is_active(self, superadmin_user):
+        client = APIClient()
+        token = login_user(client, superadmin_user.email)
+        client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
+
+        Plan.objects.create(name="Plan Actif Filtre", is_active=True)
+        Plan.objects.create(name="Plan Inactif Filtre", is_active=False)
+
+        url = reverse("superadmin-plans-list")
+        resp = client.get(url, {"is_active": "true"})
+        assert resp.status_code == 200
+        names = [p["name"] for p in resp.json()["data"]["results"]]
+        assert "Plan Actif Filtre" in names
+        assert "Plan Inactif Filtre" not in names
+
 
 # ─── Tests du Service de Limites ──────────────────────────────────────────────
 

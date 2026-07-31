@@ -22,6 +22,7 @@ from apps.superadmin.serializers import (
 )
 from apps.superadmin.services.tenant_service import create_school
 from apps.superadmin.services.dashboard_service import get_dashboard_data
+from apps.superadmin.services.plan_service import exceeds_limits, find_tenants_exceeding_limits
 from apps.superadmin.tasks import send_tenant_status_notification
 from apps.monitoring.services import audit_log, get_client_ip
 
@@ -29,18 +30,29 @@ from apps.monitoring.services import audit_log, get_client_ip
 class PlanViewSet(
     mixins.ListModelMixin,
     mixins.CreateModelMixin,
+    mixins.UpdateModelMixin,
     viewsets.GenericViewSet,
 ):
     """
     ViewSet pour la gestion des Plans par le Super Admin.
     Supporte :
-    - GET  /superadmin/plans/ (liste paginée)
-    - POST /superadmin/plans/ (création)
+    - GET        /superadmin/plans/      (liste paginée, filtrable par ?is_active=)
+    - POST       /superadmin/plans/      (création)
+    - PUT/PATCH  /superadmin/plans/{id}/ (édition — SUPERADMIN-V2-03)
+
+    Pas de DELETE (décision PO 2026-07-31) : Tenant.plan est on_delete=PROTECT,
+    donc un vrai DELETE échouerait dès qu'un tenant (actif ou non) référence
+    encore ce plan — cas marginal. `is_active=False` (déjà existant, déjà
+    appliqué à la création d'école dans tenant_service.py) est la
+    désactivation logique ; cette vue d'édition la couvre gratuitement,
+    `is_active` étant un champ normal de PlanSerializer.
     """
 
     queryset = Plan.objects.all().order_by("name")
     serializer_class = PlanSerializer
     permission_classes = [IsAuthenticated, IsSuperAdmin]
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ["is_active"]
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
@@ -48,8 +60,44 @@ class PlanViewSet(
         self.perform_create(serializer)
         return created_response(serializer.data)
 
+    def update(self, request, *args, **kwargs):
+        """
+        PUT/PATCH /superadmin/plans/{id}/
+        Édition rétroactive (Plan est une référence partagée, pas un
+        instantané par école — décision PO confirmée) : bloque en 422 si la
+        réduction de max_students/max_staff mettrait un ou plusieurs tenants
+        déjà rattachés à ce plan en dépassement, en listant lesquels — même
+        invariant que change-plan (plan_service.exceeds_limits), appliqué
+        ici à tous les tenants du plan plutôt qu'à un seul.
+        """
+        partial = kwargs.pop("partial", False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
 
-class TenantViewSet(viewsets.ModelViewSet):
+        new_max_students = serializer.validated_data.get("max_students", instance.max_students)
+        new_max_staff = serializer.validated_data.get("max_staff", instance.max_staff)
+
+        affected = find_tenants_exceeding_limits(instance.id, new_max_students, new_max_staff)
+        if affected:
+            names = ", ".join(t["name"] for t in affected)
+            return error_response(
+                f"Cette modification dépasserait les nouvelles limites pour "
+                f"{len(affected)} établissement(s) déjà rattaché(s) à ce plan : {names}.",
+                errors={"affected_tenants": affected},
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            )
+
+        self.perform_update(serializer)
+        return success_response(serializer.data)
+
+
+class TenantViewSet(
+    mixins.ListModelMixin,
+    mixins.CreateModelMixin,
+    mixins.RetrieveModelMixin,
+    viewsets.GenericViewSet,
+):
     """
     ViewSet pour la gestion des Établissements (Tenants) par le Super Admin (§2 du contrat d'API).
     Supporte :
@@ -58,6 +106,23 @@ class TenantViewSet(viewsets.ModelViewSet):
     - GET   /superadmin/schools/{id}/ -> Détail de l'école
     - PATCH /superadmin/schools/{id}/suspend/ -> Suspendre
     - PATCH /superadmin/schools/{id}/reactivate/ -> Réactiver
+    - PATCH /superadmin/schools/{id}/change-plan/ -> Changer de plan
+
+    SUPERADMIN-V2-03 — CORRECTIF DE SÉCURITÉ découvert en marge du ticket :
+    ce ViewSet héritait auparavant de `viewsets.ModelViewSet`, ce qui exposait
+    silencieusement `PUT`/`PATCH`/`DELETE /superadmin/schools/{id}/` génériques
+    (jamais documentés, jamais voulus). Le PATCH générique utilisait
+    `TenantListSerializer` par défaut (aucun cas "update" dans
+    `get_serializer_class`), dont le champ `status` est directement
+    inscriptible : un simple `PATCH {"status": "SUSPENDED_HARD"}` contournait
+    entièrement le workflow `suspend`/`reactivate` (pas de `reason`, pas
+    d'AuditLog, pas de notification). Le DELETE générique, lui, supprimait
+    purement et simplement le Tenant (cascade sur toutes ses données).
+    Passage à des mixins explicites (List/Create/Retrieve uniquement) :
+    toute mutation doit désormais passer par une action nommée, auditée —
+    même principe déjà acté pour STAFF-V2-02 ("actions sensibles = endpoint
+    nommé, pas un champ noyé dans un PATCH générique"). Test de régression :
+    apps/superadmin/tests/test_tenant_generic_mutations_removed.py.
     """
 
     queryset = Tenant.objects.all().select_related("plan").order_by("-created_at")
@@ -187,6 +252,65 @@ class TenantViewSet(viewsets.ModelViewSet):
         )
 
         return success_response({"id": tenant.id, "status": tenant.status})
+
+    @action(detail=True, methods=["patch"], url_path="change-plan")
+    def change_plan(self, request, pk=None):
+        """
+        PATCH /superadmin/schools/{id}/change-plan/
+        Change le plan d'un établissement, effet immédiat sur
+        max_students/max_staff (Plan est une référence live, pas un
+        instantané — rien à propager). Bloqué en 422 si l'effectif actuel
+        de l'établissement dépasserait les limites du plan cible (décision
+        PO 2026-07-31, même invariant que check_student_limit/
+        check_staff_limit) ; pas de mode « forcer quand même ».
+        """
+        tenant = self.get_object()
+        plan_id = request.data.get("plan_id")
+
+        if not plan_id:
+            return error_response(
+                "plan_id est requis.", status_code=status.HTTP_400_BAD_REQUEST
+            )
+
+        new_plan = Plan.objects.filter(id=plan_id).first()
+        if new_plan is None:
+            return error_response(
+                "Plan non trouvé.", status_code=status.HTTP_404_NOT_FOUND
+            )
+
+        if not new_plan.is_active:
+            return error_response(
+                "Le plan sélectionné n'est pas actif.",
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            )
+
+        student_count = tenant.get_student_count()
+        staff_count = tenant.get_staff_count()
+        if exceeds_limits(student_count, staff_count, new_plan.max_students, new_plan.max_staff):
+            return error_response(
+                f"Ce plan ne peut pas être appliqué : l'établissement compte "
+                f"{student_count} élève(s) (limite {new_plan.max_students}) et "
+                f"{staff_count} membre(s) du personnel (limite {new_plan.max_staff}).",
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            )
+
+        old_plan = tenant.plan
+        tenant.plan = new_plan
+        tenant.save(update_fields=["plan", "updated_at"])
+
+        audit_log(
+            user=request.user,
+            tenant=tenant,
+            action="tenant:change-plan",
+            target_model="Tenant",
+            target_id=tenant.id,
+            extra={"old_plan_id": str(old_plan.id), "new_plan_id": str(new_plan.id)},
+            ip_address=get_client_ip(request),
+        )
+
+        return success_response(
+            {"id": tenant.id, "plan": {"id": new_plan.id, "name": new_plan.name}}
+        )
 
 
 @api_view(["GET"])

@@ -40,6 +40,24 @@ class TenantPlanNestedSerializer(serializers.ModelSerializer):
         fields = ["id", "name"]
 
 
+class TenantPlanDetailNestedSerializer(serializers.ModelSerializer):
+    """
+    Variante de TenantPlanNestedSerializer pour TenantDetailSerializer
+    uniquement — SUPERADMIN-V2-03, correctif trouvé en marge du ticket (pas
+    une régression introduite par lui) : la page de détail école affiche
+    déjà `school.plan.price_monthly`/`max_students`/`max_staff` (tarif,
+    limites, barres "Utilisation actuelle"), mais TenantPlanNestedSerializer
+    ne renvoyait que `id`/`name`, donnant "NaN GNF" et des limites vides à
+    l'affichage. Distincte de TenantPlanNestedSerializer (utilisée par
+    TenantListSerializer / GET /superadmin/schools/) pour ne pas élargir le
+    contrat déjà documenté de la liste, qui n'a besoin que de `id`/`name`.
+    """
+
+    class Meta:
+        model = Plan
+        fields = ["id", "name", "price_monthly", "max_students", "max_staff"]
+
+
 class TenantCreateSerializer(serializers.Serializer):
     """
     Serializer pour la requête POST de création d'école (§2.1 du contrat d'API).
@@ -96,7 +114,7 @@ class TenantDetailSerializer(serializers.ModelSerializer):
     Serializer pour le détail complet d'une école (§2.3 du contrat d'API).
     """
 
-    plan = TenantPlanNestedSerializer(read_only=True)
+    plan = TenantPlanDetailNestedSerializer(read_only=True)
     student_count = serializers.SerializerMethodField()
     staff_count = serializers.SerializerMethodField()
 

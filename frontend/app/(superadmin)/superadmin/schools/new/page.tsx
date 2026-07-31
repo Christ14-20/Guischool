@@ -12,7 +12,7 @@ export default async function NewSchoolPage() {
 
   try {
     const client = await getBackendClient();
-    const plansResp = await client.get("/superadmin/plans/");
+    const plansResp = await client.get("/superadmin/plans/?is_active=true");
     if (plansResp.data?.status === "success") {
       const payload = plansResp.data.data;
       if (Array.isArray(payload)) {

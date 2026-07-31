@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { getBackendClient } from "@/lib/api/client";
 import { Building2, Calendar, Mail, Phone, MapPin, Award, User, ShieldAlert, ArrowLeft, Users } from "lucide-react";
 import SchoolActions from "../SchoolActions";
+import ChangePlanButton from "../ChangePlanButton";
 
 
 export const dynamic = "force-dynamic";
@@ -18,12 +19,19 @@ interface SchoolDetailPageProps {
 export default async function SchoolDetailPage({ params }: SchoolDetailPageProps) {
   const { id } = await params;
   let school: any = null;
+  let activePlans: any[] = [];
 
   try {
     const client = await getBackendClient();
     const resp = await client.get(`/superadmin/schools/${id}/`);
     if (resp.data?.status === "success") {
       school = resp.data.data;
+    }
+
+    const plansResp = await client.get("/superadmin/plans/?is_active=true");
+    if (plansResp.data?.status === "success") {
+      const payload = plansResp.data.data;
+      activePlans = Array.isArray(payload) ? payload : payload?.results || [];
     }
   } catch (err: any) {
     console.error("School detail fetch error:", err.message);
@@ -208,11 +216,16 @@ export default async function SchoolDetailPage({ params }: SchoolDetailPageProps
         <div className="space-y-8">
           {/* Subscription plan details */}
           <div className="bg-slate-900/20 border border-slate-800/80 rounded-2xl p-6 shadow-xl backdrop-blur-md space-y-6">
-            <h2 className="font-bold text-white text-lg border-b border-slate-800 pb-3 flex items-center gap-2">
-              <Award className="size-5 text-indigo-400" />
-              Plan d’abonnement
-            </h2>
-            
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <h2 className="font-bold text-white text-lg flex items-center gap-2">
+                <Award className="size-5 text-indigo-400" />
+                Plan d’abonnement
+              </h2>
+              {activePlans.length > 0 && (
+                <ChangePlanButton schoolId={school.id} currentPlanId={school.plan?.id} plans={activePlans} />
+              )}
+            </div>
+
             {school.plan ? (
               <div className="space-y-6 text-sm">
                 <div className="flex items-center justify-between">

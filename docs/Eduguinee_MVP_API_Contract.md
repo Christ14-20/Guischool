@@ -382,6 +382,10 @@ Convention uniforme sur toutes les listes : `?champ=valeur` pour un filtre exact
 ### `GET /superadmin/schools/{id}/`
 **Réponse `200` :** objet complet `Tenant` (tous les champs listés dans le schéma de données §1.1) + `student_count`, `staff_count`.
 
+`plan` imbriqué : `{"id": "...", "name": "Pro", "price_monthly": "1500000.00", "max_students": 1000, "max_staff": 100}`.
+
+> **Correctif trouvé en marge de SUPERADMIN-V2-03 (2026-07-31), pas le périmètre initial :** ce `plan` imbriqué ne renvoyait auparavant que `id`/`name` (`TenantPlanNestedSerializer`), alors que la page de détail école affichait déjà `price_monthly`/`max_students`/`max_staff` — d'où un « Tarif mensuel : NaN GNF » et des limites vides à l'écran. Nouveau serializer dédié `TenantPlanDetailNestedSerializer`, utilisé uniquement ici (le `plan` imbriqué de `GET /superadmin/schools/` liste, ci-dessous, reste `{id, name}` — contrat inchangé pour cet endpoint).
+
 ### `PATCH /superadmin/schools/{id}/suspend/`
 **Requête :** `{"reason": "Impayé abonnement depuis 45 jours", "type": "SOFT"}` (`type` : `"SOFT"` ou `"HARD"`) — **Réponse `200` :** `{"status": "success", "data": {"id": "...", "status": "SUSPENDED_SOFT"}}`
 
@@ -391,6 +395,32 @@ Convention uniforme sur toutes les listes : `?champ=valeur` pour un filtre exact
 
 ### `PATCH /superadmin/schools/{id}/reactivate/`
 **Requête :** `{}` — **Réponse `200`** : `{"status": "success", "data": {"id": "...", "status": "ACTIVE"}}`
+
+> **Correctif de sécurité découvert en marge de SUPERADMIN-V2-03 (2026-07-31), pas le périmètre initial du ticket :** `TenantViewSet` héritait auparavant de `viewsets.ModelViewSet`, ce qui exposait silencieusement des routes génériques `PUT`/`PATCH`/`DELETE /superadmin/schools/{id}/` jamais documentées ni voulues. Le `PATCH` générique retombait sur `TenantListSerializer` (seul cas non spécialisé de `get_serializer_class`), dont le champ `status` est directement inscriptible : `PATCH {"status": "SUSPENDED_HARD"}` contournait donc entièrement le workflow `suspend`/`reactivate` ci-dessus (pas de `reason`, pas d'`AuditLog`, pas de notification). Le `DELETE` générique, lui, supprimait purement et simplement le `Tenant` (cascade sur toutes ses données). `TenantViewSet` n'expose désormais que `GET /superadmin/schools/` (liste), `POST /superadmin/schools/` (création), `GET /superadmin/schools/{id}/` (détail) et les actions nommées documentées dans cette section — **`PUT`/`PATCH`/`DELETE` génériques sur `/superadmin/schools/{id}/` n'ont jamais fait partie du contrat et renvoient désormais `405`**. Test de régression : `apps/superadmin/tests/test_tenant_generic_mutations_removed.py`.
+
+### `PATCH /superadmin/schools/{id}/change-plan/` — SUPERADMIN-V2-03
+**Requête :** `{"plan_id": "7a1b2c3d-..."}`
+
+**Réponse `200` :**
+```json
+{
+  "status": "success",
+  "data": {
+    "id": "9c8d7e6f-...",
+    "plan": {"id": "7a1b2c3d-...", "name": "Pro"}
+  }
+}
+```
+
+Effet **immédiat** sur `max_students`/`max_staff` — `Plan` est une référence live (FK), pas un instantané par école, donc rien à propager ailleurs.
+
+**Erreurs :**
+- `400` si `plan_id` absent : `{"message": "plan_id est requis."}`
+- `404` si le plan n'existe pas : `{"message": "Plan non trouvé."}`
+- `422` si le plan ciblé est désactivé (`is_active=false`) : `{"message": "Le plan sélectionné n'est pas actif."}`
+- `422` si l'effectif actuel de l'établissement dépasserait les limites du plan ciblé : `{"message": "Ce plan ne peut pas être appliqué : l'établissement compte X élève(s) (limite Y) et Z membre(s) du personnel (limite W)."}` — décision PO 2026-07-31 : **bloqué, pas de mode « forcer quand même »**. La comparaison est `count > limite` (être pile à la limite est valide, pas une violation) — même invariant que `PlanViewSet.update` ci-dessous, mutualisé dans `apps/superadmin/services/plan_service.py`.
+
+Action tracée dans `AuditLog` (`action="tenant:change-plan"`, `extra={"old_plan_id", "new_plan_id"}`).
 
 ### `GET /superadmin/dashboard/` — SUPERADMIN-V2-02
 **Auth :** JWT, `IsSuperAdmin` uniquement (403 sinon) — vue globale plateforme, aucune notion de tenant.
@@ -441,11 +471,37 @@ Convention uniforme sur toutes les listes : `?champ=valeur` pour un filtre exact
 **Performance :** pas de cache pour cette version (agrégats bon marché à l'échelle actuelle de la plateforme — `COUNT`/`SUM` sur colonne indexée). Redis est configuré au niveau infra mais non utilisé par ce endpoint ; voir `apps/superadmin/services/dashboard_service.py` pour la justification détaillée et le point d'extension prévu si le besoin apparaît.
 
 ### `GET /superadmin/plans/` / `POST /superadmin/plans/`
+**Query params (`GET`) :** `?is_active=true` — filtre les plans désactivés, notamment utilisé par le sélecteur de plan à la création d'école (SUPERADMIN-V2-03, corrige un gap où le formulaire de création listait aussi les plans inactifs).
+
 **Réponse `GET` (élément de liste) :**
 ```json
 {"id": "7a1b2c3d-...", "name": "Pro", "max_students": 1000, "max_staff": 100, "price_monthly": "1500000.00", "is_active": true}
 ```
 **Requête `POST` :** mêmes champs sans `id`.
+
+### `PUT` / `PATCH /superadmin/plans/{id}/` — SUPERADMIN-V2-03
+**Requête (`PATCH`, partielle) :** `{"max_students": 500}` — mêmes champs que `POST` pour `PUT` (complet).
+
+**Réponse `200` :** objet `Plan` mis à jour, même forme que `GET`.
+
+Édition **rétroactive** : `Plan` est une référence partagée par tous les tenants qui y sont rattachés, pas un instantané par école — aucune propagation à faire, la lecture est toujours live via la FK `Tenant.plan`.
+
+**Erreur `422`** si la réduction de `max_students`/`max_staff` mettrait un ou plusieurs tenants déjà rattachés à ce plan en dépassement — bloque et **liste lesquels** (pas juste un refus générique) :
+```json
+{
+  "status": "error",
+  "message": "Cette modification dépasserait les nouvelles limites pour 2 établissement(s) déjà rattaché(s) à ce plan : École A, École B.",
+  "errors": {
+    "affected_tenants": [
+      {"id": "9c8d7e6f-...", "name": "École A", "student_count": 620, "staff_count": 40},
+      {"id": "1a2b3c4d-...", "name": "École B", "student_count": 510, "staff_count": 38}
+    ]
+  }
+}
+```
+Même invariant (et même implémentation, `apps/superadmin/services/plan_service.py`) que `change-plan` ci-dessus, mais appliqué à **tous** les tenants du plan plutôt qu'à un seul.
+
+> **Pas de `DELETE`** (décision PO 2026-07-31, hors périmètre volontairement) : `Tenant.plan` est `on_delete=PROTECT` (la DB refuse déjà toute suppression tant qu'un tenant y est rattaché), et la désactivation (`is_active=false`, déjà bloquée à la création d'école par `tenant_service.py`) couvre le besoin de retirer un plan de la vente sans supprimer l'historique.
 
 ---
 ## 3. Structure pédagogique (Épic 3)

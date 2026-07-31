@@ -232,6 +232,15 @@ class TestSchoolEndpoints:
         # staff_count == 1 (director_user créé dans ce tenant)
         assert data["staff_count"] == 1
 
+        # SUPERADMIN-V2-03 — correctif trouvé en marge du ticket : le plan
+        # imbriqué doit inclure price_monthly/max_students/max_staff (pas
+        # seulement id/name), sinon la page de détail école affiche
+        # "NaN GNF" et des limites vides.
+        assert data["plan"]["id"] == str(tenant.plan.id)
+        assert data["plan"]["price_monthly"] == str(tenant.plan.price_monthly)
+        assert data["plan"]["max_students"] == tenant.plan.max_students
+        assert data["plan"]["max_staff"] == tenant.plan.max_staff
+
     def test_superadmin_can_suspend_and_reactivate_school(self, superadmin_user, director_user):
         """Vérifie le workflow de suspension (HARD) et de réactivation d'une école."""
         client = APIClient()
@@ -325,3 +334,144 @@ class TestSchoolEndpoints:
         suspend_url = reverse("superadmin-schools-suspend", args=[str(director_user.tenant.id)])
         resp = client.patch(suspend_url, {"reason": "Test"}, format="json")
         assert resp.status_code == 403
+
+
+@pytest.mark.django_db
+class TestChangePlan:
+    """SUPERADMIN-V2-03 : PATCH /superadmin/schools/{id}/change-plan/"""
+
+    def test_change_plan_success_immediate_effect(self, superadmin_user, director_user, plan):
+        tenant = director_user.tenant
+        new_plan = Plan.objects.create(
+            name="Enterprise", max_students=2000, max_staff=200,
+            price_monthly=Decimal("3000000.00"), is_active=True,
+        )
+        client = APIClient()
+        token = login_user(client, superadmin_user.email)
+        client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
+
+        url = reverse("superadmin-schools-change-plan", args=[str(tenant.id)])
+        resp = client.patch(url, {"plan_id": str(new_plan.id)}, format="json")
+
+        assert resp.status_code == 200, resp.json()
+        assert resp.json()["data"]["plan"]["name"] == "Enterprise"
+        tenant.refresh_from_db()
+        assert tenant.plan_id == new_plan.id
+
+    def test_change_plan_blocked_when_student_count_exceeds_target(
+        self, superadmin_user, director_user, plan
+    ):
+        tenant = director_user.tenant
+        small_plan = Plan.objects.create(
+            name="Mini", max_students=100, max_staff=10, is_active=True,
+        )
+        client = APIClient()
+        token = login_user(client, superadmin_user.email)
+        client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
+
+        with patch.object(Tenant, "get_student_count", return_value=150):
+            url = reverse("superadmin-schools-change-plan", args=[str(tenant.id)])
+            resp = client.patch(url, {"plan_id": str(small_plan.id)}, format="json")
+
+        assert resp.status_code == 422
+        assert "150" in resp.json()["message"]
+        tenant.refresh_from_db()
+        assert tenant.plan_id == plan.id  # inchangé
+
+    def test_change_plan_blocked_when_staff_count_exceeds_target(
+        self, superadmin_user, director_user, plan
+    ):
+        tenant = director_user.tenant
+        small_plan = Plan.objects.create(
+            name="Mini Staff", max_students=1000, max_staff=5, is_active=True,
+        )
+        client = APIClient()
+        token = login_user(client, superadmin_user.email)
+        client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
+
+        with patch.object(Tenant, "get_staff_count", return_value=10):
+            url = reverse("superadmin-schools-change-plan", args=[str(tenant.id)])
+            resp = client.patch(url, {"plan_id": str(small_plan.id)}, format="json")
+
+        assert resp.status_code == 422
+        tenant.refresh_from_db()
+        assert tenant.plan_id == plan.id
+
+    def test_change_plan_allowed_when_exactly_at_limit(
+        self, superadmin_user, director_user, plan
+    ):
+        """Être PILE à la limite est un état valide, pas un dépassement."""
+        tenant = director_user.tenant
+        exact_plan = Plan.objects.create(
+            name="Exact", max_students=150, max_staff=100, is_active=True,
+        )
+        client = APIClient()
+        token = login_user(client, superadmin_user.email)
+        client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
+
+        with patch.object(Tenant, "get_student_count", return_value=150):
+            url = reverse("superadmin-schools-change-plan", args=[str(tenant.id)])
+            resp = client.patch(url, {"plan_id": str(exact_plan.id)}, format="json")
+
+        assert resp.status_code == 200, resp.json()
+
+    def test_change_plan_to_inactive_plan_returns_422(self, superadmin_user, director_user):
+        tenant = director_user.tenant
+        inactive_plan = Plan.objects.create(name="Retiré", is_active=False)
+        client = APIClient()
+        token = login_user(client, superadmin_user.email)
+        client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
+
+        url = reverse("superadmin-schools-change-plan", args=[str(tenant.id)])
+        resp = client.patch(url, {"plan_id": str(inactive_plan.id)}, format="json")
+
+        assert resp.status_code == 422
+
+    def test_change_plan_missing_plan_id_returns_400(self, superadmin_user, director_user):
+        client = APIClient()
+        token = login_user(client, superadmin_user.email)
+        client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
+
+        url = reverse("superadmin-schools-change-plan", args=[str(director_user.tenant.id)])
+        resp = client.patch(url, {}, format="json")
+        assert resp.status_code == 400
+
+    def test_change_plan_unknown_plan_returns_404(self, superadmin_user, director_user):
+        client = APIClient()
+        token = login_user(client, superadmin_user.email)
+        client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
+
+        url = reverse("superadmin-schools-change-plan", args=[str(director_user.tenant.id)])
+        resp = client.patch(
+            url, {"plan_id": "00000000-0000-0000-0000-000000000000"}, format="json"
+        )
+        assert resp.status_code == 404
+
+    def test_change_plan_forbidden_for_director(self, director_user, plan):
+        other_plan = Plan.objects.create(name="Autre", is_active=True)
+        client = APIClient()
+        token = login_user(client, director_user.email)
+        client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
+
+        url = reverse("superadmin-schools-change-plan", args=[str(director_user.tenant.id)])
+        resp = client.patch(url, {"plan_id": str(other_plan.id)}, format="json")
+        assert resp.status_code == 403
+
+    def test_change_plan_creates_audit_log(self, superadmin_user, director_user, plan):
+        from apps.monitoring.models import AuditLog
+
+        tenant = director_user.tenant
+        new_plan = Plan.objects.create(
+            name="Audit Plan", max_students=500, max_staff=50, is_active=True,
+        )
+        client = APIClient()
+        token = login_user(client, superadmin_user.email)
+        client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
+
+        url = reverse("superadmin-schools-change-plan", args=[str(tenant.id)])
+        client.patch(url, {"plan_id": str(new_plan.id)}, format="json")
+
+        log = AuditLog.objects.filter(action="tenant:change-plan", target_id=str(tenant.id)).first()
+        assert log is not None
+        assert log.extra["new_plan_id"] == str(new_plan.id)
+        assert log.extra["old_plan_id"] == str(plan.id)

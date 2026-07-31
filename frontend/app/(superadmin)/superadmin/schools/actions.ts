@@ -65,6 +65,25 @@ export async function suspendSchoolAction(id: string, reason: string) {
   }
 }
 
+export async function changePlanAction(id: string, planId: string) {
+  try {
+    const client = await getBackendClient();
+    await client.patch(`/superadmin/schools/${id}/change-plan/`, { plan_id: planId });
+
+    revalidatePath("/superadmin/dashboard");
+    revalidatePath("/superadmin/schools");
+    revalidatePath(`/superadmin/schools/${id}`);
+
+    return { success: true, error: null };
+  } catch (err: any) {
+    console.error("Error changing plan:", err.response?.data || err.message);
+    return {
+      success: false,
+      error: err.response?.data?.message || "Impossible de changer le plan de cet établissement.",
+    };
+  }
+}
+
 export async function reactivateSchoolAction(id: string) {
   try {
     const client = await getBackendClient();
