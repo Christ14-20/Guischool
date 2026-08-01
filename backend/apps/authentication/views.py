@@ -40,6 +40,7 @@ from .serializers import (
     STAFF_PROFILE_FIELDS,
 )
 from .services.staff_service import create_staff_account
+from .services.staff_dashboard_service import get_staff_dashboard_data
 
 
 class LoginView(APIView):
@@ -324,6 +325,8 @@ class StaffViewSet(viewsets.ModelViewSet):
             perms.append(HasPermission("staff:update"))
         elif self.action in ("disable", "enable"):
             perms.append(HasPermission("staff:disable"))
+        elif self.action == "dashboard":
+            perms.append(HasPermission("staff:read"))
         return perms
 
     def get_queryset(self):
@@ -516,6 +519,18 @@ class StaffViewSet(viewsets.ModelViewSet):
         )
 
         return success_response(StaffDetailSerializer(user).data)
+
+    @action(detail=False, methods=["get"])
+    def dashboard(self, request):
+        """
+        GET /auth/staff/dashboard/ — STAFF-V2-05.
+
+        Effectifs par rôle, ancienneté moyenne (`date_embauche`), taux de
+        vacataires (`statut_emploi`) — comptes actifs uniquement (décision
+        PO). Cf. docstring de `get_staff_dashboard_data` pour le détail des
+        décisions actées.
+        """
+        return success_response(get_staff_dashboard_data(request.tenant))
 
     @action(detail=True, methods=["patch"], url_path="custom-permissions")
     def custom_permissions(self, request, pk=None):

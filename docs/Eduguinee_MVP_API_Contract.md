@@ -399,6 +399,25 @@ Remplace **intégralement** la liste (pas un ajout incrémental) — un tableau 
 >
 > Pas de nouveau codename de permission créé pour cet endpoint — réutilise `staff:update`, même décision que `change-role`.
 
+### `GET /auth/staff/dashboard/` — STAFF-V2-05
+**Auth :** JWT, permission `staff:read` (`DIRECTOR`/`STUDENT_STUDIES`) — même codename que la liste, pas de nouveau codename créé.
+
+Tableau de bord personnel : effectifs par rôle, ancienneté moyenne, taux de vacataires. **Comptes actifs uniquement** (décision PO) — un compte désactivé n'est compté dans aucune des 3 métriques. Même périmètre que `GET /auth/staff/` (exclut `DIRECTOR`/`SUPER_ADMIN`, filtré sur le tenant courant).
+
+**Réponse `200` :**
+```json
+{
+  "status": "success",
+  "data": {
+    "total_staff": 12,
+    "by_role": {"TEACHER": 8, "STUDENT_STUDIES": 2, "ACCOUNTANT": 2},
+    "average_tenure_years": 3.4,
+    "vacataire_rate": 0.25
+  }
+}
+```
+`by_role` : toujours les 3 clés (`TEACHER`/`STUDENT_STUDIES`/`ACCOUNTANT`), même à 0 — pas de clé manquante à gérer côté frontend. `average_tenure_years` : moyenne calculée uniquement sur les comptes ayant un `date_embauche` renseigné (champ optionnel) ; `0.0` si aucun compte n'en a. `vacataire_rate` : proportion (0–1) des comptes actifs avec `statut_emploi="VACATAIRE"` (STAFF-V2-04) — **pas** `type_contrat="VACATAIRE"` (axe distinct, décision PO explicite) ; `0.0` si `total_staff` est 0.
+
 ---
 
 ## 2. Super Administration (Épic 2)
@@ -1300,6 +1319,7 @@ Pour garder une expérience cohérente, le frontend doit afficher **exactement**
 | Auth (staff) | `/auth/staff/` | GET, POST |
 | Auth (staff) | `/auth/staff/{id}/` | GET, PATCH |
 | Auth (staff) | `/auth/staff/{id}/disable/`, `/auth/staff/{id}/enable/`, `/auth/staff/{id}/change-role/`, `/auth/staff/{id}/custom-permissions/` | PATCH |
+| Auth (staff) | `/auth/staff/dashboard/` | GET |
 | Super Admin | `/superadmin/schools/` | GET, POST |
 | Super Admin | `/superadmin/schools/{id}/` | GET |
 | Super Admin | `/superadmin/schools/{id}/suspend/`, `/reactivate/`, `/change-plan/` | PATCH |

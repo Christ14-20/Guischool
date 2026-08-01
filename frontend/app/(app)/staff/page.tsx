@@ -2,7 +2,7 @@
 import React from "react";
 import Link from "next/link";
 import { getBackendClient } from "@/lib/api/client";
-import { Plus, Search, UserCog } from "lucide-react";
+import { Plus, Search, UserCog, Users, GraduationCap, BookOpen, Landmark, Clock, Percent } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -15,20 +15,33 @@ interface StaffPageProps {
   }>;
 }
 
+// STAFF-V2-05 : ACCOUNTANT ajouté ici aussi — même résidu pré-existant que
+// StaffDetailClient.tsx (corrigé en STAFF-V2-02), le tableau de bord rend ce
+// rôle visible dans ses stat cards.
 const ROLE_OPTIONS = [
   { value: "TEACHER", label: "Enseignant" },
   { value: "STUDENT_STUDIES", label: "Études" },
+  { value: "ACCOUNTANT", label: "Comptable" },
 ];
 
 const ROLE_LABELS: Record<string, string> = {
   TEACHER: "Enseignant",
   STUDENT_STUDIES: "Études",
+  ACCOUNTANT: "Comptable",
 };
 
 const ROLE_STYLES: Record<string, string> = {
   TEACHER: "bg-indigo-500/10 text-indigo-400 border-indigo-500/20",
   STUDENT_STUDIES: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
+  ACCOUNTANT: "bg-amber-500/10 text-amber-400 border-amber-500/20",
 };
+
+interface DashboardData {
+  total_staff: number;
+  by_role: Record<string, number>;
+  average_tenure_years: number;
+  vacataire_rate: number;
+}
 
 export default async function StaffPage({ searchParams }: StaffPageProps) {
   const params = await searchParams;
@@ -38,6 +51,7 @@ export default async function StaffPage({ searchParams }: StaffPageProps) {
   const currentPage = parseInt(params.page || "1", 10);
 
   let staffData: { results: any[]; count: number } = { results: [], count: 0 };
+  let dashboard: DashboardData | null = null;
   let errorMsg: string | null = null;
 
   try {
@@ -50,10 +64,16 @@ export default async function StaffPage({ searchParams }: StaffPageProps) {
     if (currentPage > 1) queryParts.push(`page=${currentPage}`);
     const queryStr = queryParts.length ? `?${queryParts.join("&")}` : "";
 
-    const resp = await client.get(`/auth/staff/${queryStr}`);
+    const [staffResp, dashboardResp] = await Promise.all([
+      client.get(`/auth/staff/${queryStr}`),
+      client.get("/auth/staff/dashboard/").catch(() => ({ data: { status: "error" } })),
+    ]);
 
-    if (resp.data?.status === "success") {
-      staffData = resp.data.data;
+    if (staffResp.data?.status === "success") {
+      staffData = staffResp.data.data;
+    }
+    if (dashboardResp.data?.status === "success") {
+      dashboard = dashboardResp.data.data;
     }
   } catch {
     errorMsg = "Impossible de charger la liste du personnel.";
@@ -94,6 +114,35 @@ export default async function StaffPage({ searchParams }: StaffPageProps) {
       {errorMsg && (
         <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-xl text-destructive text-sm">
           {errorMsg}
+        </div>
+      )}
+
+      {/* Tableau de bord (STAFF-V2-05) — comptes actifs uniquement */}
+      {dashboard && (
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+          {[
+            { label: "Effectif actif", value: dashboard.total_staff, icon: Users },
+            { label: "Enseignants", value: dashboard.by_role.TEACHER ?? 0, icon: GraduationCap },
+            { label: "Études", value: dashboard.by_role.STUDENT_STUDIES ?? 0, icon: BookOpen },
+            { label: "Comptables", value: dashboard.by_role.ACCOUNTANT ?? 0, icon: Landmark },
+            {
+              label: "Ancienneté moyenne",
+              value: `${dashboard.average_tenure_years} an${dashboard.average_tenure_years >= 2 ? "s" : ""}`,
+              icon: Clock,
+            },
+            { label: "Taux de vacataires", value: `${Math.round(dashboard.vacataire_rate * 100)}%`, icon: Percent },
+          ].map(({ label, value, icon: Icon }) => (
+            <div
+              key={label}
+              className="bg-slate-900/40 border border-slate-800/80 rounded-xl p-4 shadow-xl backdrop-blur-md"
+            >
+              <div className="flex items-center gap-2 text-slate-500 mb-2">
+                <Icon className="size-3.5" />
+                <span className="text-xs font-semibold uppercase tracking-wider">{label}</span>
+              </div>
+              <div className="text-2xl font-bold text-white tabular-nums">{value}</div>
+            </div>
+          ))}
         </div>
       )}
 
