@@ -69,7 +69,9 @@ def transition_tenant_status(
 
     from apps.superadmin.tasks import send_tenant_status_notification
 
-    send_tenant_status_notification.delay(str(tenant.id), old_status, new_status)
+    send_tenant_status_notification.delay(
+        str(tenant.id), old_status, new_status, reason=reason, action=action
+    )
 
     from apps.monitoring.services import audit_log
 

@@ -262,7 +262,10 @@ class TestSchoolEndpoints:
             assert tenant.status == Tenant.Status.SUSPENDED_HARD
             assert tenant.settings.get("suspend_reason") == "Impayé abonnement"
             # Notification Celery asynchrone déclenchée (old_status=ACTIVE car la fixture crée un tenant ACTIVE)
-            mock_notify.assert_called_once_with(str(tenant.id), "ACTIVE", Tenant.Status.SUSPENDED_HARD)
+            mock_notify.assert_called_once_with(
+                str(tenant.id), "ACTIVE", Tenant.Status.SUSPENDED_HARD,
+                reason="Impayé abonnement", action="tenant:suspend",
+            )
 
         # 2. Réactivation
         reactivate_url = reverse("superadmin-schools-reactivate", args=[str(tenant.id)])
@@ -274,7 +277,10 @@ class TestSchoolEndpoints:
             tenant.refresh_from_db()
             assert tenant.status == Tenant.Status.ACTIVE
             assert "suspend_reason" not in tenant.settings
-            mock_notify.assert_called_once_with(str(tenant.id), "SUSPENDED_HARD", Tenant.Status.ACTIVE)
+            mock_notify.assert_called_once_with(
+                str(tenant.id), "SUSPENDED_HARD", Tenant.Status.ACTIVE,
+                reason=None, action="tenant:reactivate",
+            )
 
     def test_superadmin_can_soft_suspend_school(self, superadmin_user, director_user):
         """SUPERADMIN-V2-01 : suspension SOFT distincte de HARD."""
@@ -293,7 +299,10 @@ class TestSchoolEndpoints:
 
             tenant.refresh_from_db()
             assert tenant.status == Tenant.Status.SUSPENDED_SOFT
-            mock_notify.assert_called_once_with(str(tenant.id), "ACTIVE", Tenant.Status.SUSPENDED_SOFT)
+            mock_notify.assert_called_once_with(
+                str(tenant.id), "ACTIVE", Tenant.Status.SUSPENDED_SOFT,
+                reason="Retard de paiement mineur", action="tenant:suspend",
+            )
 
     def test_suspend_without_type_returns_400(self, superadmin_user, director_user):
         client = APIClient()

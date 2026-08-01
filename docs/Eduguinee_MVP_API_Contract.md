@@ -548,10 +548,12 @@ Action tracée dans `AuditLog` (`action="platforminvoice:mark-paid"`).
 |---|---|---|
 | `OVERDUE` | J+1 | Relance email + SMS (`send_overdue_invoice_reminder`), aucun changement de statut. |
 | `D7` | J+7 | Idem. |
-| `D15` | J+15 | Escalade `SUSPENDED_SOFT` — relance portée par la notification de changement de statut elle-même, pas de message distinct le même jour. |
+| `D15` | J+15 | Escalade `SUSPENDED_SOFT` — relance portée par la notification de changement de statut elle-même (pas de message distinct en plus le même jour), mais avec un **corps explicitement différent** du message générique de suspension manuelle : motif impayé, numéro de facture, montant et retard sont cités en toutes lettres (décision PO, cf. ci-dessous). |
 | `D30` | J+30 | Escalade `SUSPENDED_HARD` — idem. |
 
 Seuils assumés (aucun chiffre contractuel communiqué), isolés dans `platform_invoice_service.REMINDER_MILESTONES`. Garde anti-doublon `PlatformInvoice.last_reminder_stage` (un seul envoi/escalade par palier par facture) — vit sur la facture, pas sur le tenant : si la plus ancienne facture impayée est payée, la facture suivante devient l'ancre et repart de zéro sur son propre `due_date` (décision PO explicite).
+
+**Contenu du message à D15/D30 :** `send_tenant_status_notification` (email) et `notify_tenant_status` (SMS) reçoivent désormais `reason`/`action` (transmis depuis `transition_tenant_status`). Quand `action == "tenant:auto-suspend-overdue"`, le sujet et le corps sont entièrement distincts du message générique de suspension manuelle : `"Eduguinée — Suspension automatique pour facture d'abonnement impayée"`, avec un paragraphe `Motif : {reason}` citant explicitement le numéro de facture et le montant (le SMS, plus compact, embarque directement `reason`). Une suspension **manuelle** continue d'utiliser le message générique inchangé, sans jamais citer le `suspend_reason` tapé par le Super Admin dans le corps de la notification (comportement préexistant, non modifié). Tests dédiés : `test_overdue_escalation.py::TestOverdueSuspensionMessageContent`.
 
 **Jamais de downgrade** : l'escalade compare la sévérité de la cible (`SUSPENDED_SOFT` < `SUSPENDED_HARD`) à la sévérité actuelle du tenant — un tenant déjà `SUSPENDED_HARD` pour une raison sans lien avec un impayé (ex. non-respect CGU) n'est jamais rétrogradé à `SUSPENDED_SOFT`, et son `suspend_reason` existant n'est jamais écrasé.
 

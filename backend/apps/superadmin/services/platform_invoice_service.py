@@ -257,8 +257,9 @@ def escalate_overdue_tenants(today: date | None = None) -> list[dict]:
                     tenant,
                     target_status,
                     reason=(
-                        f"Suspension automatique — facture {oldest.invoice_number} "
-                        f"impayée depuis {days_overdue} jour(s) (échéance dépassée "
+                        f"Suspension automatique pour impayé — facture "
+                        f"{oldest.invoice_number} ({oldest.amount} GNF) en retard de "
+                        f"paiement depuis {days_overdue} jour(s) (échéance dépassée "
                         f"le {oldest.due_date.isoformat()})."
                     ),
                     action="tenant:auto-suspend-overdue",

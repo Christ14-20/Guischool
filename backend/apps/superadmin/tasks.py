@@ -13,7 +13,10 @@ logger = logging.getLogger(__name__)
 
 
 @shared_task(name="apps.superadmin.tasks.send_tenant_status_notification")
-def send_tenant_status_notification(tenant_id: str, old_status: str, new_status: str):
+def send_tenant_status_notification(
+    tenant_id: str, old_status: str, new_status: str,
+    reason: str | None = None, action: str | None = None,
+):
     """
     Envoie une notification (email + SMS) au contact principal lors du
     changement de statut d'un Tenant.
@@ -22,6 +25,13 @@ def send_tenant_status_notification(tenant_id: str, old_status: str, new_status:
     SUPERADMIN-V2-01 : le SMS (apps.communication.services.notify_tenant_status)
     a été ajouté ici — jusqu'ici cette tâche n'envoyait qu'un email malgré son
     nom générique.
+
+    SUPERADMIN-V2-04 : `reason`/`action` (transmis par transition_tenant_status)
+    permettent de distinguer une suspension automatique pour impayé
+    (`action == "tenant:auto-suspend-overdue"`) d'une suspension manuelle —
+    le corps du message est alors explicitement différent (montant, numéro de
+    facture, retard), PAS le message générique de changement de statut
+    utilisé pour une suspension manuelle (décision PO explicite).
     """
     from apps.superadmin.models import Tenant
     from apps.communication.services import notify_tenant_status
@@ -32,38 +42,65 @@ def send_tenant_status_notification(tenant_id: str, old_status: str, new_status:
         logger.error(f"Tenant {tenant_id} introuvable pour envoi de notification.")
         return
 
-    subject = f"Eduguinée — Statut de votre établissement mis à jour"
+    is_overdue_escalation = action == "tenant:auto-suspend-overdue"
 
-    status_labels = {
-        "ACTIVE": "Activé / Réactivé",
-        "SUSPENDED_SOFT": "Suspendu (lecture seule)",
-        "SUSPENDED_HARD": "Suspendu (blocage total)",
-        "CANCELLED": "Résilié",
-        "TRIAL": "Période d'essai",
-    }
-
-    label = status_labels.get(new_status, new_status)
-    message = (
-        f"Bonjour {tenant.contact_name},\n\n"
-        f"Le statut de votre établissement '{tenant.name}' sur la plateforme Eduguinée a été mis à jour.\n"
-        f"Nouveau statut : {label}.\n\n"
-    )
-
-    if new_status == "SUSPENDED_SOFT":
-        message += (
-            "L'accès à votre espace a été restreint en lecture seule. La consultation et "
-            "l'export de vos données restent disponibles, mais toute nouvelle saisie est "
-            "bloquée jusqu'à régularisation. Contactez notre support pour rétablir l'accès complet.\n\n"
+    if is_overdue_escalation:
+        subject = "Eduguinée — Suspension automatique pour facture d'abonnement impayée"
+        access_labels = {
+            "SUSPENDED_SOFT": (
+                "L'accès à votre espace a été restreint en lecture seule. La consultation "
+                "et l'export de vos données restent disponibles, mais toute nouvelle saisie "
+                "est bloquée jusqu'à régularisation."
+            ),
+            "SUSPENDED_HARD": (
+                "L'accès à votre espace a été entièrement suspendu, y compris la "
+                "consultation."
+            ),
+        }
+        message = (
+            f"Bonjour {tenant.contact_name},\n\n"
+            f"L'accès de votre établissement '{tenant.name}' à la plateforme Eduguinée a été "
+            f"restreint suite à un impayé sur votre abonnement.\n\n"
+            f"Motif : {reason}\n\n"
+            f"{access_labels.get(new_status, '')}\n\n"
+            "Merci de régulariser votre situation dans les meilleurs délais pour rétablir "
+            "l'accès complet. Contactez notre support si vous pensez qu'il s'agit d'une "
+            "erreur.\n\n"
+            "Cordialement,\nL'équipe d'administration Eduguinée"
         )
-    elif new_status == "SUSPENDED_HARD":
-        message += (
-            "L'accès à votre espace a été entièrement suspendu, y compris la consultation. "
-            "Contactez notre support pour rétablir le service.\n\n"
-        )
-    elif new_status == "ACTIVE":
-        message += "Votre espace est de nouveau pleinement opérationnel.\n\n"
+    else:
+        subject = "Eduguinée — Statut de votre établissement mis à jour"
 
-    message += "Cordialement,\nL'équipe d'administration Eduguinée"
+        status_labels = {
+            "ACTIVE": "Activé / Réactivé",
+            "SUSPENDED_SOFT": "Suspendu (lecture seule)",
+            "SUSPENDED_HARD": "Suspendu (blocage total)",
+            "CANCELLED": "Résilié",
+            "TRIAL": "Période d'essai",
+        }
+
+        label = status_labels.get(new_status, new_status)
+        message = (
+            f"Bonjour {tenant.contact_name},\n\n"
+            f"Le statut de votre établissement '{tenant.name}' sur la plateforme Eduguinée a été mis à jour.\n"
+            f"Nouveau statut : {label}.\n\n"
+        )
+
+        if new_status == "SUSPENDED_SOFT":
+            message += (
+                "L'accès à votre espace a été restreint en lecture seule. La consultation et "
+                "l'export de vos données restent disponibles, mais toute nouvelle saisie est "
+                "bloquée jusqu'à régularisation. Contactez notre support pour rétablir l'accès complet.\n\n"
+            )
+        elif new_status == "SUSPENDED_HARD":
+            message += (
+                "L'accès à votre espace a été entièrement suspendu, y compris la consultation. "
+                "Contactez notre support pour rétablir le service.\n\n"
+            )
+        elif new_status == "ACTIVE":
+            message += "Votre espace est de nouveau pleinement opérationnel.\n\n"
+
+        message += "Cordialement,\nL'équipe d'administration Eduguinée"
 
     from_email = getattr(settings, "DEFAULT_FROM_EMAIL", "no-reply@eduguinee.gn")
 
@@ -84,7 +121,7 @@ def send_tenant_status_notification(tenant_id: str, old_status: str, new_status:
             f"Échec de l'envoi d'email de notification à {tenant.contact_email} : {str(e)}"
         )
 
-    notify_tenant_status(tenant_id, new_status)
+    notify_tenant_status(tenant_id, new_status, reason=reason, action=action)
 
 
 @shared_task(name="apps.superadmin.tasks.generate_platform_invoices")

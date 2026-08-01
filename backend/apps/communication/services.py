@@ -121,13 +121,20 @@ def notify_grade_validated(grade_id: str, tenant_id: str):
     )
 
 
-def notify_tenant_status(tenant_id: str, new_status: str):
+def notify_tenant_status(
+    tenant_id: str, new_status: str, reason: str | None = None, action: str | None = None,
+):
     """
     SUPERADMIN-V2-01 : notifie par SMS le contact principal d'un établissement
     lors d'un changement de statut (suspension soft/hard, réactivation).
     Complète l'email déjà envoyé par apps.superadmin.tasks.send_tenant_status_notification
     (TENANT-04) — ce n'était jusqu'ici qu'une notification email malgré le nom
     générique de la tâche.
+
+    SUPERADMIN-V2-04 : `action == "tenant:auto-suspend-overdue"` -> le SMS
+    mentionne explicitement l'impayé (`reason`, qui contient déjà montant et
+    numéro de facture — cf. platform_invoice_service.escalate_overdue_tenants),
+    pas le SMS générique de suspension manuelle.
     """
     from apps.superadmin.models import Tenant
 
@@ -137,20 +144,32 @@ def notify_tenant_status(tenant_id: str, new_status: str):
         logger.error("Tenant %s introuvable pour notification SMS de statut", tenant_id)
         return
 
-    messages = {
-        Tenant.Status.SUSPENDED_SOFT: (
-            f"Eduguinee: L'acces de {tenant.name} a ete restreint en lecture seule. "
-            "Consultation et export restent disponibles. Contactez le support."
-        ),
-        Tenant.Status.SUSPENDED_HARD: (
-            f"Eduguinee: L'acces de {tenant.name} a ete entierement suspendu. "
-            "Contactez le support."
-        ),
-        Tenant.Status.ACTIVE: (
-            f"Eduguinee: L'acces de {tenant.name} est de nouveau pleinement operationnel."
-        ),
-    }
-    message = messages.get(new_status)
+    if action == "tenant:auto-suspend-overdue":
+        access_labels = {
+            Tenant.Status.SUSPENDED_SOFT: "restreint (lecture seule)",
+            Tenant.Status.SUSPENDED_HARD: "suspendu (bloque)",
+        }
+        access = access_labels.get(new_status)
+        message = (
+            f"Eduguinee: Acces de {tenant.name} {access} pour impaye. {reason}"
+            if access else None
+        )
+    else:
+        messages = {
+            Tenant.Status.SUSPENDED_SOFT: (
+                f"Eduguinee: L'acces de {tenant.name} a ete restreint en lecture seule. "
+                "Consultation et export restent disponibles. Contactez le support."
+            ),
+            Tenant.Status.SUSPENDED_HARD: (
+                f"Eduguinee: L'acces de {tenant.name} a ete entierement suspendu. "
+                "Contactez le support."
+            ),
+            Tenant.Status.ACTIVE: (
+                f"Eduguinee: L'acces de {tenant.name} est de nouveau pleinement operationnel."
+            ),
+        }
+        message = messages.get(new_status)
+
     if not message:
         # Pas de SMS pour les autres transitions (CANCELLED, TRIAL) — hors
         # périmètre de ce ticket, uniquement suspension soft/hard + réactivation.

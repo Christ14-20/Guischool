@@ -107,7 +107,10 @@ class TestTransitionTenantStatus:
                 reason="Facture impayée", action="tenant:auto-suspend-overdue", actor=None,
             )
         assert result is True
-        mock_notify.assert_called_once_with(str(tenant.id), "ACTIVE", Tenant.Status.SUSPENDED_SOFT)
+        mock_notify.assert_called_once_with(
+            str(tenant.id), "ACTIVE", Tenant.Status.SUSPENDED_SOFT,
+            reason="Facture impayée", action="tenant:auto-suspend-overdue",
+        )
 
         tenant.refresh_from_db()
         assert tenant.status == Tenant.Status.SUSPENDED_SOFT
@@ -187,7 +190,9 @@ class TestEscalateOverdueTenants:
 
         tenant.refresh_from_db()
         assert tenant.status == Tenant.Status.SUSPENDED_SOFT
-        assert "impayée" in tenant.settings["suspend_reason"]
+        assert "impayé" in tenant.settings["suspend_reason"]
+        assert invoice.invoice_number in tenant.settings["suspend_reason"]
+        assert str(invoice.amount) in tenant.settings["suspend_reason"]
         invoice.refresh_from_db()
         assert invoice.last_reminder_stage == "D15"
 
@@ -344,3 +349,91 @@ class TestSendOverdueInvoiceReminderTask:
         with patch("apps.superadmin.tasks.send_mail") as mock_mail:
             send_overdue_invoice_reminder(str(tenant.id), "00000000-0000-0000-0000-000000000000", "OVERDUE")
         mock_mail.assert_not_called()
+
+
+@pytest.mark.django_db
+class TestOverdueSuspensionMessageContent:
+    """
+    Régression demandée par le PO : le message de suspension automatique
+    (D15/D30) doit inclure explicitement le motif impayé (montant, numéro de
+    facture) dans son corps — PAS le message générique déjà utilisé pour une
+    suspension manuelle.
+    """
+
+    def test_email_body_includes_invoice_number_and_amount_not_generic_text(self, plan):
+        from apps.superadmin.tasks import send_tenant_status_notification
+
+        tenant = make_tenant(plan, status=Tenant.Status.ACTIVE)
+        reason = (
+            "Suspension automatique pour impayé — facture PINV-2026-000042 "
+            "(1500000.00 GNF) en retard de paiement depuis 15 jour(s) "
+            "(échéance dépassée le 2026-04-01)."
+        )
+
+        with patch("apps.superadmin.tasks.send_mail") as mock_mail, \
+             patch("apps.communication.services.send_sms.delay"):
+            send_tenant_status_notification(
+                str(tenant.id), "ACTIVE", Tenant.Status.SUSPENDED_SOFT,
+                reason=reason, action="tenant:auto-suspend-overdue",
+            )
+
+        mock_mail.assert_called_once()
+        args, _ = mock_mail.call_args
+        subject, body = args[0], args[1]
+
+        assert "PINV-2026-000042" in body
+        assert "1500000.00 GNF" in body
+        assert "impayé" in subject.lower() or "impayé" in body.lower()
+        # Pas le sujet générique utilisé pour une suspension manuelle.
+        assert subject != "Eduguinée — Statut de votre établissement mis à jour"
+        assert "a été mis à jour" not in body
+
+    def test_manual_suspend_still_uses_generic_message(self, plan):
+        """Non-régression : une suspension manuelle garde le message générique inchangé."""
+        from apps.superadmin.tasks import send_tenant_status_notification
+
+        tenant = make_tenant(plan, status=Tenant.Status.ACTIVE)
+
+        with patch("apps.superadmin.tasks.send_mail") as mock_mail, \
+             patch("apps.communication.services.send_sms.delay"):
+            send_tenant_status_notification(
+                str(tenant.id), "ACTIVE", Tenant.Status.SUSPENDED_HARD,
+                reason="Non-respect des CGU", action="tenant:suspend",
+            )
+
+        mock_mail.assert_called_once()
+        args, _ = mock_mail.call_args
+        subject, body = args[0], args[1]
+
+        assert subject == "Eduguinée — Statut de votre établissement mis à jour"
+        assert "Non-respect des CGU" not in body  # jamais inclus dans le message généré
+
+    def test_sms_body_includes_invoice_reason_for_auto_suspend(self, plan):
+        from apps.communication.services import notify_tenant_status
+
+        tenant = make_tenant(plan, status=Tenant.Status.ACTIVE)
+        reason = "Suspension automatique pour impayé — facture PINV-2026-000042 (1500000.00 GNF)..."
+
+        with patch("apps.communication.services.send_sms.delay") as mock_sms:
+            notify_tenant_status(
+                str(tenant.id), Tenant.Status.SUSPENDED_SOFT,
+                reason=reason, action="tenant:auto-suspend-overdue",
+            )
+
+        mock_sms.assert_called_once()
+        _, kwargs = mock_sms.call_args
+        assert "PINV-2026-000042" in kwargs["message"]
+
+    def test_sms_manual_suspend_still_generic(self, plan):
+        from apps.communication.services import notify_tenant_status
+
+        tenant = make_tenant(plan, status=Tenant.Status.ACTIVE)
+        with patch("apps.communication.services.send_sms.delay") as mock_sms:
+            notify_tenant_status(
+                str(tenant.id), Tenant.Status.SUSPENDED_HARD,
+                reason="Non-respect des CGU", action="tenant:suspend",
+            )
+
+        mock_sms.assert_called_once()
+        _, kwargs = mock_sms.call_args
+        assert "Non-respect des CGU" not in kwargs["message"]
