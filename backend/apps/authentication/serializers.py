@@ -8,7 +8,7 @@ from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from .models import User, StaffProfile
+from .models import User, StaffProfile, Permission
 from .services.staff_service import ALLOWED_CREATE_ROLES
 
 #: Réutilisé par StaffViewSet.partial_update pour router les champs validés
@@ -207,9 +207,19 @@ class ChangePasswordSerializer(serializers.Serializer):
 
 
 class RoleNestedSerializer(serializers.Serializer):
-    """Sérialisation minimale du rôle pour les réponses staff."""
+    """
+    Sérialisation minimale du rôle pour les réponses staff.
+
+    `permissions` (STAFF-V2-03) : codenames accordés par le rôle de base —
+    utilisé côté frontend pour griser, dans le sélecteur de permissions
+    individuelles, celles déjà couvertes par le rôle (custom_permissions
+    ne doit contenir que l'ajout réel, pas de la redondance).
+    """
     name = serializers.CharField()
     label = serializers.CharField()
+    permissions = serializers.SlugRelatedField(
+        many=True, slug_field="codename", read_only=True
+    )
 
 
 class StaffListSerializer(StaffProfileMixin, serializers.ModelSerializer):
@@ -251,6 +261,7 @@ class StaffDetailSerializer(StaffProfileMixin, serializers.ModelSerializer):
             "is_active",
             "must_change_password",
             "subjects_taught",
+            "custom_permissions",
             "is_email_verified",
             "is_phone_verified",
             "date_joined",
@@ -356,3 +367,36 @@ class StaffChangeRoleSerializer(serializers.Serializer):
     n'expose de toute façon jamais les comptes DIRECTOR/SUPER_ADMIN).
     """
     role = serializers.ChoiceField(choices=ALLOWED_CREATE_ROLES)
+
+
+class PermissionSerializer(serializers.ModelSerializer):
+    """Serializer pour GET /auth/permissions/catalog/ — STAFF-V2-03."""
+
+    class Meta:
+        model = Permission
+        fields = ["codename", "name", "module"]
+
+
+class StaffCustomPermissionsSerializer(serializers.Serializer):
+    """
+    Serializer pour PATCH /auth/staff/{id}/custom-permissions/ — STAFF-V2-03.
+
+    Remplace intégralement la liste `custom_permissions` du compte (pas un
+    ajout incrémental) — chaque codename doit exister dans le catalogue
+    `Permission`, sinon 400.
+    """
+    custom_permissions = serializers.ListField(
+        child=serializers.CharField(max_length=100),
+        allow_empty=True,
+    )
+
+    def validate_custom_permissions(self, value):
+        if len(set(value)) != len(value):
+            raise serializers.ValidationError("La liste contient des doublons.")
+        valid_codenames = set(Permission.objects.values_list("codename", flat=True))
+        unknown = set(value) - valid_codenames
+        if unknown:
+            raise serializers.ValidationError(
+                f"Codenames inconnus : {', '.join(sorted(unknown))}"
+            )
+        return value

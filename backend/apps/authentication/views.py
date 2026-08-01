@@ -17,7 +17,7 @@ from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenRefreshView
 
-from .models import User, StaffProfile, Role
+from .models import User, StaffProfile, Role, Permission
 
 from django_ratelimit.decorators import ratelimit
 from django.utils.decorators import method_decorator
@@ -35,6 +35,8 @@ from .serializers import (
     StaffCreateSerializer,
     StaffUpdateSerializer,
     StaffChangeRoleSerializer,
+    StaffCustomPermissionsSerializer,
+    PermissionSerializer,
     STAFF_PROFILE_FIELDS,
 )
 from .services.staff_service import create_staff_account
@@ -197,6 +199,24 @@ class PermissionsMeView(APIView):
         )
 
 
+class PermissionsCatalogView(APIView):
+    """
+    GET /auth/permissions/catalog/ — STAFF-V2-03.
+
+    Catalogue complet des permissions disponibles (~30 entrées fixes), pour
+    peupler le sélecteur de permissions individuelles (`custom_permissions`)
+    sur la fiche staff. Accès restreint à `staff:update` : ce catalogue n'a
+    d'usage que dans l'UI d'édition du personnel.
+    """
+
+    def get_permissions(self):
+        return [IsAuthenticated(), HasPermission("staff:update")]
+
+    def get(self, request):
+        permissions = Permission.objects.all().order_by("module", "codename")
+        return success_response(PermissionSerializer(permissions, many=True).data)
+
+
 class TeachersListView(APIView):
     """
     GET /auth/teachers/ — Liste des enseignants du tenant courant.
@@ -290,6 +310,8 @@ class StaffViewSet(viewsets.ModelViewSet):
             return StaffDetailSerializer
         elif self.action == "change_role":
             return StaffChangeRoleSerializer
+        elif self.action == "custom_permissions":
+            return StaffCustomPermissionsSerializer
         return StaffListSerializer
 
     def get_permissions(self):
@@ -298,7 +320,7 @@ class StaffViewSet(viewsets.ModelViewSet):
             perms.append(HasPermission("staff:read"))
         elif self.action == "create":
             perms.append(HasPermission("staff:create"))
-        elif self.action in ("partial_update", "update", "change_role"):
+        elif self.action in ("partial_update", "update", "change_role", "custom_permissions"):
             perms.append(HasPermission("staff:update"))
         elif self.action in ("disable", "enable"):
             perms.append(HasPermission("staff:disable"))
@@ -485,6 +507,41 @@ class StaffViewSet(viewsets.ModelViewSet):
             extra={
                 "old_role": old_role.name if old_role else None,
                 "new_role": new_role.name,
+            },
+            ip_address=get_client_ip(request),
+        )
+
+        return success_response(StaffDetailSerializer(user).data)
+
+    @action(detail=True, methods=["patch"], url_path="custom-permissions")
+    def custom_permissions(self, request, pk=None):
+        """
+        PATCH /auth/staff/{id}/custom-permissions/ — STAFF-V2-03.
+
+        Remplace intégralement `custom_permissions` (rôles composites : ajout
+        de permissions individuelles au-delà du rôle de base, sans créer de
+        nouveau rôle en base). Endpoint dédié + AuditLog par cohérence avec
+        change-role/change-plan/mark-paid (actions sensibles = endpoint
+        nommé). Réutilise `staff:update`, pas de nouveau codename.
+        """
+        user = self.get_object()
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        new_permissions = serializer.validated_data["custom_permissions"]
+
+        old_permissions = list(user.custom_permissions or [])
+        user.custom_permissions = new_permissions
+        user.save(update_fields=["custom_permissions"])
+
+        audit_log(
+            user=request.user,
+            tenant=request.tenant,
+            action="staff:custom-permissions",
+            target_model="User",
+            target_id=str(user.id),
+            extra={
+                "old_permissions": old_permissions,
+                "new_permissions": new_permissions,
             },
             ip_address=get_client_ip(request),
         )

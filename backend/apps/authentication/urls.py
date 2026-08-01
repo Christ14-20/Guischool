@@ -8,7 +8,7 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import (
     LoginView, RefreshView, LogoutView, MeView,
-    PermissionsMeView, TeachersListView, ChangePasswordView,
+    PermissionsMeView, PermissionsCatalogView, TeachersListView, ChangePasswordView,
     StaffViewSet,
 )
 
@@ -22,6 +22,7 @@ urlpatterns = [
     path("auth/logout/", LogoutView.as_view(), name="auth-logout"),
     path("auth/change-password/", ChangePasswordView.as_view(), name="auth-change-password"),
     path("auth/permissions/me/", PermissionsMeView.as_view(), name="auth-permissions-me"),
+    path("auth/permissions/catalog/", PermissionsCatalogView.as_view(), name="auth-permissions-catalog"),
 
     # User endpoints
     path("users/me/", MeView.as_view(), name="users-me"),

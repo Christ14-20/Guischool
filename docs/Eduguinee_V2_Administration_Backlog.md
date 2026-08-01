@@ -1,6 +1,6 @@
 # Eduguinée — Backlog V2 : Administration (Super Admin + École) & Chantiers Transversaux
 
-> **Statut :** en cours — Chantier année scolaire terminé : SCHOOLYEAR-V2-01 livré (2026-07-29), SCHOOLYEAR-V2-02 livré (2026-07-30, sous-tickets A→F). Module A (Super Admin) terminé : SUPERADMIN-V2-01 livré (2026-07-30), SUPERADMIN-V2-02 livré (2026-07-31), SUPERADMIN-V2-03 livré (2026-07-31), SUPERADMIN-V2-03B (nettoyage résidus statut) livré (2026-07-31), SUPERADMIN-V2-05 (facturation SaaS) livré (2026-07-31), SUPERADMIN-V2-04 (gestion des impayés) livré (2026-08-01). Module B (Personnel) en cours : STAFF-V2-01 (fiche personnel enrichie) livré (2026-08-01), STAFF-V2-02 (changement de rôle) livré (2026-08-01). Prochain : STAFF-V2-03.
+> **Statut :** en cours — Chantier année scolaire terminé : SCHOOLYEAR-V2-01 livré (2026-07-29), SCHOOLYEAR-V2-02 livré (2026-07-30, sous-tickets A→F). Module A (Super Admin) terminé : SUPERADMIN-V2-01 livré (2026-07-30), SUPERADMIN-V2-02 livré (2026-07-31), SUPERADMIN-V2-03 livré (2026-07-31), SUPERADMIN-V2-03B (nettoyage résidus statut) livré (2026-07-31), SUPERADMIN-V2-05 (facturation SaaS) livré (2026-07-31), SUPERADMIN-V2-04 (gestion des impayés) livré (2026-08-01). Module B (Personnel) en cours : STAFF-V2-01 (fiche personnel enrichie) livré (2026-08-01), STAFF-V2-02 (changement de rôle) livré (2026-08-01), STAFF-V2-03 (rôles composites via custom_permissions) livré (2026-08-01). Prochain : STAFF-V2-04.
 > **Périmètre :** ce backlog complète le MVP V1 (Épics 0 à 8, terminés) sur deux axes d'administration, plus deux chantiers transversaux indispensables à leur bon fonctionnement.
 > **Ordre de traitement validé (PO) :** Chantier année scolaire → Module A (Super Admin) → Module B (Personnel) → Infra MinIO. L'ordre ci-dessous reflète cette priorité, pas l'ordre de rédaction.
 > **Sources :** `Eduguinee_CDC_Complet.md` §4.4-4.6, §5, §6, §10, §21.1, §21.3 ; retour d'expérience V1 (Épics 2, 6.1, 7).
@@ -231,12 +231,19 @@
 - **Bug de positionnement trouvé et corrigé en marge** (même cause que `ChangePlanButton`/`SchoolActions` côté Super Admin) : la modale de confirmation de désactivation existante (`showDisableModal`) était déjà imbriquée dans une carte `backdrop-blur-md`, confinée au lieu de couvrir l'écran — jamais remarqué jusqu'ici faute de vérification en navigateur sur cette page précise. Corrigée par `createPortal` en même temps que la nouvelle modale « Changer de rôle » (déjà construite correctement dès le départ). Vérifié par mesure directe du rectangle de la modale en navigateur (`{x:0, y:0, width: viewport, height: viewport}`).
 - 681 tests backend passants (+8 nouveaux pour ce ticket), aucune régression (mêmes 2 échecs `finance` pré-existants et sans lien). Vérifié en navigateur réel (changement de rôle TEACHER → ACCOUNTANT, matières réinitialisées, modale plein écran).
 
-### 🃏 [STAFF-V2-03] Rôles composites via `custom_permissions`
+### 🃏 [STAFF-V2-03] Rôles composites via `custom_permissions` — ✅ Livré 2026-08-01
 **Priorité :** 🟡 Moyenne
-- [ ] Interface sur la fiche staff pour ajouter des permissions individuelles en plus du rôle de base (champ `custom_permissions` JSON existant depuis l'Épic 1, jamais exposé en UI).
-- [ ] `GET /auth/permissions/catalog/` — liste de tous les codenames disponibles (à créer si absent), pour peupler un sélecteur.
-- [ ] Pas de nouveau rôle composite en base (type `SECRETARY_ACCOUNTANT`) — le mécanisme `custom_permissions` suffit à simuler le cumul.
+- [x] Interface sur la fiche staff pour ajouter des permissions individuelles en plus du rôle de base (champ `custom_permissions` JSON existant depuis l'Épic 1, jamais exposé en UI).
+- [x] `GET /auth/permissions/catalog/` — liste de tous les codenames disponibles (à créer si absent), pour peupler un sélecteur.
+- [x] Pas de nouveau rôle composite en base (type `SECRETARY_ACCOUNTANT`) — le mécanisme `custom_permissions` suffit à simuler le cumul.
 **Labels :** `personnel` `backend` `frontend`
+**Notes de livraison :**
+- **2 décisions PO actées avant codage** : (1) écriture via endpoint dédié `PATCH /auth/staff/{id}/custom-permissions/` + `AuditLog` obligatoire, plutôt qu'un champ noyé dans le `PATCH` générique — même principe déjà établi (« actions sensibles = endpoint nommé ») que `change-role`/`change-plan`/`mark-paid` ; (2) l'UI grise et rend non cochables les permissions déjà couvertes par le rôle de base (icône verrou + tooltip « déjà inclus via le rôle »), pour que `custom_permissions` ne stocke que l'ajout réel, jamais de redondance avec le rôle.
+- `GET /auth/permissions/catalog/` : catalogue global (30 permissions), non paginé, calqué sur le pattern déjà utilisé pour `LevelViewSet` (« catalogue fixe »). Réservé à `staff:update` — n'a d'usage que dans cette UI, pas exposé plus largement.
+- `PATCH .../custom-permissions/` remplace intégralement la liste (pas incrémental) ; rejette en `400` tout codename absent du catalogue et les doublons. Réutilise le codename `staff:update` existant — aucun nouveau codename créé (même décision que `change-role`).
+- `RoleNestedSerializer` étendu avec `permissions` (codenames du rôle de base) pour permettre au frontend de calculer le grisage sans appel supplémentaire ; `custom_permissions` ajouté à `StaffDetailSerializer`. Additif pur, aucune régression sur les serializers existants (112 tests `authentication` toujours passants).
+- Vérifié fonctionnellement de bout en bout, pas seulement au niveau HTTP : test dédié confirmant que `User.can("finance:read")` passe de `False` à `True` après l'ajout via l'endpoint, sans création de nouveau rôle (`user.role.name` inchangé) — preuve que le mécanisme de cumul fonctionne réellement, pas seulement que le champ JSON est correctement écrit.
+- Vérifié en navigateur réel (compte TEACHER, ajout de `finance:read`/`finance:create` via le sélecteur groupé par module, persistance après rechargement, badges affichés en lecture) — aucune erreur console. 692 tests backend passants (+11 nouveaux pour ce ticket), aucune régression (mêmes 2 échecs `finance` pré-existants et sans lien, déjà signalés depuis SUPERADMIN-V2-04).
 
 ### 🃏 [STAFF-V2-04] Spécificités enseignants
 **Priorité :** 🟠 Haute

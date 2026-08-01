@@ -20,8 +20,16 @@ import {
   Landmark,
   IdCard,
   Repeat,
+  KeyRound,
+  Lock,
 } from "lucide-react";
-import { updateStaffAction, disableStaffAction, enableStaffAction, changeRoleStaffAction } from "../actions";
+import {
+  updateStaffAction,
+  disableStaffAction,
+  enableStaffAction,
+  changeRoleStaffAction,
+  updateCustomPermissionsAction,
+} from "../actions";
 
 interface Subject {
   id: string;
@@ -29,9 +37,16 @@ interface Subject {
   name: string;
 }
 
+interface PermissionCatalogItem {
+  codename: string;
+  name: string;
+  module: string;
+}
+
 interface Props {
   staff: any;
   subjects: Subject[];
+  permissionsCatalog: PermissionCatalogItem[];
 }
 
 // STAFF-V2-02 : ACCOUNTANT ajouté — absent jusqu'ici bien que déjà créable
@@ -63,7 +78,7 @@ const STATUT_STYLES: Record<string, { bg: string; color: string; label: string }
 const inputClass =
   "w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 transition-colors";
 
-export default function StaffDetailClient({ staff, subjects }: Props) {
+export default function StaffDetailClient({ staff, subjects, permissionsCatalog }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
@@ -95,6 +110,39 @@ export default function StaffDetailClient({ staff, subjects }: Props) {
     CHANGE_ROLE_OPTIONS.find((r) => r !== staff.role?.name) || CHANGE_ROLE_OPTIONS[0]
   );
   const [changeRoleError, setChangeRoleError] = useState<string | null>(null);
+
+  // Permissions individuelles / rôles composites (STAFF-V2-03)
+  const [editingPermissions, setEditingPermissions] = useState(false);
+  const [selectedPermissions, setSelectedPermissions] = useState<string[]>(
+    staff.custom_permissions ?? []
+  );
+  const [permError, setPermError] = useState<string | null>(null);
+
+  const rolePermissionSet = new Set<string>(staff.role?.permissions ?? []);
+  const permissionsByModule = permissionsCatalog.reduce((acc, p) => {
+    (acc[p.module] ||= []).push(p);
+    return acc;
+  }, {} as Record<string, PermissionCatalogItem[]>);
+
+  const togglePermission = (codename: string) => {
+    if (rolePermissionSet.has(codename)) return;
+    setSelectedPermissions((prev) =>
+      prev.includes(codename) ? prev.filter((c) => c !== codename) : [...prev, codename]
+    );
+  };
+
+  const handleSavePermissions = () => {
+    setPermError(null);
+    startTransition(async () => {
+      const res = await updateCustomPermissionsAction(staff.id, selectedPermissions);
+      if (res.success) {
+        setEditingPermissions(false);
+        router.refresh();
+      } else {
+        setPermError(res.error);
+      }
+    });
+  };
 
   const handleChangeRole = () => {
     setChangeRoleError(null);
@@ -529,6 +577,122 @@ export default function StaffDetailClient({ staff, subjects }: Props) {
                   : "—"}
               </span>
             </div>
+          </div>
+        )}
+      </div>
+
+      {/* Permissions individuelles / rôles composites (STAFF-V2-03) */}
+      <div className="bg-slate-900/40 border border-slate-800/80 rounded-xl p-6 shadow-xl backdrop-blur-md space-y-4">
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider">
+              Permissions individuelles
+            </h3>
+            <p className="text-xs text-slate-600 mt-1">
+              Ajoutées au-delà du rôle {ROLE_LABELS[staff.role?.name] ?? staff.role?.name} — simule un rôle composite sans en créer un nouveau.
+            </p>
+          </div>
+          {!editingPermissions && permissionsCatalog.length > 0 && (
+            <button
+              onClick={() => {
+                setPermError(null);
+                setSelectedPermissions(staff.custom_permissions ?? []);
+                setEditingPermissions(true);
+              }}
+              className="inline-flex items-center gap-1.5 text-xs text-indigo-400 hover:text-indigo-300 cursor-pointer shrink-0"
+            >
+              <Pencil className="size-3.5" />
+              Modifier
+            </button>
+          )}
+        </div>
+
+        {permissionsCatalog.length === 0 ? (
+          <p className="text-xs text-slate-600">Catalogue des permissions indisponible.</p>
+        ) : editingPermissions ? (
+          <div className="space-y-4">
+            {Object.entries(permissionsByModule).map(([module, perms]) => (
+              <div key={module}>
+                <p className="text-xs text-slate-500 uppercase tracking-wider mb-2">{module}</p>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+                  {perms.map((p) => {
+                    const roleGranted = rolePermissionSet.has(p.codename);
+                    const isSelected = roleGranted || selectedPermissions.includes(p.codename);
+                    return (
+                      <button
+                        key={p.codename}
+                        type="button"
+                        disabled={roleGranted}
+                        onClick={() => togglePermission(p.codename)}
+                        title={roleGranted ? "Déjà inclus via le rôle" : p.name}
+                        className={`flex items-center gap-2 px-3 py-2 rounded-xl text-sm border transition-colors ${
+                          roleGranted
+                            ? "bg-slate-900 border-slate-800/60 text-slate-600 cursor-not-allowed"
+                            : isSelected
+                            ? "bg-indigo-500/10 border-indigo-500/40 text-indigo-300 cursor-pointer"
+                            : "bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-600 cursor-pointer"
+                        }`}
+                      >
+                        <span
+                          className={`size-3.5 rounded border flex items-center justify-center transition-colors shrink-0 ${
+                            roleGranted
+                              ? "bg-slate-800 border-slate-700"
+                              : isSelected
+                              ? "bg-indigo-500 border-indigo-500"
+                              : "border-slate-600"
+                          }`}
+                        >
+                          {roleGranted ? (
+                            <Lock className="size-2.5 text-slate-500" />
+                          ) : (
+                            isSelected && <Check className="size-3 text-white" />
+                          )}
+                        </span>
+                        <span className="text-xs font-medium truncate">{p.codename}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+
+            {permError && <p className="text-xs text-destructive">{permError}</p>}
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleSavePermissions}
+                disabled={isPending}
+                className="inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-medium transition-colors disabled:opacity-50 cursor-pointer"
+              >
+                {isPending ? <Loader2 className="size-3.5 animate-spin" /> : <Check className="size-3.5" />}
+                Enregistrer
+              </button>
+              <button
+                onClick={() => {
+                  setEditingPermissions(false);
+                  setSelectedPermissions(staff.custom_permissions ?? []);
+                  setPermError(null);
+                }}
+                className="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-medium transition-colors cursor-pointer"
+              >
+                <X className="size-3.5" />
+                Annuler
+              </button>
+            </div>
+          </div>
+        ) : (staff.custom_permissions ?? []).length === 0 ? (
+          <p className="text-xs text-slate-600">Aucune permission individuelle — rôle de base uniquement.</p>
+        ) : (
+          <div className="flex flex-wrap gap-1.5">
+            {(staff.custom_permissions ?? []).map((code: string) => (
+              <span
+                key={code}
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg border text-xs font-medium bg-indigo-500/10 text-indigo-400 border-indigo-500/20"
+              >
+                <KeyRound className="size-3" />
+                {code}
+              </span>
+            ))}
           </div>
         )}
       </div>

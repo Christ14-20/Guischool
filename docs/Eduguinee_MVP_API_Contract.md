@@ -226,6 +226,20 @@ Convention uniforme sur toutes les listes : `?champ=valeur` pour un filtre exact
 }
 ```
 
+### `GET /auth/permissions/catalog/` — STAFF-V2-03
+**Auth :** JWT, permission `staff:update` (`DIRECTOR` uniquement) — catalogue réservé à l'usage de l'UI d'édition du personnel, pas exposé plus largement.
+
+**Réponse `200` :** liste **non paginée** (catalogue fixe, ~30 entrées), triée par `module` puis `codename` :
+```json
+{
+  "status": "success",
+  "data": [
+    {"codename": "finance:read", "name": "", "module": "finance"},
+    {"codename": "finance:create", "name": "", "module": "finance"}
+  ]
+}
+```
+
 ---
 
 ## 1b. Gestion du personnel (STAFF-MVP-01/02, STAFF-V2-01) ⚠️ *(ajout post-contrat — Épic 6.1)*
@@ -243,9 +257,10 @@ Convention uniforme sur toutes les listes : `?champ=valeur` pour un filtre exact
   "first_name": "Aissatou",
   "last_name": "Bah",
   "phone": "+224620000010",
-  "role": {"name": "TEACHER", "label": "Enseignant"},
+  "role": {"name": "TEACHER", "label": "Enseignant", "permissions": ["notes:create:evaluation", "attendance:create"]},
   "is_active": true,
   "subjects_taught": ["MATH", "PC"],
+  "custom_permissions": ["finance:read"],
   "date_joined": "2026-07-22T10:00:00Z",
   "date_naissance": "1990-05-12",
   "sexe": "F",
@@ -258,6 +273,8 @@ Convention uniforme sur toutes les listes : `?champ=valeur` pour un filtre exact
 }
 ```
 `date_naissance`/`sexe`/`date_embauche`/`type_contrat`/`numero_cnss`/`type_compte_paie`/`numero_compte_paie`/`statut` : ajoutés par STAFF-V2-01. Stockés sur un modèle séparé `StaffProfile` (`OneToOneField` vers `User`, jamais exposé comme sous-objet — fusionné à plat dans la réponse pour ne pas changer le contrat). `sexe` : `M`/`F`/`""`. `type_contrat` : `CDI`/`CDD`/`VACATAIRE`/`STAGE`/`""`. `type_compte_paie` : `BANQUE`/`ORANGE_MONEY`/`ESPECES`/`""`. `statut` : `ACTIF`/`EN_CONGE`/`SUSPENDU`/`PARTI`.
+
+`role.permissions`/`custom_permissions` : ajoutés par STAFF-V2-03. `role.permissions` = codenames accordés par le rôle de base (lecture seule, dérivé de `Role.permissions`). `custom_permissions` = codenames ajoutés individuellement au-delà du rôle (mécanisme des rôles composites, cf. `PATCH .../custom-permissions/` ci-dessous) — modifiable uniquement via cet endpoint dédié, jamais via le `PATCH` générique.
 
 > **`statut` (métadonnée RH) et `is_active` (contrôle d'accès) sont volontairement indépendants** (décision PO) : modifier l'un n'a jamais d'effet sur l'autre. L'accès reste exclusivement piloté par `disable`/`enable` ci-dessous.
 
@@ -354,6 +371,22 @@ Convention uniforme sur toutes les listes : `?champ=valeur` pour un filtre exact
 > Action tracée dans `AuditLog` (`action="staff:change-role"`, `extra={"old_role", "new_role"}`).
 >
 > **Limite connue, non corrigée par ce ticket** (même lacune que `disable`, jamais traitée jusqu'ici) : le rôle est encodé dans le JWT à la connexion — un token déjà émis garde les permissions de l'ancien rôle jusqu'à expiration naturelle ou reconnexion. `change-role` ne révoque aucun token existant.
+
+### `PATCH /auth/staff/{id}/custom-permissions/` — STAFF-V2-03
+**Auth :** JWT, permission `staff:update` (`DIRECTOR` uniquement) — endpoint dédié plutôt qu'un champ noyé dans le `PATCH` générique, même principe que `change-role`/`change-plan`/`mark-paid` (actions sensibles = endpoint nommé + `AuditLog`).
+
+Permet d'accorder des permissions individuelles en plus du rôle de base, pour simuler un rôle composite (ex. « secrétaire-comptable ») **sans créer de nouveau rôle en base** — le mécanisme `custom_permissions` (JSON existant depuis l'Épic 1) suffit.
+
+**Requête :** `{"custom_permissions": ["finance:read", "finance:create"]}`
+Remplace **intégralement** la liste (pas un ajout incrémental) — un tableau vide efface toutes les permissions individuelles. Chaque codename doit exister dans le catalogue `Permission` (`GET /auth/permissions/catalog/`), sinon `400`. Pas de restriction sur les codenames accordables : un `DIRECTOR` a déjà autorité complète sur son tenant, et l'usage visé (rôles composites) suppose explicitement de pouvoir accorder n'importe quelle permission.
+
+**Réponse `200` :** objet complet mis à jour (même forme que `GET /auth/staff/{id}/`).
+
+**Erreurs `400` :** codename(s) inconnu(s) du catalogue, doublons dans la liste.
+
+> Action tracée dans `AuditLog` (`action="staff:custom-permissions"`, `extra={"old_permissions", "new_permissions"}`).
+>
+> Pas de nouveau codename de permission créé pour cet endpoint — réutilise `staff:update`, même décision que `change-role`.
 
 ---
 
@@ -1250,9 +1283,10 @@ Pour garder une expérience cohérente, le frontend doit afficher **exactement**
 | Auth | `/auth/login/`, `/auth/refresh/`, `/auth/logout/`, `/auth/change-password/` | POST |
 | Auth | `/users/me/` | GET, PATCH |
 | Auth | `/auth/permissions/me/` | GET |
+| Auth | `/auth/permissions/catalog/` | GET |
 | Auth (staff) | `/auth/staff/` | GET, POST |
 | Auth (staff) | `/auth/staff/{id}/` | GET, PATCH |
-| Auth (staff) | `/auth/staff/{id}/disable/`, `/auth/staff/{id}/enable/`, `/auth/staff/{id}/change-role/` | PATCH |
+| Auth (staff) | `/auth/staff/{id}/disable/`, `/auth/staff/{id}/enable/`, `/auth/staff/{id}/change-role/`, `/auth/staff/{id}/custom-permissions/` | PATCH |
 | Super Admin | `/superadmin/schools/` | GET, POST |
 | Super Admin | `/superadmin/schools/{id}/` | GET |
 | Super Admin | `/superadmin/schools/{id}/suspend/`, `/reactivate/`, `/change-plan/` | PATCH |

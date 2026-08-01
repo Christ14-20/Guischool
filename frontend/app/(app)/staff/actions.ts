@@ -114,3 +114,21 @@ export async function changeRoleStaffAction(id: string, role: string) {
     };
   }
 }
+
+export async function updateCustomPermissionsAction(id: string, customPermissions: string[]) {
+  try {
+    const client = await getBackendClient();
+    const response = await client.patch(`/auth/staff/${id}/custom-permissions/`, {
+      custom_permissions: customPermissions,
+    });
+    revalidatePath(`/staff/${id}`);
+    revalidatePath("/staff");
+    return { success: true, data: response.data.data, error: null };
+  } catch (err: any) {
+    return {
+      success: false,
+      data: null,
+      error: err.response?.data?.message || "Impossible de mettre à jour les permissions individuelles.",
+    };
+  }
+}
