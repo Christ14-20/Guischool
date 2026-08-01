@@ -66,27 +66,76 @@ def lock_stale_attendances():
 )
 def generate_bulletin_pdf(self, student_id: str, period_id: str):
     """
-    STUB — Génération du bulletin PDF (GRADE-MVP-03).
+    Génération du bulletin PDF (GRADE-MVP-03, implémentée par INFRA-V2-01 —
+    le wiring MinIO manquant, pas WeasyPrint lui-même, était le blocage
+    initial : receipts/factures utilisaient déjà WeasyPrint avec succès).
 
-    L'intégration WeasyPrint (HTML→PDF) nécessite des dépendances système
-    (libpango, libcairo, libffi) qui ne sont pas garanties sur tous les
-    environnements de développement. Cette tâche journalise l'intention et
-    retourne une URL factice ; la génération réelle du PDF (template HTML,
-    upload S3) sera livrée lors de la mise en place de l'infrastructure
-    de stockage.
+    Même pattern que apps.finance.tasks.generate_invoice_pdf : HTML→PDF via
+    WeasyPrint, upload via default_storage. Données via
+    grade_service.compute_student_moyenne(), déjà utilisé par l'endpoint
+    /students/{id}/moyenne/ — même source de vérité, pas de recalcul
+    dupliqué.
 
-    Conforme à la convention §8 du contrat d'API :
-    - 202 Accepted avec task_id déclenché par la view.
-    - Le frontend pollue GET /tasks/{task_id}/status/.
+    Pas de champ modèle pour stocker l'URL (contrairement à Invoice.pdf_url) :
+    le résultat n'est consommé que via le polling GET /tasks/{task_id}/status/
+    (TaskResult.result), conforme à la convention §8 du contrat d'API déjà
+    respectée par le stub que cette implémentation remplace.
     """
-    logger.info(
-        "STUB génération bulletin — élève %s, période %s "
-        "(intégration WeasyPrint réelle à venir avec le setup S3)",
-        student_id,
-        period_id,
+    import io
+
+    from django.core.files.base import ContentFile
+    from django.core.files.storage import default_storage
+    from django.template.loader import render_to_string
+    from django.utils import timezone
+    from weasyprint import HTML
+
+    from apps.pedagogy.models import AcademicPeriod, Student
+    from apps.pedagogy.services.grade_service import arrondi_academique, compute_student_moyenne
+
+    try:
+        student = Student.objects.select_related("tenant", "classe_actuelle").get(id=student_id)
+    except Student.DoesNotExist:
+        logger.error("generate_bulletin_pdf — élève %s introuvable", student_id)
+        return {"error": "Élève introuvable"}
+
+    try:
+        period = AcademicPeriod.objects.select_related("school_year").get(id=period_id)
+    except AcademicPeriod.DoesNotExist:
+        logger.error("generate_bulletin_pdf — période %s introuvable", period_id)
+        return {"error": "Période introuvable"}
+
+    result = compute_student_moyenne(student, period)
+    par_matiere = [
+        {
+            "subject_name": item["subject_name"],
+            "subject_code": item["subject_code"],
+            "moyenne": arrondi_academique(item["moyenne"]),
+            "coefficient": item["coefficient"],
+        }
+        for item in result["par_matiere"]
+    ]
+    moyenne_generale = (
+        arrondi_academique(result["moyenne_generale"])
+        if result["moyenne_generale"] is not None else None
     )
+
+    html = render_to_string("pedagogy/bulletin.html", {
+        "student": student,
+        "period": period,
+        "moyenne_generale": moyenne_generale,
+        "mention": result["mention"],
+        "par_matiere": par_matiere,
+    })
+    pdf_buffer = io.BytesIO()
+    HTML(string=html).write_pdf(pdf_buffer)
+
+    filename = f"bulletins/{student.id}/{period.id}.pdf"
+    saved_path = default_storage.save(filename, ContentFile(pdf_buffer.getvalue()))
+    pdf_url = default_storage.url(saved_path)
+
+    logger.info("PDF généré pour le bulletin — élève %s, période %s", student.id, period.id)
     return {
-        "pdf_url": f"https://storage.eduguinee.gn/bulletins/{student_id}/{period_id}.pdf",
-        "generated_at": None,
+        "pdf_url": pdf_url,
+        "generated_at": timezone.now().isoformat(),
         "status": "done",
     }

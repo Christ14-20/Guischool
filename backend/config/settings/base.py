@@ -216,13 +216,37 @@ CACHES = {
 }
 
 # ── Stockage fichiers (S3-compatible MinIO en dev) ─────────────────────────────
-DEFAULT_FILE_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"
+# INFRA-V2-01 : `DEFAULT_FILE_STORAGE` (legacy) n'est PLUS lu du tout par Django
+# depuis la 5.0 (seul `STORAGES` l'est depuis la 4.2) — ce projet tourne en
+# 5.1.4. Le réglage legacy était donc mort depuis toujours : `default_storage`
+# retombait silencieusement sur le `FileSystemStorage` par défaut de Django,
+# dans TOUS les environnements (dev ET staging, faute de surcharge dans
+# development.py/staging.py). Vérifié empiriquement en explorant ce ticket :
+# des dizaines de PDF de reçus réels traînaient sur disque local
+# (backend/mediafiles/receipts/), jamais dans MinIO. `STORAGES` est la seule
+# clé que Django lit réellement — c'est elle qui pilote `default_storage`.
+STORAGES = {
+    "default": {
+        "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
+    },
+    "staticfiles": {
+        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+    },
+}
 AWS_ACCESS_KEY_ID = config("AWS_ACCESS_KEY_ID", default="minioadmin")
 AWS_SECRET_ACCESS_KEY = config("AWS_SECRET_ACCESS_KEY", default="minioadmin")
 AWS_STORAGE_BUCKET_NAME = config("AWS_STORAGE_BUCKET_NAME", default="eduguinee-dev")
 AWS_S3_ENDPOINT_URL = config("AWS_S3_ENDPOINT_URL", default="http://localhost:9000")
 AWS_S3_FILE_OVERWRITE = False
 AWS_DEFAULT_ACL = None
+# Décision PO (2026-08-01) : `receipt_pdf_url`/`pdf_url` sont stockées de façon
+# permanente en base (URLField), pas régénérées à la lecture — les URLs
+# présignées par défaut de django-storages expirent au bout d'1h
+# (AWS_QUERYSTRING_EXPIRE=3600), ce qui les casserait silencieusement. Porté
+# à ~10 ans plutôt que de désactiver la signature (un bucket public rendrait
+# des documents financiers accessibles sans expiration à quiconque détient le
+# lien — cf. note du ticket INFRA-V2-01 dans le backlog).
+AWS_QUERYSTRING_EXPIRE = config("AWS_QUERYSTRING_EXPIRE", default=315360000, cast=int)
 
 # ── Africa's Talking (SMS — COMM-MVP-01) ───────────────────────────────────────
 AFRICASTALKING_MOCK = config("AFRICASTALKING_MOCK", default=True, cast=bool)

@@ -883,6 +883,73 @@ class TestStudentBulletin:
         assert response.status_code == status.HTTP_404_NOT_FOUND
 
 
+# ── Génération réelle du bulletin PDF (INFRA-V2-01) ────────────────────────────
+
+
+class TestGenerateBulletinPdfTask:
+    """
+    generate_bulletin_pdf n'était qu'un stub (URL factice, storage jamais
+    touché) jusqu'à INFRA-V2-01 — ces tests exercent la vraie génération
+    WeasyPrint + default_storage, appelée directement (.apply()) plutôt que
+    .delay() pour rester synchrone sans worker Celery.
+    """
+
+    @pytest.fixture(autouse=True)
+    def _use_local_storage(self, settings):
+        """INFRA-V2-01 : cible `STORAGES` (le seul réglage réellement lu par Django ≥5.0)."""
+        settings.STORAGES = {
+            "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+            "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
+        }
+
+    def test_generates_real_pdf_with_grades(
+        self, student, evaluation, class_subject, period
+    ):
+        from apps.pedagogy.tasks import generate_bulletin_pdf
+
+        evaluation.is_locked = True
+        evaluation.save(update_fields=["is_locked"])
+        Grade.objects.create(
+            tenant=student.tenant, student=student, evaluation=evaluation,
+            score=Decimal("15.00"),
+        )
+
+        result = generate_bulletin_pdf.apply(args=[str(student.id), str(period.id)]).get()
+
+        assert result["status"] == "done"
+        assert result["generated_at"] is not None
+        assert result["pdf_url"]
+        assert "storage.eduguinee.gn" not in result["pdf_url"]  # plus l'URL factice du stub
+
+        from django.core.files.storage import default_storage
+        assert default_storage.exists(f"bulletins/{student.id}/{period.id}.pdf")
+
+    def test_generates_pdf_without_grades(self, student, period):
+        """Aucune note saisie — le PDF doit tout de même être généré (moyenne indisponible, pas une erreur)."""
+        from apps.pedagogy.tasks import generate_bulletin_pdf
+
+        result = generate_bulletin_pdf.apply(args=[str(student.id), str(period.id)]).get()
+
+        assert result["status"] == "done"
+        assert result["pdf_url"]
+
+    def test_unknown_student_returns_error(self, period):
+        from apps.pedagogy.tasks import generate_bulletin_pdf
+
+        result = generate_bulletin_pdf.apply(
+            args=["00000000-0000-0000-0000-000000000000", str(period.id)]
+        ).get()
+        assert "error" in result
+
+    def test_unknown_period_returns_error(self, student):
+        from apps.pedagogy.tasks import generate_bulletin_pdf
+
+        result = generate_bulletin_pdf.apply(
+            args=[str(student.id), "00000000-0000-0000-0000-000000000000"]
+        ).get()
+        assert "error" in result
+
+
 # ── Task Status endpoint ──────────────────────────────────────────────────────
 
 

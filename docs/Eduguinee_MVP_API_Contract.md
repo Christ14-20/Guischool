@@ -1084,6 +1084,8 @@ Le frontend fait un polling sur `GET /pedagogy/tasks/{task_id}/status/`.
 
 **Réponse `200`** (quand le PDF est déjà disponible via le résultat de tâche) : voir §8.
 
+> **INFRA-V2-01** : `generate_bulletin_pdf` n'était qu'un stub jusqu'à ce ticket (URL factice, aucune génération réelle) — implémente désormais un vrai rendu WeasyPrint + upload MinIO, même pattern que les factures PDF (§7). Aucun champ modèle ne stocke `pdf_url` pour le bulletin (contrairement à `Invoice.pdf_url`) : le résultat n'est disponible que via le polling ci-dessus, pas de `GET` ultérieur pour le retrouver.
+
 **Permission requise :** `notes:read`
 
 **Erreur `400` :** si `period_id` manquant → `{"message": "Le paramètre period_id est requis."}`
@@ -1132,6 +1134,8 @@ Champs en lecture seule (auto-remplis) :
 ---
 
 ## 7. Finance (Épic 7)
+
+> **INFRA-V2-01 (2026-08-01)** : `receipt_pdf_url`/`pdf_url` pointaient en réalité vers du stockage disque local (`FileSystemStorage`) depuis toujours, dans tous les environnements — `DEFAULT_FILE_STORAGE` (réglage utilisé pour configurer MinIO) n'était plus lu du tout par Django ≥5.0 (seul `STORAGES` l'est). Corrigé : ces URLs pointent désormais réellement vers MinIO (S3-compatible), avec une expiration de signature portée à ~10 ans (décision PO) puisqu'elles sont stockées de façon permanente en base.
 
 ### `GET/POST /finance/feecategories/`
 **Requête `POST` :**

@@ -38,8 +38,19 @@ def _celery_eager(settings):
 
 @pytest.fixture(autouse=True)
 def _local_storage(settings):
-    """Override S3 storage → FileSystemStorage pour la génération de reçus."""
-    settings.DEFAULT_FILE_STORAGE = 'django.core.files.storage.FileSystemStorage'
+    """
+    Override S3 storage → FileSystemStorage pour la génération de reçus.
+
+    INFRA-V2-01 : `DEFAULT_FILE_STORAGE` n'est plus lu par Django depuis la
+    5.0 (seul `STORAGES` l'est) — cet override était un no-op silencieux
+    depuis toujours. `default_storage` retombait déjà sur FileSystemStorage
+    par défaut (bug de config réel, corrigé dans config/settings/base.py),
+    ce qui masquait le problème ici. Corrigé pour cibler `STORAGES`.
+    """
+    settings.STORAGES = {
+        "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+        "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
+    }
 
 
 @pytest.fixture

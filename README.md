@@ -131,6 +131,9 @@ cp .env.example .env
 # Appliquer les migrations
 python manage.py migrate
 
+# Créer le bucket MinIO cible s'il n'existe pas déjà (idempotent — INFRA-V2-01)
+python manage.py ensure_storage_bucket
+
 # Créer les données initiales (plans, rôles, permissions, super admin)
 python manage.py shell < scripts/init_data.py
 

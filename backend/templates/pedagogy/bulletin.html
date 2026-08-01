@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  @page { margin: 2cm; size: A4; }
+  body { font-family: 'DejaVu Sans', sans-serif; font-size: 10pt; color: #333; }
+  .header { text-align: center; margin-bottom: 1.5em; border-bottom: 2px solid #2563eb; padding-bottom: 1em; }
+  .header h1 { font-size: 16pt; margin: 0; color: #2563eb; }
+  .header p { margin: 0.2em 0; font-size: 10pt; color: #666; }
+  .bulletin-title { text-align: center; font-size: 14pt; font-weight: bold; margin: 1.5em 0; }
+  .info-section { margin: 1em 0; }
+  .info-section table { width: 100%; border-collapse: collapse; }
+  .info-section td { padding: 0.3em 0.2em; }
+  .info-section td.label { font-weight: bold; width: 30%; color: #555; }
+  .info-section td.value { width: 70%; }
+  .grades { margin: 2em 0; }
+  .grades table { width: 100%; border-collapse: collapse; }
+  .grades th { background: #2563eb; color: white; padding: 0.5em; text-align: left; }
+  .grades td { padding: 0.5em; border-bottom: 1px solid #ddd; }
+  .grades td.numeric { text-align: right; }
+  .summary { margin: 2em 0; text-align: center; }
+  .summary .moyenne { font-size: 16pt; font-weight: bold; color: #2563eb; }
+  .summary .mention { font-size: 12pt; font-weight: bold; margin-top: 0.3em; }
+  .footer { text-align: center; font-size: 9pt; color: #999; margin-top: 3em; border-top: 1px solid #ddd; padding-top: 1em; }
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>{{ student.tenant.name }}</h1>
+  <p>{{ student.tenant.contact_phone|default:"" }}</p>
+</div>
+<div class="bulletin-title">BULLETIN SCOLAIRE — {{ period.name }} ({{ period.school_year.label }})</div>
+<div class="info-section">
+  <table>
+    <tr><td class="label">Élève</td><td class="value">{{ student.nom }} {{ student.prenom }}</td></tr>
+    <tr><td class="label">Matricule</td><td class="value">{{ student.matricule }}</td></tr>
+    <tr><td class="label">Classe</td><td class="value">{{ student.classe_actuelle.nom|default:"" }}</td></tr>
+  </table>
+</div>
+<div class="grades">
+  <table>
+    <tr><th>Matière</th><th style="text-align:right">Coefficient</th><th style="text-align:right">Moyenne</th></tr>
+    {% for item in par_matiere %}
+    <tr>
+      <td>{{ item.subject_name }} ({{ item.subject_code }})</td>
+      <td class="numeric">{{ item.coefficient }}</td>
+      <td class="numeric">{{ item.moyenne }}</td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="3">Aucune note saisie pour cette période.</td></tr>
+    {% endfor %}
+  </table>
+</div>
+<div class="summary">
+  {% if moyenne_generale is not None %}
+  <div class="moyenne">Moyenne générale : {{ moyenne_generale }} / 20</div>
+  <div class="mention">Mention : {{ mention }}</div>
+  {% else %}
+  <div class="moyenne">Moyenne générale non disponible</div>
+  {% endif %}
+</div>
+<div class="footer">
+  Bulletin généré le {% now "d/m/Y H:i" %} — ÉduGuinée
+</div>
+</body>
+</html>

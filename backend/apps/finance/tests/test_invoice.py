@@ -121,7 +121,11 @@ def api_client():
 
 @pytest.fixture(autouse=True)
 def _use_local_storage(settings):
-    settings.DEFAULT_FILE_STORAGE = 'django.core.files.storage.FileSystemStorage'
+    """INFRA-V2-01 : `DEFAULT_FILE_STORAGE` n'est plus lu par Django ≥5.0 — cible `STORAGES`."""
+    settings.STORAGES = {
+        "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+        "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
+    }
 
 
 @pytest.fixture

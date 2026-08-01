@@ -362,12 +362,21 @@ class TestClosedYearBlocksWrites:
         )
         assert resp.status_code == 422
 
-    def test_payment_on_closed_year_is_not_blocked(self, director_user, student, student_fee, closed_year):
+    def test_payment_on_closed_year_is_not_blocked(self, director_user, student, student_fee, closed_year, settings):
         """
         Décision PO 2026-07-29 : un encaissement tardif sur une dette d'une
         année clôturée reste autorisé, contrairement à la création/modification
         de frais.
+
+        Ce paiement CASH déclenche generate_receipt_for_payment (WeasyPrint +
+        default_storage) — override vers FileSystemStorage (INFRA-V2-01,
+        même raison que les fixtures homonymes côté finance : éviter un
+        appel réseau réel vers MinIO pendant les tests).
         """
+        settings.STORAGES = {
+            "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+            "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
+        }
         _close(closed_year)
         client = login_client(APIClient(), director_user.email)
         resp = client.post(
