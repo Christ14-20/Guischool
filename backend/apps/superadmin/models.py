@@ -180,12 +180,23 @@ class PlatformInvoice(TimestampedModel):
     class Status(models.TextChoices):
         PENDING = "PENDING", "En attente"
         PAID = "PAID", "Payé"
-        # Jamais assignée par ce ticket (SUPERADMIN-V2-05) : la transition
-        # PENDING -> OVERDUE est du ressort de SUPERADMIN-V2-04, qui n'est
-        # pas encore implémenté. L'enum existe dès maintenant pour que le
-        # champ `status` de ce modèle n'ait pas besoin d'être retouché plus
-        # tard (décision PO explicite, à documenter comme non fait ici).
+        # SUPERADMIN-V2-04 : assignée par platform_invoice_service.
+        # mark_overdue_invoices (PENDING dont due_date est dépassée),
+        # posée sans transition par SUPERADMIN-V2-05.
         OVERDUE = "OVERDUE", "En retard"
+
+    class ReminderStage(models.TextChoices):
+        """
+        SUPERADMIN-V2-04 — garde anti-doublon de relance/escalade : dernier
+        palier déjà notifié pour CETTE facture (pas le tenant — voir
+        `last_reminder_stage` ci-dessous). Paliers strictement ordonnés par
+        ancienneté de `due_date` dépassée (jours de retard) ; seul le palier
+        le plus élevé atteint est conservé, jamais une liste cumulative.
+        """
+        OVERDUE = "OVERDUE", "Retard initial (J+1)"
+        D7 = "D7", "Relance J+7"
+        D15 = "D15", "Suspension lecture seule J+15"
+        D30 = "D30", "Suspension totale J+30"
 
     tenant = models.ForeignKey(
         "superadmin.Tenant", on_delete=models.PROTECT, related_name="platform_invoices"
@@ -200,6 +211,15 @@ class PlatformInvoice(TimestampedModel):
     paid_date = models.DateField(null=True, blank=True)
     status = models.CharField(
         max_length=10, choices=Status.choices, default=Status.PENDING, db_index=True,
+    )
+    # SUPERADMIN-V2-04 — vit sur LA FACTURE (pas sur Tenant) : si la plus
+    # ancienne facture impayée est payée, la facture suivante devient
+    # l'ancre d'escalade et repart de zéro sur son propre due_date (décision
+    # PO explicite) — payer l'arriéré le plus ancien réduit réellement la
+    # sévérité, il est logique que l'horloge reparte sur la nouvelle plus
+    # ancienne facture impayée.
+    last_reminder_stage = models.CharField(
+        max_length=10, choices=ReminderStage.choices, blank=True, default=""
     )
 
     class Meta:

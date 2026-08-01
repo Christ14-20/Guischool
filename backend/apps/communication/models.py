@@ -25,6 +25,10 @@ class SMSLog(TenantScopedModel):
         NOTE_VALIDEE = "NOTE_VALIDEE", "Note validée"
         INSCRIPTION = "INSCRIPTION", "Confirmation d'inscription"
         TENANT_STATUS = "TENANT_STATUS", "Changement de statut établissement"
+        # "INVOICE_REMINDER" (pas "PLATFORM_INVOICE_REMINDER") pour tenir dans
+        # max_length=20 sans élargir la colonne — sans ambiguïté ici puisque
+        # apps.finance n'a pas son propre trigger_type de relance de facture.
+        INVOICE_REMINDER = "INVOICE_REMINDER", "Relance facture d'abonnement impayée"
 
     class Status(models.TextChoices):
         SENT = "SENT", "Envoyé"

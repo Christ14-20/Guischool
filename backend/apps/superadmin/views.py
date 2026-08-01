@@ -24,7 +24,7 @@ from apps.superadmin.serializers import (
 from apps.superadmin.services.tenant_service import create_school
 from apps.superadmin.services.dashboard_service import get_dashboard_data
 from apps.superadmin.services.plan_service import exceeds_limits, find_tenants_exceeding_limits
-from apps.superadmin.tasks import send_tenant_status_notification
+from apps.superadmin.services.tenant_status_service import transition_tenant_status
 from apps.monitoring.services import audit_log, get_client_ip
 from django.utils import timezone
 
@@ -210,27 +210,12 @@ class TenantViewSet(
             )
         new_status = type_map[suspension_type]
 
-        old_status = tenant.status
-        tenant.status = new_status
-        if not tenant.settings:
-            tenant.settings = {}
-        tenant.settings["suspend_reason"] = reason
-        update_fields = ["status", "settings", "updated_at"]
-        if old_status in (Tenant.Status.TRIAL, Tenant.Status.CANCELLED):
-            # SUPERADMIN-V2-05 : rentrée en éligibilité facturation, cf.
-            # docstring de Tenant.billing_cycle_start.
-            tenant.billing_cycle_start = timezone.now().date()
-            update_fields.append("billing_cycle_start")
-        tenant.save(update_fields=update_fields)
-
-        # Envoi de la notification asynchrone (non bloquante)
-        send_tenant_status_notification.delay(str(tenant.id), old_status, new_status)
-
-        # AuditLog
-        audit_log(
-            user=request.user,
-            tenant=tenant,
+        transition_tenant_status(
+            tenant,
+            new_status,
+            reason=reason,
             action="tenant:suspend",
+            actor=request.user,
             ip_address=get_client_ip(request),
         )
 
@@ -244,26 +229,12 @@ class TenantViewSet(
         """
         tenant = self.get_object()
 
-        old_status = tenant.status
-        tenant.status = Tenant.Status.ACTIVE
-        if tenant.settings and "suspend_reason" in tenant.settings:
-            tenant.settings.pop("suspend_reason")
-        update_fields = ["status", "settings", "updated_at"]
-        if old_status in (Tenant.Status.TRIAL, Tenant.Status.CANCELLED):
-            # SUPERADMIN-V2-05 : rentrée en éligibilité facturation, cf.
-            # docstring de Tenant.billing_cycle_start.
-            tenant.billing_cycle_start = timezone.now().date()
-            update_fields.append("billing_cycle_start")
-        tenant.save(update_fields=update_fields)
-
-        # Envoi de la notification asynchrone (non bloquante)
-        send_tenant_status_notification.delay(str(tenant.id), old_status, Tenant.Status.ACTIVE)
-
-        # AuditLog
-        audit_log(
-            user=request.user,
-            tenant=tenant,
+        transition_tenant_status(
+            tenant,
+            Tenant.Status.ACTIVE,
+            reason=None,
             action="tenant:reactivate",
+            actor=request.user,
             ip_address=get_client_ip(request),
         )
 

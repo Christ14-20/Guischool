@@ -106,3 +106,89 @@ def generate_platform_invoices():
             "generate_platform_invoices — %s facture(s) plateforme générée(s)", len(created)
         )
     return len(created)
+
+
+@shared_task(name="apps.superadmin.tasks.flag_overdue_platform_invoices")
+def flag_overdue_platform_invoices():
+    """
+    Tâche quotidienne Celery Beat — SUPERADMIN-V2-04.
+
+    Regroupe volontairement deux étapes séquentielles du même cycle impayé
+    dans une seule tâche Beat (contrairement à generate_platform_invoices,
+    qui est une responsabilité distincte) : d'abord marquer les factures en
+    retard (mark_overdue_invoices), puis évaluer relance/escalade dessus
+    (escalate_overdue_tenants) — l'ordre importe, l'escalade du jour doit
+    voir les factures fraîchement passées OVERDUE. Toute la logique vit dans
+    apps.superadmin.services.platform_invoice_service, pas dupliquée ici.
+    """
+    from apps.superadmin.services.platform_invoice_service import (
+        mark_overdue_invoices,
+        escalate_overdue_tenants,
+    )
+
+    flagged = mark_overdue_invoices()
+    actions = escalate_overdue_tenants()
+
+    if flagged:
+        logger.info(
+            "flag_overdue_platform_invoices — %s facture(s) plateforme marquée(s) OVERDUE",
+            flagged,
+        )
+    if actions:
+        logger.info(
+            "flag_overdue_platform_invoices — %s action(s) de relance/escalade", len(actions)
+        )
+    return {"flagged": flagged, "escalation_actions": len(actions)}
+
+
+@shared_task(name="apps.superadmin.tasks.send_overdue_invoice_reminder")
+def send_overdue_invoice_reminder(tenant_id: str, invoice_id: str, stage: str):
+    """
+    Relance email + SMS pour une facture d'abonnement en retard — paliers
+    OVERDUE (J+1) et D7 uniquement (SUPERADMIN-V2-04). Les paliers D15/D30
+    sont déjà couverts par la notification de changement de statut
+    (transition_tenant_status -> send_tenant_status_notification/
+    notify_tenant_status) : pas de message distinct ici pour ces paliers,
+    décision PO explicite pour éviter un double email/SMS le même jour pour
+    le même événement.
+    """
+    from apps.superadmin.models import Tenant, PlatformInvoice
+    from apps.communication.services import notify_overdue_invoice
+
+    try:
+        tenant = Tenant.objects.get(id=tenant_id)
+        invoice = PlatformInvoice.objects.get(id=invoice_id)
+    except Tenant.DoesNotExist:
+        logger.error(f"Tenant {tenant_id} introuvable pour relance impayé.")
+        return
+    except PlatformInvoice.DoesNotExist:
+        logger.error(f"PlatformInvoice {invoice_id} introuvable pour relance impayé.")
+        return
+
+    stage_labels = {
+        "OVERDUE": "est en retard de paiement",
+        "D7": "reste impayée après 7 jours de retard",
+    }
+    subject = "Eduguinée — Facture d'abonnement impayée"
+    message = (
+        f"Bonjour {tenant.contact_name},\n\n"
+        f"La facture {invoice.invoice_number} de '{tenant.name}' "
+        f"{stage_labels.get(stage, 'est impayée')} "
+        f"(échéance dépassée le {invoice.due_date.strftime('%d/%m/%Y')}, montant : "
+        f"{invoice.amount} GNF).\n\n"
+        "Merci de régulariser votre situation dans les meilleurs délais pour éviter "
+        "une suspension automatique de votre accès à la plateforme.\n\n"
+        "Cordialement,\nL'équipe d'administration Eduguinée"
+    )
+
+    from_email = getattr(settings, "DEFAULT_FROM_EMAIL", "no-reply@eduguinee.gn")
+    try:
+        send_mail(subject, message, from_email, [tenant.contact_email], fail_silently=False)
+        logger.info(
+            f"Relance impayé envoyée par email à {tenant.contact_email} "
+            f"(facture {invoice.invoice_number}, palier {stage})"
+        )
+    except Exception as e:
+        logger.error(f"Échec de l'envoi de la relance impayé par email : {str(e)}")
+
+    notify_overdue_invoice(tenant_id, invoice.invoice_number, stage)

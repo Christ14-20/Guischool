@@ -139,3 +139,138 @@ def generate_due_invoices(today: date | None = None) -> list[PlatformInvoice]:
         created.append(invoice)
 
     return created
+
+
+# ─── SUPERADMIN-V2-04 : détection des impayés + escalade ──────────────────────
+#
+# Paliers d'escalade (jours de retard depuis `due_date`, valeurs assumées en
+# l'absence de chiffre contractuel, isolées ici comme PAYMENT_TERM_DAYS) :
+#   J+1  -> OVERDUE  : simple relance (email+SMS), pas de changement de statut.
+#   J+7  -> D7       : simple relance, pas de changement de statut.
+#   J+15 -> D15      : escalade SUSPENDED_SOFT (relance portée par la
+#                       notification de changement de statut elle-même —
+#                       décision PO, pas de message distinct le même jour).
+#   J+30 -> D30      : escalade SUSPENDED_HARD (idem).
+#
+# Le palier est déterminé par tenant à partir de SA facture impayée la plus
+# ancienne (due_date la plus reculée) — pas du nombre de factures ni d'un
+# cumul. `PlatformInvoice.last_reminder_stage` vit sur cette facture (pas sur
+# Tenant) : si elle est payée, la facture suivante devient l'ancre et repart
+# de zéro sur son propre due_date (décision PO explicite, cf. docstring du
+# champ) — payer l'arriéré le plus ancien réduit réellement la sévérité.
+REMINDER_MILESTONES = [
+    (PlatformInvoice.ReminderStage.OVERDUE, 1, None),
+    (PlatformInvoice.ReminderStage.D7, 7, None),
+    (PlatformInvoice.ReminderStage.D15, 15, Tenant.Status.SUSPENDED_SOFT),
+    (PlatformInvoice.ReminderStage.D30, 30, Tenant.Status.SUSPENDED_HARD),
+]
+
+STATUS_SEVERITY = {
+    Tenant.Status.ACTIVE: 0,
+    Tenant.Status.SUSPENDED_SOFT: 1,
+    Tenant.Status.SUSPENDED_HARD: 2,
+}
+
+UNPAID_STATUSES = [PlatformInvoice.Status.PENDING, PlatformInvoice.Status.OVERDUE]
+
+
+def mark_overdue_invoices(today: date | None = None) -> int:
+    """
+    PENDING dont `due_date` est dépassée -> OVERDUE. Appelé quotidiennement,
+    avant `escalate_overdue_tenants` (même tâche Celery Beat
+    `apps.superadmin.tasks.flag_overdue_platform_invoices`), pour que
+    l'escalade du jour voie déjà les factures fraîchement en retard. Même
+    pattern que `apps.finance.tasks.flag_overdue_invoices`, un niveau
+    au-dessus (facture plateforme, pas facture élève).
+    """
+    if today is None:
+        today = date.today()
+
+    return PlatformInvoice.objects.filter(
+        status=PlatformInvoice.Status.PENDING, due_date__lt=today
+    ).update(status=PlatformInvoice.Status.OVERDUE)
+
+
+def _compute_reminder_stage(days_overdue: int):
+    """Palier le plus élevé atteint pour ce nombre de jours de retard, ou (None, None)."""
+    stage, target_status = None, None
+    for code, threshold, status_target in REMINDER_MILESTONES:
+        if days_overdue >= threshold:
+            stage, target_status = code, status_target
+    return stage, target_status
+
+
+def escalate_overdue_tenants(today: date | None = None) -> list[dict]:
+    """
+    Pour chaque tenant éligible (ACTIVE/SUSPENDED_SOFT/SUSPENDED_HARD — un
+    tenant CANCELLED avec de vieilles factures impayées résiduelles n'est
+    jamais réévalué ici) ayant au moins une facture impayée, détermine le
+    palier à partir de la facture impayée la plus ancienne et agit une seule
+    fois par palier (garde `PlatformInvoice.last_reminder_stage`) :
+    - OVERDUE/D7 : relance email+SMS (`apps.superadmin.tasks.
+      send_overdue_invoice_reminder`), aucun changement de statut.
+    - D15/D30 : escalade via `transition_tenant_status`, mais UNIQUEMENT si
+      la sévérité cible dépasse la sévérité actuelle du tenant — jamais de
+      downgrade si le tenant est déjà à un palier plus sévère pour une autre
+      raison (ex. suspension CGU manuelle déjà en HARD). Si déjà au palier
+      cible ou au-delà, aucune action (ni notification ni écrasement du
+      `suspend_reason` existant — `transition_tenant_status` est lui-même
+      no-op si le statut ne change pas, cf. sa docstring).
+    """
+    if today is None:
+        today = date.today()
+
+    actions = []
+    tenant_ids = (
+        PlatformInvoice.objects.filter(
+            status__in=UNPAID_STATUSES, tenant__status__in=ELIGIBLE_STATUSES
+        )
+        .values_list("tenant_id", flat=True)
+        .distinct()
+    )
+
+    for tenant_id in tenant_ids:
+        oldest = (
+            PlatformInvoice.objects.filter(tenant_id=tenant_id, status__in=UNPAID_STATUSES)
+            .select_related("tenant")
+            .order_by("due_date")
+            .first()
+        )
+        if oldest is None or oldest.due_date >= today:
+            continue
+
+        days_overdue = (today - oldest.due_date).days
+        stage, target_status = _compute_reminder_stage(days_overdue)
+        if stage is None or stage == oldest.last_reminder_stage:
+            continue
+
+        oldest.last_reminder_stage = stage
+        oldest.save(update_fields=["last_reminder_stage"])
+
+        tenant = oldest.tenant
+        escalated = False
+        if target_status is not None:
+            if STATUS_SEVERITY[target_status] > STATUS_SEVERITY[tenant.status]:
+                from apps.superadmin.services.tenant_status_service import transition_tenant_status
+
+                escalated = transition_tenant_status(
+                    tenant,
+                    target_status,
+                    reason=(
+                        f"Suspension automatique — facture {oldest.invoice_number} "
+                        f"impayée depuis {days_overdue} jour(s) (échéance dépassée "
+                        f"le {oldest.due_date.isoformat()})."
+                    ),
+                    action="tenant:auto-suspend-overdue",
+                    actor=None,
+                )
+        else:
+            from apps.superadmin.tasks import send_overdue_invoice_reminder
+
+            send_overdue_invoice_reminder.delay(str(tenant.id), str(oldest.id), stage)
+
+        actions.append(
+            {"tenant_id": tenant.id, "invoice_id": oldest.id, "stage": stage, "escalated": escalated}
+        )
+
+    return actions

@@ -396,6 +396,8 @@ Convention uniforme sur toutes les listes : `?champ=valeur` pour un filtre exact
 ### `PATCH /superadmin/schools/{id}/reactivate/`
 **Requête :** `{}` — **Réponse `200`** : `{"status": "success", "data": {"id": "...", "status": "ACTIVE"}}`
 
+> **SUPERADMIN-V2-04 :** `suspend`/`reactivate` délèguent désormais à un service centralisé unique, `apps.superadmin.services.tenant_status_service.transition_tenant_status()` (status, `settings.suspend_reason`, `billing_cycle_start`, notification, `AuditLog`), également réutilisé par l'escalade automatique des impayés ci-dessous — comportement HTTP inchangé, mais **no-op si le tenant est déjà dans le statut cible** (aucune mutation, aucune notification, aucun `AuditLog` — évite qu'un second appel manuel identique n'écrase un `suspend_reason` déjà en place ou ne renvoie une notification redondante).
+
 > **Correctif de sécurité découvert en marge de SUPERADMIN-V2-03 (2026-07-31), pas le périmètre initial du ticket :** `TenantViewSet` héritait auparavant de `viewsets.ModelViewSet`, ce qui exposait silencieusement des routes génériques `PUT`/`PATCH`/`DELETE /superadmin/schools/{id}/` jamais documentées ni voulues. Le `PATCH` générique retombait sur `TenantListSerializer` (seul cas non spécialisé de `get_serializer_class`), dont le champ `status` est directement inscriptible : `PATCH {"status": "SUSPENDED_HARD"}` contournait donc entièrement le workflow `suspend`/`reactivate` ci-dessus (pas de `reason`, pas d'`AuditLog`, pas de notification). Le `DELETE` générique, lui, supprimait purement et simplement le `Tenant` (cascade sur toutes ses données). `TenantViewSet` n'expose désormais que `GET /superadmin/schools/` (liste), `POST /superadmin/schools/` (création), `GET /superadmin/schools/{id}/` (détail) et les actions nommées documentées dans cette section — **`PUT`/`PATCH`/`DELETE` génériques sur `/superadmin/schools/{id}/` n'ont jamais fait partie du contrat et renvoient désormais `405`**. Test de régression : `apps/superadmin/tests/test_tenant_generic_mutations_removed.py`.
 
 ### `PATCH /superadmin/schools/{id}/change-plan/` — SUPERADMIN-V2-03
@@ -521,7 +523,7 @@ Liste paginée (§0.4) des factures d'abonnement SaaS (`PlatformInvoice`, école
   "status": "PENDING"
 }
 ```
-`amount`/`plan_name` sont des **instantanés** figés à l'émission (copiés depuis `Plan.price_monthly`/`Plan.name`), jamais recalculés — contrairement à `Tenant.plan` qui reste une référence live (SUPERADMIN-V2-03). `status` : `PENDING`/`PAID`/`OVERDUE`, mais **aucune transition automatique vers `OVERDUE` n'est implémentée par ce ticket** — posé pour SUPERADMIN-V2-04 (gestion des impayés), pas encore développé.
+`amount`/`plan_name` sont des **instantanés** figés à l'émission (copiés depuis `Plan.price_monthly`/`Plan.name`), jamais recalculés — contrairement à `Tenant.plan` qui reste une référence live (SUPERADMIN-V2-03). `status` : `PENDING`/`PAID`/`OVERDUE` — la transition automatique `PENDING` → `OVERDUE` est implémentée depuis SUPERADMIN-V2-04, cf. « Détection des impayés et escalade » ci-dessous.
 
 ### `PATCH /superadmin/schools/{id}/invoices/{invoice_id}/mark-paid/` — SUPERADMIN-V2-05
 **Requête :** `{}` — règlement hors plateforme (virement, mobile money), action manuelle du Super Admin.
@@ -537,6 +539,25 @@ Action tracée dans `AuditLog` (`action="platforminvoice:mark-paid"`).
 **Génération automatique** (tâche Celery Beat quotidienne, `apps.superadmin.tasks.generate_platform_invoices`) : seuls les tenants `ACTIVE`/`SUSPENDED_SOFT`/`SUSPENDED_HARD` génèrent des factures (`TRIAL`/`CANCELLED` jamais). Le premier cycle de facturation d'un tenant démarre le jour où il est vu pour la première fois en statut éligible par la tâche — **pas** `Tenant.created_at` littéralement : un tenant resté plusieurs mois en `TRIAL` avant de passer `ACTIVE` n'est jamais facturé rétroactivement pour ses mois d'essai (décision PO). Chaque facture suivante part de `period_end` de la précédente (cycle continu, pas calé sur le 1er du mois civil). Délai de paiement : 15 jours après émission (valeur assumée, documentée dans `platform_invoice_service.py`, aucun chiffre contractuel communiqué à ce jour).
 
 > **Correctif trouvé après relecture du PO, pas dans le périmètre initial :** la même règle « pas de rattrapage rétroactif » s'applique symétriquement à un tenant qui **sort** de l'éligibilité (`CANCELLED`) puis y **revient** (réactivé) des mois plus tard — la version initiale repartait de l'ancien `period_end` d'une facture antérieure au passage `CANCELLED`, facturant rétroactivement une période où le tenant ne payait rien et n'utilisait pas le service. Nouveau champ interne `Tenant.billing_cycle_start` (non exposé par les serializers), repositionné à aujourd'hui par `TenantViewSet.suspend`/`reactivate` uniquement lors d'une rentrée en éligibilité (ancien statut `TRIAL` ou `CANCELLED`) — jamais lors d'une transition entre deux statuts déjà éligibles (ex. `SUSPENDED_HARD` → `ACTIVE`). Tests de régression dédiés dans `test_platform_invoice.py` (`TestBillingCycleStartTransitions`, `test_no_retroactive_billing_after_cancellation_and_reactivation`).
+
+**Détection des impayés et escalade** (SUPERADMIN-V2-04) — tâche Celery Beat quotidienne unique, `apps.superadmin.tasks.flag_overdue_platform_invoices`, deux étapes séquentielles :
+1. `PENDING` dont `due_date` est dépassée → `OVERDUE` (`platform_invoice_service.mark_overdue_invoices`).
+2. Pour chaque tenant éligible (`ACTIVE`/`SUSPENDED_SOFT`/`SUSPENDED_HARD`) ayant au moins une facture impayée, le palier est déterminé par sa facture impayée la **plus ancienne** (`due_date` la plus reculée) — pas le nombre de factures ni un cumul (`platform_invoice_service.escalate_overdue_tenants`) :
+
+| Palier | Retard | Effet |
+|---|---|---|
+| `OVERDUE` | J+1 | Relance email + SMS (`send_overdue_invoice_reminder`), aucun changement de statut. |
+| `D7` | J+7 | Idem. |
+| `D15` | J+15 | Escalade `SUSPENDED_SOFT` — relance portée par la notification de changement de statut elle-même, pas de message distinct le même jour. |
+| `D30` | J+30 | Escalade `SUSPENDED_HARD` — idem. |
+
+Seuils assumés (aucun chiffre contractuel communiqué), isolés dans `platform_invoice_service.REMINDER_MILESTONES`. Garde anti-doublon `PlatformInvoice.last_reminder_stage` (un seul envoi/escalade par palier par facture) — vit sur la facture, pas sur le tenant : si la plus ancienne facture impayée est payée, la facture suivante devient l'ancre et repart de zéro sur son propre `due_date` (décision PO explicite).
+
+**Jamais de downgrade** : l'escalade compare la sévérité de la cible (`SUSPENDED_SOFT` < `SUSPENDED_HARD`) à la sévérité actuelle du tenant — un tenant déjà `SUSPENDED_HARD` pour une raison sans lien avec un impayé (ex. non-respect CGU) n'est jamais rétrogradé à `SUSPENDED_SOFT`, et son `suspend_reason` existant n'est jamais écrasé.
+
+**Réactivation automatique au paiement : non.** `mark-paid` ne réactive jamais un tenant suspendu — la réactivation reste une action manuelle explicite du Super Admin.
+
+Toute la logique de transition de statut (manuelle **et** automatique) passe désormais par `apps.superadmin.services.tenant_status_service.transition_tenant_status()`, cf. note sur `PATCH .../reactivate/` plus haut.
 
 ---
 ## 3. Structure pédagogique (Épic 3)

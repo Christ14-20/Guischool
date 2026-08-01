@@ -168,6 +168,43 @@ def notify_tenant_status(tenant_id: str, new_status: str):
     )
 
 
+def notify_overdue_invoice(tenant_id: str, invoice_number: str, stage: str):
+    """
+    SUPERADMIN-V2-04 : relance SMS pour une facture d'abonnement en retard
+    (paliers OVERDUE/D7 uniquement — D15/D30 sont déjà couverts par
+    notify_tenant_status via la notification de suspension, cf.
+    apps.superadmin.tasks.send_overdue_invoice_reminder).
+    """
+    from apps.superadmin.models import Tenant
+
+    try:
+        tenant = Tenant.objects.get(id=tenant_id)
+    except Tenant.DoesNotExist:
+        logger.error("Tenant %s introuvable pour relance SMS impayé", tenant_id)
+        return
+
+    stage_labels = {
+        "OVERDUE": "est en retard de paiement",
+        "D7": "reste impayee apres 7 jours",
+    }
+    message = (
+        f"Eduguinee: La facture {invoice_number} de {tenant.name} "
+        f"{stage_labels.get(stage, 'est impayee')}. Merci de regulariser pour "
+        "eviter une suspension automatique."
+    )
+
+    if not tenant.contact_phone:
+        logger.info("Aucun contact_phone pour le tenant %s, SMS non envoyé", tenant_id)
+        return
+
+    send_sms.delay(
+        recipient_phone=tenant.contact_phone,
+        message=message,
+        trigger_type="INVOICE_REMINDER",
+        tenant_id=tenant_id,
+    )
+
+
 def _get_guardian_phone(student):
     guardian = (
         student.guardians.filter(user__isnull=False).first()
