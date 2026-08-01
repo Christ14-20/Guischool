@@ -17,7 +17,7 @@ from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenRefreshView
 
-from .models import User, StaffProfile
+from .models import User, StaffProfile, Role
 
 from django_ratelimit.decorators import ratelimit
 from django.utils.decorators import method_decorator
@@ -34,6 +34,7 @@ from .serializers import (
     StaffDetailSerializer,
     StaffCreateSerializer,
     StaffUpdateSerializer,
+    StaffChangeRoleSerializer,
     STAFF_PROFILE_FIELDS,
 )
 from .services.staff_service import create_staff_account
@@ -268,6 +269,7 @@ class StaffViewSet(viewsets.ModelViewSet):
     - PATCH  /auth/staff/{id}/     → modification (staff:update)
     - PATCH  /auth/staff/{id}/disable/     → désactivation (staff:disable)
     - PATCH  /auth/staff/{id}/enable/      → réactivation (staff:disable)
+    - PATCH  /auth/staff/{id}/change-role/ → changement de rôle (staff:update)
 
     Isolation multi-tenant : filtré sur request.tenant.
     """
@@ -286,6 +288,8 @@ class StaffViewSet(viewsets.ModelViewSet):
             return StaffUpdateSerializer
         elif self.action == "retrieve":
             return StaffDetailSerializer
+        elif self.action == "change_role":
+            return StaffChangeRoleSerializer
         return StaffListSerializer
 
     def get_permissions(self):
@@ -294,7 +298,7 @@ class StaffViewSet(viewsets.ModelViewSet):
             perms.append(HasPermission("staff:read"))
         elif self.action == "create":
             perms.append(HasPermission("staff:create"))
-        elif self.action in ("partial_update", "update"):
+        elif self.action in ("partial_update", "update", "change_role"):
             perms.append(HasPermission("staff:update"))
         elif self.action in ("disable", "enable"):
             perms.append(HasPermission("staff:disable"))
@@ -428,3 +432,61 @@ class StaffViewSet(viewsets.ModelViewSet):
             ip_address=get_client_ip(request),
         )
         return success_response({"id": user.id, "is_active": True})
+
+    @action(detail=True, methods=["patch"], url_path="change-role")
+    def change_role(self, request, pk=None):
+        """
+        PATCH /auth/staff/{id}/change-role/ — STAFF-V2-02.
+
+        Rôles cibles autorisés : mêmes que la création (TEACHER,
+        STUDENT_STUDIES, ACCOUNTANT) — jamais DIRECTOR. `subjects_taught`
+        est vidé dès que le rôle cible n'est pas TEACHER (décision PO :
+        évite des matières "enseignées" fantômes sur un compte non-TEACHER,
+        que l'ancien rôle ait été TEACHER ou non).
+
+        Limite connue, non corrigée ici (même lacune que `disable`, jamais
+        traitée dans un ticket jusqu'ici) : le rôle est encodé dans le JWT à
+        la connexion (CustomTokenObtainPairSerializer.get_token) — changer
+        le rôle en base n'invalide pas les tokens déjà émis, qui gardent
+        les permissions de l'ancien rôle jusqu'à expiration ou reconnexion.
+        """
+        user = self.get_object()
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        new_role_name = serializer.validated_data["role"]
+
+        if user.role and user.role.name == new_role_name:
+            return error_response(
+                "Ce compte a déjà ce rôle.",
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+
+        new_role = Role.objects.filter(name=new_role_name).first()
+        if not new_role:
+            return error_response(
+                f"Le rôle '{new_role_name}' est introuvable.",
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+
+        old_role = user.role
+        user.role = new_role
+        update_fields = ["role"]
+        if new_role_name != "TEACHER":
+            user.subjects_taught = []
+            update_fields.append("subjects_taught")
+        user.save(update_fields=update_fields)
+
+        audit_log(
+            user=request.user,
+            tenant=request.tenant,
+            action="staff:change-role",
+            target_model="User",
+            target_id=str(user.id),
+            extra={
+                "old_role": old_role.name if old_role else None,
+                "new_role": new_role.name,
+            },
+            ip_address=get_client_ip(request),
+        )
+
+        return success_response(StaffDetailSerializer(user).data)

@@ -2,6 +2,7 @@
 "use client";
 
 import React, { useState, useTransition } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import {
   User,
@@ -18,8 +19,9 @@ import {
   Briefcase,
   Landmark,
   IdCard,
+  Repeat,
 } from "lucide-react";
-import { updateStaffAction, disableStaffAction, enableStaffAction } from "../actions";
+import { updateStaffAction, disableStaffAction, enableStaffAction, changeRoleStaffAction } from "../actions";
 
 interface Subject {
   id: string;
@@ -32,10 +34,17 @@ interface Props {
   subjects: Subject[];
 }
 
+// STAFF-V2-02 : ACCOUNTANT ajouté — absent jusqu'ici bien que déjà créable
+// (résidu pré-existant, corrigé en marge car change-role rend ce rôle
+// couramment rencontré sur cette page).
 const ROLE_LABELS: Record<string, string> = {
   TEACHER: "Enseignant",
   STUDENT_STUDIES: "Études",
+  ACCOUNTANT: "Comptable",
 };
+
+// Mêmes rôles cibles que la création (ALLOWED_CREATE_ROLES côté backend).
+const CHANGE_ROLE_OPTIONS = ["TEACHER", "STUDENT_STUDIES", "ACCOUNTANT"];
 
 const SEXE_LABELS: Record<string, string> = { M: "Masculin", F: "Féminin" };
 const CONTRAT_LABELS: Record<string, string> = {
@@ -79,6 +88,26 @@ export default function StaffDetailClient({ staff, subjects }: Props) {
   // Disable/Reactivate modal
   const [showDisableModal, setShowDisableModal] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+
+  // Change-role modal (STAFF-V2-02)
+  const [showChangeRoleModal, setShowChangeRoleModal] = useState(false);
+  const [newRole, setNewRole] = useState(
+    CHANGE_ROLE_OPTIONS.find((r) => r !== staff.role?.name) || CHANGE_ROLE_OPTIONS[0]
+  );
+  const [changeRoleError, setChangeRoleError] = useState<string | null>(null);
+
+  const handleChangeRole = () => {
+    setChangeRoleError(null);
+    startTransition(async () => {
+      const res = await changeRoleStaffAction(staff.id, newRole);
+      if (res.success) {
+        setShowChangeRoleModal(false);
+        router.refresh();
+      } else {
+        setChangeRoleError(res.error);
+      }
+    });
+  };
 
   const toggleSubject = (code: string) => {
     setSelectedSubjects((prev) =>
@@ -539,10 +568,22 @@ export default function StaffDetailClient({ staff, subjects }: Props) {
               Réactiver
             </button>
           )}
+          <button
+            onClick={() => {
+              setChangeRoleError(null);
+              setNewRole(CHANGE_ROLE_OPTIONS.find((r) => r !== staff.role?.name) || CHANGE_ROLE_OPTIONS[0]);
+              setShowChangeRoleModal(true);
+            }}
+            disabled={isPending}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600/10 hover:bg-indigo-600/20 text-indigo-400 text-sm font-medium rounded-xl transition-all disabled:opacity-50 cursor-pointer"
+          >
+            <Repeat className="size-4" />
+            Changer de rôle
+          </button>
         </div>
 
         {/* Disable Confirmation Modal */}
-        {showDisableModal && (
+        {showDisableModal && createPortal(
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm animate-fade-in">
             <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 w-full max-w-md shadow-2xl space-y-4">
               <div>
@@ -572,7 +613,59 @@ export default function StaffDetailClient({ staff, subjects }: Props) {
                 </button>
               </div>
             </div>
-          </div>
+          </div>,
+          document.body
+        )}
+
+        {/* Change Role Modal (STAFF-V2-02) */}
+        {showChangeRoleModal && createPortal(
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm animate-fade-in">
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 w-full max-w-md shadow-2xl space-y-4">
+              <div>
+                <h3 className="text-lg font-bold text-white">Changer de rôle</h3>
+                <p className="text-slate-400 text-sm mt-1">
+                  Rôle actuel : <strong>{ROLE_LABELS[staff.role?.name] ?? staff.role?.name}</strong>.
+                  {staff.role?.name === "TEACHER" && (staff.subjects_taught ?? []).length > 0 && (
+                    <> Les matières enseignées seront réinitialisées si le nouveau rôle n&apos;est pas Enseignant.</>
+                  )}
+                </p>
+              </div>
+
+              {changeRoleError && (
+                <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-xl text-destructive text-xs">
+                  {changeRoleError}
+                </div>
+              )}
+
+              <div className="space-y-1">
+                <label className="text-xs text-slate-500 uppercase tracking-wider">Nouveau rôle</label>
+                <select value={newRole} onChange={(e) => setNewRole(e.target.value)} className={inputClass}>
+                  {CHANGE_ROLE_OPTIONS.filter((r) => r !== staff.role?.name).map((r) => (
+                    <option key={r} value={r}>{ROLE_LABELS[r]}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex items-center justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowChangeRoleModal(false)}
+                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium rounded-xl text-sm transition-colors cursor-pointer"
+                >
+                  Annuler
+                </button>
+                <button
+                  onClick={handleChangeRole}
+                  disabled={isPending}
+                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:bg-indigo-600/50 text-white font-medium rounded-xl text-sm transition-colors flex items-center gap-1.5 cursor-pointer"
+                >
+                  {isPending && <Loader2 className="size-4 animate-spin" />}
+                  Confirmer
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body
         )}
       </div>
     </div>

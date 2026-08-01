@@ -1,6 +1,6 @@
 # Eduguinée — Backlog V2 : Administration (Super Admin + École) & Chantiers Transversaux
 
-> **Statut :** en cours — Chantier année scolaire terminé : SCHOOLYEAR-V2-01 livré (2026-07-29), SCHOOLYEAR-V2-02 livré (2026-07-30, sous-tickets A→F). Module A (Super Admin) terminé : SUPERADMIN-V2-01 livré (2026-07-30), SUPERADMIN-V2-02 livré (2026-07-31), SUPERADMIN-V2-03 livré (2026-07-31), SUPERADMIN-V2-03B (nettoyage résidus statut) livré (2026-07-31), SUPERADMIN-V2-05 (facturation SaaS) livré (2026-07-31), SUPERADMIN-V2-04 (gestion des impayés) livré (2026-08-01). Module B (Personnel) en cours : STAFF-V2-01 (fiche personnel enrichie) livré (2026-08-01). Prochain : STAFF-V2-02.
+> **Statut :** en cours — Chantier année scolaire terminé : SCHOOLYEAR-V2-01 livré (2026-07-29), SCHOOLYEAR-V2-02 livré (2026-07-30, sous-tickets A→F). Module A (Super Admin) terminé : SUPERADMIN-V2-01 livré (2026-07-30), SUPERADMIN-V2-02 livré (2026-07-31), SUPERADMIN-V2-03 livré (2026-07-31), SUPERADMIN-V2-03B (nettoyage résidus statut) livré (2026-07-31), SUPERADMIN-V2-05 (facturation SaaS) livré (2026-07-31), SUPERADMIN-V2-04 (gestion des impayés) livré (2026-08-01). Module B (Personnel) en cours : STAFF-V2-01 (fiche personnel enrichie) livré (2026-08-01), STAFF-V2-02 (changement de rôle) livré (2026-08-01). Prochain : STAFF-V2-03.
 > **Périmètre :** ce backlog complète le MVP V1 (Épics 0 à 8, terminés) sur deux axes d'administration, plus deux chantiers transversaux indispensables à leur bon fonctionnement.
 > **Ordre de traitement validé (PO) :** Chantier année scolaire → Module A (Super Admin) → Module B (Personnel) → Infra MinIO. L'ordre ci-dessous reflète cette priorité, pas l'ordre de rédaction.
 > **Sources :** `Eduguinee_CDC_Complet.md` §4.4-4.6, §5, §6, §10, §21.1, §21.3 ; retour d'expérience V1 (Épics 2, 6.1, 7).
@@ -215,13 +215,21 @@
 - **Bug pré-existant trouvé en vérifiant ce ticket en navigateur, corrigé dans ce même ticket, hors périmètre initial** : `phone` sur `StaffCreateSerializer`/`StaffUpdateSerializer` était `CharField(required=False)` sans `allow_blank=True` — `required=False` ne dispense que de la clé absente, pas d'une chaîne vide fournie. Comme `CreateStaffForm.tsx` envoie toujours `phone: ""` (jamais omis) quand le champ est vide, **toute création de staff sans numéro de téléphone échouait en 400 depuis STAFF-MVP-02**, sans qu'aucun test existant ne le couvre (tous fournissaient un `phone`). Repéré uniquement grâce à la vérification en navigateur réel — invisible en tests unitaires jusqu'à ce que le cas soit ajouté. Tests de régression dédiés (`TestPhoneBlankRegression`), vérifiés en les désactivant temporairement pour confirmer qu'ils échouent bien sans le correctif.
 - 673 tests backend passants (+18 nouveaux pour ce ticket), aucune régression (seuls les 2 échecs `finance` déjà signalés en SUPERADMIN-V2-04, sans lien, toujours présents). Vérifié en navigateur réel (création avec champs RH complets, affichage détail, édition, changement de `statut` sans effet sur `is_active` — capture d'écran à l'appui).
 
-### 🃏 [STAFF-V2-02] Changement de rôle d'un compte existant
+### 🃏 [STAFF-V2-02] Changement de rôle d'un compte existant — ✅ Livré 2026-08-01
 **Priorité :** 🟠 Haute
-- [ ] `PATCH /auth/staff/{id}/change-role/` — endpoint d'action dédié (cohérent avec le principe déjà établi : actions sensibles = endpoint nommé, pas un champ noyé dans un `PATCH` générique).
-- [ ] Permission `staff:update` (`DIRECTOR` uniquement).
-- [ ] `AuditLog` obligatoire (ancien rôle → nouveau rôle).
-- [ ] Rôles autorisés en cible : mêmes que la création (`TEACHER`/`STUDENT_STUDIES`/`ACCOUNTANT`), jamais `DIRECTOR`.
+- [x] `PATCH /auth/staff/{id}/change-role/` — endpoint d'action dédié.
+- [x] Permission `staff:update` (`DIRECTOR` uniquement) — réutilise le codename existant, pas de nouveau codename créé.
+- [x] `AuditLog` obligatoire (`action="staff:change-role"`, `extra={"old_role", "new_role"}`).
+- [x] Rôles autorisés en cible : mêmes que la création (`ALLOWED_CREATE_ROLES` réutilisé — `TEACHER`/`STUDENT_STUDIES`/`ACCOUNTANT`), jamais `DIRECTOR`.
 **Labels :** `personnel` `backend`
+**Notes de livraison :**
+- **Décision PO actée avant codage** : `subjects_taught` est réinitialisé à `[]` dès que le rôle cible n'est pas `TEACHER` — évite des matières « enseignées » fantômes sur un compte scolarité/comptable. Aucune tentative de deviner des matières dans l'autre sens (X → TEACHER laisse `subjects_taught` vide, à assigner ensuite via `PATCH` classique). Vérifié en désactivant temporairement le nettoyage pour confirmer que le test dédié échoue bien sans lui.
+- **Point signalé, pas corrigé** (même traitement que pour `disable`, jamais dans le périmètre d'un ticket jusqu'ici) : le rôle est encodé dans le JWT à la connexion — `change-role` ne révoque aucun token déjà émis, qui garde les permissions de l'ancien rôle jusqu'à expiration ou reconnexion.
+- **Décision mineure tranchée par l'agent** (pas d'arbitrage PO nécessaire) : `change-role` vers le rôle déjà actuel → `400` (même convention locale que `disable`/`enable`, "déjà dans cet état"), pas un no-op silencieux.
+- **Frontend, pas explicitement demandé par le ticket mais ajouté** (même raisonnement que pour `change-plan`/`mark-paid` sur les tickets Super Admin précédents : sans point d'entrée UI, personne n'atteint ce nouvel endpoint) : bouton « Changer de rôle » sur `/app/staff/[id]`, avec avertissement explicite si des matières seront réinitialisées.
+- **Résidu corrigé en marge** : `ROLE_LABELS` (frontend) n'incluait pas `ACCOUNTANT` alors que ce rôle est déjà créable depuis STAFF-MVP-02 — un badge de rôle affichait le code brut `ACCOUNTANT` au lieu de « Comptable ». Corrigé, car `change-role` rend ce rôle couramment rencontré sur cette page précise.
+- **Bug de positionnement trouvé et corrigé en marge** (même cause que `ChangePlanButton`/`SchoolActions` côté Super Admin) : la modale de confirmation de désactivation existante (`showDisableModal`) était déjà imbriquée dans une carte `backdrop-blur-md`, confinée au lieu de couvrir l'écran — jamais remarqué jusqu'ici faute de vérification en navigateur sur cette page précise. Corrigée par `createPortal` en même temps que la nouvelle modale « Changer de rôle » (déjà construite correctement dès le départ). Vérifié par mesure directe du rectangle de la modale en navigateur (`{x:0, y:0, width: viewport, height: viewport}`).
+- 681 tests backend passants (+8 nouveaux pour ce ticket), aucune régression (mêmes 2 échecs `finance` pré-existants et sans lien). Vérifié en navigateur réel (changement de rôle TEACHER → ACCOUNTANT, matières réinitialisées, modale plein écran).
 
 ### 🃏 [STAFF-V2-03] Rôles composites via `custom_permissions`
 **Priorité :** 🟡 Moyenne

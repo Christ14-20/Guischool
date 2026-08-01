@@ -345,3 +345,14 @@ class StaffUpdateSerializer(serializers.Serializer):
         if value and not is_valid_guinea_phone(value):
             raise serializers.ValidationError("Format attendu : +224XXXXXXXXX")
         return value
+
+
+class StaffChangeRoleSerializer(serializers.Serializer):
+    """
+    Serializer pour PATCH /auth/staff/{id}/change-role/ — STAFF-V2-02.
+
+    Mêmes rôles cibles autorisés qu'à la création (ALLOWED_CREATE_ROLES) —
+    jamais DIRECTOR (réservé au Super Admin via TENANT-03 ; StaffViewSet
+    n'expose de toute façon jamais les comptes DIRECTOR/SUPER_ADMIN).
+    """
+    role = serializers.ChoiceField(choices=ALLOWED_CREATE_ROLES)

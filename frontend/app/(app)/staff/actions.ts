@@ -98,3 +98,19 @@ export async function enableStaffAction(id: string) {
     };
   }
 }
+
+export async function changeRoleStaffAction(id: string, role: string) {
+  try {
+    const client = await getBackendClient();
+    const response = await client.patch(`/auth/staff/${id}/change-role/`, { role });
+    revalidatePath(`/staff/${id}`);
+    revalidatePath("/staff");
+    return { success: true, data: response.data.data, error: null };
+  } catch (err: any) {
+    return {
+      success: false,
+      data: null,
+      error: err.response?.data?.message || "Impossible de changer le rôle de ce compte.",
+    };
+  }
+}

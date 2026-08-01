@@ -339,6 +339,22 @@ Convention uniforme sur toutes les listes : `?champ=valeur` pour un filtre exact
 **Réponse `200` :** `{"status": "success", "data": {"id": "...", "is_active": true}}`
 **Erreur `400` :** si déjà actif.
 
+### `PATCH /auth/staff/{id}/change-role/` — STAFF-V2-02
+**Auth :** JWT, permission `staff:update` (`DIRECTOR` uniquement) — action nommée dédiée plutôt qu'un champ `role` noyé dans le `PATCH` générique (`role` reste explicitement exclu de `StaffUpdateSerializer`, même principe déjà établi sur les autres actions sensibles de ce projet).
+
+**Requête :** `{"role": "ACCOUNTANT"}`
+`role` accepte les mêmes valeurs qu'à la création : `TEACHER`, `STUDENT_STUDIES`, `ACCOUNTANT` — jamais `DIRECTOR`.
+
+**Réponse `200` :** objet complet mis à jour (même forme que `GET /auth/staff/{id}/`).
+
+**Erreurs `400` :** rôle absent, rôle cible non autorisé (`DIRECTOR` ou valeur invalide), compte déjà dans ce rôle.
+
+> `subjects_taught` est réinitialisé à `[]` dès que le rôle cible n'est pas `TEACHER` (décision PO) — évite des matières « enseignées » fantômes sur un compte scolarité/comptable. Rien n'est présumé dans l'autre sens : passer un compte à `TEACHER` laisse `subjects_taught` vide, à assigner ensuite via `PATCH` classique.
+>
+> Action tracée dans `AuditLog` (`action="staff:change-role"`, `extra={"old_role", "new_role"}`).
+>
+> **Limite connue, non corrigée par ce ticket** (même lacune que `disable`, jamais traitée jusqu'ici) : le rôle est encodé dans le JWT à la connexion — un token déjà émis garde les permissions de l'ancien rôle jusqu'à expiration naturelle ou reconnexion. `change-role` ne révoque aucun token existant.
+
 ---
 
 ## 2. Super Administration (Épic 2)
@@ -1236,7 +1252,7 @@ Pour garder une expérience cohérente, le frontend doit afficher **exactement**
 | Auth | `/auth/permissions/me/` | GET |
 | Auth (staff) | `/auth/staff/` | GET, POST |
 | Auth (staff) | `/auth/staff/{id}/` | GET, PATCH |
-| Auth (staff) | `/auth/staff/{id}/disable/`, `/auth/staff/{id}/enable/` | PATCH |
+| Auth (staff) | `/auth/staff/{id}/disable/`, `/auth/staff/{id}/enable/`, `/auth/staff/{id}/change-role/` | PATCH |
 | Super Admin | `/superadmin/schools/` | GET, POST |
 | Super Admin | `/superadmin/schools/{id}/` | GET |
 | Super Admin | `/superadmin/schools/{id}/suspend/`, `/reactivate/`, `/change-plan/` | PATCH |
