@@ -228,12 +228,12 @@ Convention uniforme sur toutes les listes : `?champ=valeur` pour un filtre exact
 
 ---
 
-## 1b. Gestion du personnel (STAFF-MVP-01/02) ⚠️ *(ajout post-contrat — Épic 6.1)*
+## 1b. Gestion du personnel (STAFF-MVP-01/02, STAFF-V2-01) ⚠️ *(ajout post-contrat — Épic 6.1)*
 
 ### `GET /auth/staff/`
 **Auth :** JWT, permission `staff:read` (`DIRECTOR`/`STUDENT_STUDIES`).
 
-**Query params :** `?role__name=TEACHER&is_active=true&search=Diallo&ordering=-first_name`
+**Query params :** `?role__name=TEACHER&is_active=true&staff_profile__statut=ACTIF&search=Diallo&ordering=-first_name`
 
 **Réponse `200` :** liste paginée (cf. §0.4), chaque élément :
 ```json
@@ -246,9 +246,20 @@ Convention uniforme sur toutes les listes : `?champ=valeur` pour un filtre exact
   "role": {"name": "TEACHER", "label": "Enseignant"},
   "is_active": true,
   "subjects_taught": ["MATH", "PC"],
-  "date_joined": "2026-07-22T10:00:00Z"
+  "date_joined": "2026-07-22T10:00:00Z",
+  "date_naissance": "1990-05-12",
+  "sexe": "F",
+  "date_embauche": "2024-09-01",
+  "type_contrat": "CDI",
+  "numero_cnss": "CNSS-00123456",
+  "type_compte_paie": "ORANGE_MONEY",
+  "numero_compte_paie": "+224620000099",
+  "statut": "ACTIF"
 }
 ```
+`date_naissance`/`sexe`/`date_embauche`/`type_contrat`/`numero_cnss`/`type_compte_paie`/`numero_compte_paie`/`statut` : ajoutés par STAFF-V2-01. Stockés sur un modèle séparé `StaffProfile` (`OneToOneField` vers `User`, jamais exposé comme sous-objet — fusionné à plat dans la réponse pour ne pas changer le contrat). `sexe` : `M`/`F`/`""`. `type_contrat` : `CDI`/`CDD`/`VACATAIRE`/`STAGE`/`""`. `type_compte_paie` : `BANQUE`/`ORANGE_MONEY`/`ESPECES`/`""`. `statut` : `ACTIF`/`EN_CONGE`/`SUSPENDU`/`PARTI`.
+
+> **`statut` (métadonnée RH) et `is_active` (contrôle d'accès) sont volontairement indépendants** (décision PO) : modifier l'un n'a jamais d'effet sur l'autre. L'accès reste exclusivement piloté par `disable`/`enable` ci-dessous.
 
 ### `POST /auth/staff/`
 **Auth :** JWT, permission `staff:create` (`DIRECTOR` uniquement).
@@ -261,10 +272,17 @@ Convention uniforme sur toutes les listes : `?champ=valeur` pour un filtre exact
   "last_name": "Bah",
   "role": "TEACHER",
   "phone": "+224620000010",
-  "subjects_taught": ["MATH"]
+  "subjects_taught": ["MATH"],
+  "date_naissance": "1990-05-12",
+  "sexe": "F",
+  "date_embauche": "2024-09-01",
+  "type_contrat": "CDI",
+  "numero_cnss": "CNSS-00123456",
+  "type_compte_paie": "ORANGE_MONEY",
+  "numero_compte_paie": "+224620000099"
 }
 ```
-`role` accepte `TEACHER` ou `STUDENT_STUDIES`. `DIRECTOR` est refusé par ce service (réservé au Super Admin via TENANT-03).
+`role` accepte `TEACHER`, `STUDENT_STUDIES` ou `ACCOUNTANT`. `DIRECTOR` est refusé par ce service (réservé au Super Admin via TENANT-03). **Tous les champs RH (STAFF-V2-01) sont optionnels à la création** — complétables ensuite via `PATCH`.
 
 **Réponse `201` :**
 ```json
@@ -280,14 +298,17 @@ Convention uniforme sur toutes les listes : `?champ=valeur` pour un filtre exact
     "must_change_password": true,
     "subjects_taught": ["MATH"],
     "temporary_password": "Xk9$mP2q@F3!",
-    "date_joined": "2026-07-22T10:00:00Z"
+    "date_joined": "2026-07-22T10:00:00Z",
+    "statut": "ACTIF"
   }
 }
 ```
 
 > Le `temporary_password` n'est renvoyé qu'une seule fois, dans cette réponse (comme TENANT-03).
 
-**Erreur `400` :** email déjà utilisé, téléphone invalide, rôle non autorisé.
+**Erreur `400` :** email déjà utilisé, téléphone invalide, rôle non autorisé, valeur invalide pour `sexe`/`type_contrat`/`type_compte_paie`.
+
+> **Correctif trouvé en marge de STAFF-V2-01, pas dans le périmètre initial :** `phone` était `CharField(required=False)` **sans** `allow_blank=True` — `required=False` dispense seulement de la clé absente, pas d'une chaîne vide explicitement fournie. Or `CreateStaffForm.tsx` envoie toujours `phone: ""` (jamais omis) quand le champ est laissé vide : **toute création de staff sans numéro de téléphone échouait en 400 depuis STAFF-MVP-02**, silencieusement (aucun test existant ne couvrait ce cas — tous fournissaient un `phone`). Corrigé sur `StaffCreateSerializer` et `StaffUpdateSerializer`. Tests de régression dédiés : `test_staff_profile.py::TestPhoneBlankRegression`.
 
 ### `GET /auth/staff/{id}/`
 **Auth :** JWT, permission `staff:read`.
@@ -298,12 +319,13 @@ Convention uniforme sur toutes les listes : `?champ=valeur` pour un filtre exact
 
 **Champs modifiables en V1 :**
 - `first_name`, `last_name`, `phone`, `subjects_taught`
+- **STAFF-V2-01 :** `date_naissance`, `sexe`, `date_embauche`, `type_contrat`, `numero_cnss`, `type_compte_paie`, `numero_compte_paie`, `statut` — routés vers `StaffProfile` en interne (`StaffViewSet.partial_update`), pas vers `User`.
 - **Pas l'email** (identifiant de connexion, dette V2 avec reverification)
 - **Pas le rôle** (fixé à la création, dette V2)
 
 **Requête :**
 ```json
-{"first_name": "NouveauPrenom", "phone": "+224620000011"}
+{"first_name": "NouveauPrenom", "phone": "+224620000011", "statut": "EN_CONGE"}
 ```
 **Réponse `200` :** objet complet mis à jour.
 

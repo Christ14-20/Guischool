@@ -179,3 +179,77 @@ class User(AbstractUser):
 
         # 2. Permissions individuelles (liste JSON, pas de requête DB)
         return codename in (self.custom_permissions or [])
+
+
+class StaffProfile(TimestampedModel):
+    """
+    STAFF-V2-01 — Fiche RH enrichie du personnel, distincte de `User`.
+
+    Décision PO (2026-08-01) : modèle séparé plutôt que des champs
+    directement sur `User`. `User` est la base commune de 6 types de
+    comptes (SUPER_ADMIN, DIRECTOR, STUDENT_STUDIES, TEACHER, ACCOUNTANT,
+    PARENT) — des champs RH comme `numero_cnss`/`type_contrat`/
+    `numero_compte_paie` n'ont de sens que pour le personnel, jamais pour un
+    PARENT ou un SUPER_ADMIN. Contrairement à `Student` (précédent le plus
+    proche dans ce repo, modèle "gras" avec `date_naissance`/`sexe`/`statut`
+    directement dessus), `Student` ne représente qu'un seul type d'entité :
+    l'analogie s'arrête là.
+
+    `TimestampedModel`, pas `TenantScopedModel` : `StaffProfile` n'est
+    jamais interrogé directement par son propre endpoint (toujours via
+    `user.staff_profile`, dans un `StaffViewSet` déjà filtré sur
+    `user.tenant`) — un FK `tenant` séparé serait redondant et pourrait
+    diverger de `user.tenant` sans bénéfice.
+
+    Créé uniquement pour les comptes gérés par `StaffViewSet`
+    (TEACHER/STUDENT_STUDIES/ACCOUNTANT — `StaffViewSet` exclut déjà
+    DIRECTOR/SUPER_ADMIN de son queryset), jamais pour DIRECTOR/SUPER_ADMIN/
+    PARENT.
+
+    `statut` (métadonnée RH) et `User.is_active` (contrôle d'accès binaire)
+    sont VOLONTAIREMENT indépendants (décision PO explicite) : aucune
+    transition de `statut` n'a d'effet automatique sur `is_active`, et
+    inversement. L'accès reste exclusivement piloté par
+    `StaffViewSet.disable`/`enable`, comme avant ce ticket — évite toute
+    cascade surprenante (ex. repasser un `PARTI` à `ACTIF` ne réactive
+    jamais l'accès tout seul).
+    """
+
+    class Sexe(models.TextChoices):
+        M = "M", "Masculin"
+        F = "F", "Féminin"
+
+    class ContractType(models.TextChoices):
+        CDI = "CDI", "CDI"
+        CDD = "CDD", "CDD"
+        VACATAIRE = "VACATAIRE", "Vacataire"
+        STAGE = "STAGE", "Stage"
+
+    class PayrollAccountType(models.TextChoices):
+        BANQUE = "BANQUE", "Compte bancaire"
+        ORANGE_MONEY = "ORANGE_MONEY", "Orange Money"
+        ESPECES = "ESPECES", "Espèces"
+
+    class Status(models.TextChoices):
+        ACTIF = "ACTIF", "Actif"
+        EN_CONGE = "EN_CONGE", "En congé"
+        SUSPENDU = "SUSPENDU", "Suspendu"
+        PARTI = "PARTI", "Parti"
+
+    user = models.OneToOneField(
+        "authentication.User", on_delete=models.CASCADE, related_name="staff_profile"
+    )
+
+    date_naissance = models.DateField(null=True, blank=True)
+    sexe = models.CharField(max_length=1, choices=Sexe.choices, blank=True)
+    date_embauche = models.DateField(null=True, blank=True)
+    type_contrat = models.CharField(max_length=10, choices=ContractType.choices, blank=True)
+    numero_cnss = models.CharField(max_length=50, blank=True)
+    type_compte_paie = models.CharField(max_length=15, choices=PayrollAccountType.choices, blank=True)
+    numero_compte_paie = models.CharField(max_length=50, blank=True)
+    statut = models.CharField(
+        max_length=10, choices=Status.choices, default=Status.ACTIF, db_index=True
+    )
+
+    def __str__(self):
+        return f"Profil RH — {self.user.email}"

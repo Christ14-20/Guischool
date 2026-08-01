@@ -8,8 +8,56 @@ from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from .models import User
+from .models import User, StaffProfile
 from .services.staff_service import ALLOWED_CREATE_ROLES
+
+#: Réutilisé par StaffViewSet.partial_update pour router les champs validés
+#: vers StaffProfile plutôt que User.
+STAFF_PROFILE_FIELDS = (
+    "date_naissance",
+    "sexe",
+    "date_embauche",
+    "type_contrat",
+    "numero_cnss",
+    "type_compte_paie",
+    "numero_compte_paie",
+    "statut",
+)
+
+
+def _staff_profile_data(profile) -> dict:
+    """
+    Représentation plate des champs RH (StaffProfile) — None-safe : un
+    profil manquant (ne devrait plus arriver après le backfill STAFF-V2-01,
+    mais reste défensif) retombe sur des valeurs vides plutôt qu'une
+    exception.
+    """
+    if profile is None:
+        return {
+            "date_naissance": None,
+            "sexe": "",
+            "date_embauche": None,
+            "type_contrat": "",
+            "numero_cnss": "",
+            "type_compte_paie": "",
+            "numero_compte_paie": "",
+            "statut": StaffProfile.Status.ACTIF,
+        }
+    return {field: getattr(profile, field) for field in STAFF_PROFILE_FIELDS}
+
+
+class StaffProfileMixin:
+    """
+    Fusionne les champs RH (StaffProfile, modèle séparé — cf. sa docstring)
+    dans la représentation plate des serializers staff existants, pour que
+    le contrat d'API reste inchangé (pas de sous-objet imbriqué côté
+    frontend).
+    """
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data.update(_staff_profile_data(getattr(instance, "staff_profile", None)))
+        return data
 
 
 class TenantMiniSerializer(serializers.Serializer):
@@ -164,7 +212,7 @@ class RoleNestedSerializer(serializers.Serializer):
     label = serializers.CharField()
 
 
-class StaffListSerializer(serializers.ModelSerializer):
+class StaffListSerializer(StaffProfileMixin, serializers.ModelSerializer):
     """Serializer pour GET /auth/staff/ — vue liste."""
     role = RoleNestedSerializer(read_only=True)
 
@@ -181,9 +229,13 @@ class StaffListSerializer(serializers.ModelSerializer):
             "subjects_taught",
             "date_joined",
         ]
+        # STAFF-V2-01 : date_naissance/sexe/date_embauche/type_contrat/
+        # numero_cnss/type_compte_paie/numero_compte_paie/statut ajoutés par
+        # StaffProfileMixin.to_representation, pas listés ici (ModelSerializer
+        # les rejetterait, ce ne sont pas des champs de User).
 
 
-class StaffDetailSerializer(serializers.ModelSerializer):
+class StaffDetailSerializer(StaffProfileMixin, serializers.ModelSerializer):
     """Serializer pour GET /auth/staff/{id}/ — vue détail."""
     role = RoleNestedSerializer(read_only=True)
 
@@ -203,6 +255,7 @@ class StaffDetailSerializer(serializers.ModelSerializer):
             "is_phone_verified",
             "date_joined",
         ]
+        # Cf. note StaffListSerializer — champs RH ajoutés par le mixin.
 
 
 class StaffCreateSerializer(serializers.Serializer):
@@ -211,16 +264,36 @@ class StaffCreateSerializer(serializers.Serializer):
 
     Champs acceptés :
     - email, first_name, last_name, role, phone, subjects_taught
+    - STAFF-V2-01 : champs RH, tous optionnels à la création (un directeur
+      peut créer un compte sans avoir toute la paperasse RH sous la main,
+      et les compléter ensuite via édition) — date_naissance, sexe,
+      date_embauche, type_contrat, numero_cnss, type_compte_paie,
+      numero_compte_paie.
     """
     email = serializers.EmailField()
     first_name = serializers.CharField(max_length=150)
     last_name = serializers.CharField(max_length=150)
     role = serializers.ChoiceField(choices=ALLOWED_CREATE_ROLES)
-    phone = serializers.CharField(max_length=20, required=False, default="")
+    phone = serializers.CharField(max_length=20, required=False, allow_blank=True, default="")
     subjects_taught = serializers.ListField(
         child=serializers.CharField(max_length=20),
         required=False,
         default=list,
+    )
+    date_naissance = serializers.DateField(required=False, allow_null=True, default=None)
+    sexe = serializers.ChoiceField(
+        choices=StaffProfile.Sexe.choices, required=False, allow_blank=True, default=""
+    )
+    date_embauche = serializers.DateField(required=False, allow_null=True, default=None)
+    type_contrat = serializers.ChoiceField(
+        choices=StaffProfile.ContractType.choices, required=False, allow_blank=True, default=""
+    )
+    numero_cnss = serializers.CharField(max_length=50, required=False, allow_blank=True, default="")
+    type_compte_paie = serializers.ChoiceField(
+        choices=StaffProfile.PayrollAccountType.choices, required=False, allow_blank=True, default=""
+    )
+    numero_compte_paie = serializers.CharField(
+        max_length=50, required=False, allow_blank=True, default=""
     )
 
     def validate_phone(self, value):
@@ -236,14 +309,36 @@ class StaffUpdateSerializer(serializers.Serializer):
 
     Champs modifiables en V1 : first_name, last_name, phone, subjects_taught.
     Pas l'email, pas le rôle (dette V2 explicite).
+
+    STAFF-V2-01 : champs RH également modifiables (date_naissance, sexe,
+    date_embauche, type_contrat, numero_cnss, type_compte_paie,
+    numero_compte_paie, statut) — routés vers StaffProfile plutôt que User
+    par StaffViewSet.partial_update (cf. STAFF_PROFILE_FIELDS ci-dessus).
+    `statut` est une métadonnée RH pure, indépendante de `is_active`
+    (décision PO, cf. docstring StaffProfile) : la modifier ici n'a aucun
+    effet sur l'accès, qui reste piloté exclusivement par disable/enable.
     """
     first_name = serializers.CharField(max_length=150, required=False)
     last_name = serializers.CharField(max_length=150, required=False)
-    phone = serializers.CharField(max_length=20, required=False)
+    phone = serializers.CharField(max_length=20, required=False, allow_blank=True)
     subjects_taught = serializers.ListField(
         child=serializers.CharField(max_length=20),
         required=False,
     )
+    date_naissance = serializers.DateField(required=False, allow_null=True)
+    sexe = serializers.ChoiceField(
+        choices=StaffProfile.Sexe.choices, required=False, allow_blank=True
+    )
+    date_embauche = serializers.DateField(required=False, allow_null=True)
+    type_contrat = serializers.ChoiceField(
+        choices=StaffProfile.ContractType.choices, required=False, allow_blank=True
+    )
+    numero_cnss = serializers.CharField(max_length=50, required=False, allow_blank=True)
+    type_compte_paie = serializers.ChoiceField(
+        choices=StaffProfile.PayrollAccountType.choices, required=False, allow_blank=True
+    )
+    numero_compte_paie = serializers.CharField(max_length=50, required=False, allow_blank=True)
+    statut = serializers.ChoiceField(choices=StaffProfile.Status.choices, required=False)
 
     def validate_phone(self, value):
         from core.utils import is_valid_guinea_phone

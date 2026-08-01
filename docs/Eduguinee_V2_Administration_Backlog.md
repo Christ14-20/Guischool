@@ -1,6 +1,6 @@
 # Eduguinée — Backlog V2 : Administration (Super Admin + École) & Chantiers Transversaux
 
-> **Statut :** en cours — Chantier année scolaire terminé : SCHOOLYEAR-V2-01 livré (2026-07-29), SCHOOLYEAR-V2-02 livré (2026-07-30, sous-tickets A→F). Module A (Super Admin) terminé : SUPERADMIN-V2-01 livré (2026-07-30), SUPERADMIN-V2-02 livré (2026-07-31), SUPERADMIN-V2-03 livré (2026-07-31), SUPERADMIN-V2-03B (nettoyage résidus statut) livré (2026-07-31), SUPERADMIN-V2-05 (facturation SaaS) livré (2026-07-31), SUPERADMIN-V2-04 (gestion des impayés) livré (2026-08-01). Prochain : Module B (Personnel).
+> **Statut :** en cours — Chantier année scolaire terminé : SCHOOLYEAR-V2-01 livré (2026-07-29), SCHOOLYEAR-V2-02 livré (2026-07-30, sous-tickets A→F). Module A (Super Admin) terminé : SUPERADMIN-V2-01 livré (2026-07-30), SUPERADMIN-V2-02 livré (2026-07-31), SUPERADMIN-V2-03 livré (2026-07-31), SUPERADMIN-V2-03B (nettoyage résidus statut) livré (2026-07-31), SUPERADMIN-V2-05 (facturation SaaS) livré (2026-07-31), SUPERADMIN-V2-04 (gestion des impayés) livré (2026-08-01). Module B (Personnel) en cours : STAFF-V2-01 (fiche personnel enrichie) livré (2026-08-01). Prochain : STAFF-V2-02.
 > **Périmètre :** ce backlog complète le MVP V1 (Épics 0 à 8, terminés) sur deux axes d'administration, plus deux chantiers transversaux indispensables à leur bon fonctionnement.
 > **Ordre de traitement validé (PO) :** Chantier année scolaire → Module A (Super Admin) → Module B (Personnel) → Infra MinIO. L'ordre ci-dessous reflète cette priorité, pas l'ordre de rédaction.
 > **Sources :** `Eduguinee_CDC_Complet.md` §4.4-4.6, §5, §6, §10, §21.1, §21.3 ; retour d'expérience V1 (Épics 2, 6.1, 7).
@@ -199,13 +199,21 @@
 
 **Déjà construit (Épic 6.1, V1) :** réutilisation `User`/`Role`, création `TEACHER`/`STUDENT_STUDIES`/`ACCOUNTANT`, `disable`/`enable`, `must_change_password`.
 
-### 🃏 [STAFF-V2-01] Fiche personnel enrichie
+### 🃏 [STAFF-V2-01] Fiche personnel enrichie — ✅ Livré 2026-08-01
 **Priorité :** 🔴 Bloquant
-- [ ] Ajout de champs (sur `User` ou modèle `StaffProfile` séparé — décision à trancher par l'agent selon la propreté du modèle actuel, à signaler) : `date_naissance`, `sexe`, `date_embauche`, `type_contrat`, `numero_cnss`, `compte_paie` (banque/mobile money), `statut` (`ACTIF`/`EN_CONGE`/`SUSPENDU`/`PARTI`).
-- [ ] Clarifier la relation entre `statut` (métadonnée RH) et `is_active` (contrôle d'accès binaire existant) — les deux doivent coexister sans se contredire.
-- [ ] `StaffCreateSerializer`/`StaffUpdateSerializer` étendus en conséquence.
-- [ ] Frontend : `/app/staff/new` et `/app/staff/[id]` enrichis.
+- [x] Ajout de champs — **modèle séparé `StaffProfile`** (décision de l'agent, signalée avant codage) : `date_naissance`, `sexe`, `date_embauche`, `type_contrat`, `numero_cnss`, `type_compte_paie`/`numero_compte_paie` (banque/mobile money, structuré en deux champs — décision PO), `statut` (`ACTIF`/`EN_CONGE`/`SUSPENDU`/`PARTI`).
+- [x] Relation `statut`/`is_active` clarifiée — **indépendance totale** (décision PO) : aucune transition de statut n'affecte l'accès, qui reste piloté exclusivement par `disable`/`enable`.
+- [x] `StaffCreateSerializer`/`StaffUpdateSerializer` étendus.
+- [x] Frontend : `/app/staff/new` et `/app/staff/[id]` enrichis.
 **Labels :** `personnel` `backend` `frontend` `priorité-haute`
+**Notes de livraison :**
+- **Décision de placement des champs, signalée comme demandé par le ticket** : `StaffProfile(TimestampedModel)` séparé plutôt que des champs directement sur `User`, malgré l'absence totale de précédent « modèle profil » dans ce repo (`Student` est le précédent le plus proche, mais représente une seule entité — `User` est la base commune de 6 types de comptes, dont des champs RH comme `numero_cnss` n'ont de sens que pour 3 d'entre eux). `TimestampedModel`, pas `TenantScopedModel` : jamais interrogé directement par son propre endpoint (toujours via `user.staff_profile`, dans un `StaffViewSet` déjà filtré sur tenant) — un FK `tenant` séparé aurait été redondant.
+- **3 décisions PO actées avant codage** : (1) `statut`/`is_active` totalement indépendants, aucune cascade automatique (cohérent avec le principe déjà établi : `mark-paid`/`reactivate` restent deux actions manuelles distinctes en SUPERADMIN-V2-04) ; (2) `compte_paie` structuré en `type_compte_paie` (BANQUE/ORANGE_MONEY/ESPECES) + `numero_compte_paie`, pas un champ texte opaque unique ; (3) `type_contrat` : CDI/CDD/VACATAIRE/STAGE (valeurs assumées, aucune liste contractuelle communiquée).
+- **Backfill de migration** : un `StaffProfile` vide (`statut=ACTIF`) est créé pour tout `User` TEACHER/STUDENT_STUDIES/ACCOUNTANT existant — garantit l'invariant « tout compte staff a un profil » sans exception à gérer dans les serializers (un fallback défensif existe quand même dans `StaffProfileMixin`, testé explicitement).
+- **API inchangée pour le frontend** : les champs `StaffProfile` sont fusionnés à plat dans `StaffListSerializer`/`StaffDetailSerializer` (`StaffProfileMixin.to_representation`) — aucun sous-objet imbriqué, le split de modèle reste un détail d'implémentation invisible côté contrat.
+- **Correctif de cache trouvé pendant les tests, corrigé dans ce même ticket** : `StaffViewSet.get_queryset()` fait un `select_related("staff_profile")` — après une mise à jour de `StaffProfile` dans `partial_update`, la réponse renvoyait l'ancien profil (mis en cache par le join) tant que `instance.staff_profile` n'était pas explicitement réassigné au profil fraîchement sauvegardé.
+- **Bug pré-existant trouvé en vérifiant ce ticket en navigateur, corrigé dans ce même ticket, hors périmètre initial** : `phone` sur `StaffCreateSerializer`/`StaffUpdateSerializer` était `CharField(required=False)` sans `allow_blank=True` — `required=False` ne dispense que de la clé absente, pas d'une chaîne vide fournie. Comme `CreateStaffForm.tsx` envoie toujours `phone: ""` (jamais omis) quand le champ est vide, **toute création de staff sans numéro de téléphone échouait en 400 depuis STAFF-MVP-02**, sans qu'aucun test existant ne le couvre (tous fournissaient un `phone`). Repéré uniquement grâce à la vérification en navigateur réel — invisible en tests unitaires jusqu'à ce que le cas soit ajouté. Tests de régression dédiés (`TestPhoneBlankRegression`), vérifiés en les désactivant temporairement pour confirmer qu'ils échouent bien sans le correctif.
+- 673 tests backend passants (+18 nouveaux pour ce ticket), aucune régression (seuls les 2 échecs `finance` déjà signalés en SUPERADMIN-V2-04, sans lien, toujours présents). Vérifié en navigateur réel (création avec champs RH complets, affichage détail, édition, changement de `statut` sans effet sur `is_active` — capture d'écran à l'appui).
 
 ### 🃏 [STAFF-V2-02] Changement de rôle d'un compte existant
 **Priorité :** 🟠 Haute

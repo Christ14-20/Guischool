@@ -14,6 +14,9 @@ import {
   ArrowLeft,
   Loader2,
   UserPlus,
+  Cake,
+  Briefcase,
+  Landmark,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -301,6 +304,103 @@ export default function CreateStaffForm({ subjects }: CreateStaffFormProps) {
                 </option>
               ))}
             </select>
+          </div>
+        </div>
+
+        {/* Informations RH (STAFF-V2-01, toutes optionnelles) */}
+        <div className="space-y-4">
+          <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider border-l-2 border-indigo-500 pl-2">
+            Informations RH (optionnel)
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-slate-400 uppercase">Date de naissance</label>
+              <div className="relative">
+                <Cake className="absolute left-3 top-2.5 size-4 text-slate-500" />
+                <input
+                  type="date"
+                  name="date_naissance"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-4 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-slate-400 uppercase">Sexe</label>
+              <select
+                name="sexe"
+                defaultValue=""
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors"
+              >
+                <option value="">Non renseigné</option>
+                <option value="M">Masculin</option>
+                <option value="F">Féminin</option>
+              </select>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-slate-400 uppercase">Date d&apos;embauche</label>
+              <div className="relative">
+                <Briefcase className="absolute left-3 top-2.5 size-4 text-slate-500" />
+                <input
+                  type="date"
+                  name="date_embauche"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-4 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-slate-400 uppercase">Type de contrat</label>
+              <select
+                name="type_contrat"
+                defaultValue=""
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors"
+              >
+                <option value="">Non renseigné</option>
+                <option value="CDI">CDI</option>
+                <option value="CDD">CDD</option>
+                <option value="VACATAIRE">Vacataire</option>
+                <option value="STAGE">Stage</option>
+              </select>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-slate-400 uppercase">Numéro CNSS</label>
+              <input
+                type="text"
+                name="numero_cnss"
+                placeholder="Ex: CNSS-00123456"
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 transition-colors"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-slate-400 uppercase">Type de compte de paie</label>
+              <select
+                name="type_compte_paie"
+                defaultValue=""
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors"
+              >
+                <option value="">Non renseigné</option>
+                <option value="BANQUE">Compte bancaire</option>
+                <option value="ORANGE_MONEY">Orange Money</option>
+                <option value="ESPECES">Espèces</option>
+              </select>
+            </div>
+
+            <div className="space-y-2 md:col-span-2">
+              <label className="text-xs font-semibold text-slate-400 uppercase">Numéro de compte / téléphone de paie</label>
+              <div className="relative">
+                <Landmark className="absolute left-3 top-2.5 size-4 text-slate-500" />
+                <input
+                  type="text"
+                  name="numero_compte_paie"
+                  placeholder="Ex: BICIGUI-00998877 ou +224620000099"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-4 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 transition-colors"
+                />
+              </div>
+            </div>
           </div>
         </div>
 

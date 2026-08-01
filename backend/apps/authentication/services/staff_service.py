@@ -11,7 +11,7 @@ DIRECTOR n'est pas créable via ce service (réservé à TENANT-03).
 from django.db import transaction
 from rest_framework.exceptions import ValidationError
 
-from apps.authentication.models import User, Role
+from apps.authentication.models import User, Role, StaffProfile
 from apps.superadmin.services.tenant_service import generate_temporary_password
 from apps.monitoring.services import audit_log
 
@@ -30,6 +30,13 @@ def create_staff_account(
     phone: str = "",
     subjects_taught: list | None = None,
     ip_address: str = "",
+    date_naissance=None,
+    sexe: str = "",
+    date_embauche=None,
+    type_contrat: str = "",
+    numero_cnss: str = "",
+    type_compte_paie: str = "",
+    numero_compte_paie: str = "",
 ) -> tuple[User, str]:
     """
     Crée un compte personnel (TEACHER ou STUDENT_STUDIES) dans un tenant.
@@ -42,6 +49,10 @@ def create_staff_account(
     - Mot de passe temporaire généré, must_change_password=True.
     - Création atomique (transaction.atomic).
     - AuditLog tracé.
+    - STAFF-V2-01 : un StaffProfile (vide ou renseigné, statut=ACTIF par
+      défaut) est créé dans la même transaction pour tout compte staff —
+      l'invariant "tout compte géré par StaffViewSet a un profil RH" ne
+      doit jamais souffrir d'exception.
     """
     if role_name not in ALLOWED_CREATE_ROLES:
         raise ValidationError(
@@ -70,6 +81,17 @@ def create_staff_account(
             must_change_password=True,
             is_active=True,
             subjects_taught=subjects_taught or [],
+        )
+
+        StaffProfile.objects.create(
+            user=user,
+            date_naissance=date_naissance,
+            sexe=sexe,
+            date_embauche=date_embauche,
+            type_contrat=type_contrat,
+            numero_cnss=numero_cnss,
+            type_compte_paie=type_compte_paie,
+            numero_compte_paie=numero_compte_paie,
         )
 
         audit_log(

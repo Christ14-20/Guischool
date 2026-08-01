@@ -17,7 +17,7 @@ from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenRefreshView
 
-from .models import User
+from .models import User, StaffProfile
 
 from django_ratelimit.decorators import ratelimit
 from django.utils.decorators import method_decorator
@@ -34,6 +34,7 @@ from .serializers import (
     StaffDetailSerializer,
     StaffCreateSerializer,
     StaffUpdateSerializer,
+    STAFF_PROFILE_FIELDS,
 )
 from .services.staff_service import create_staff_account
 
@@ -273,7 +274,7 @@ class StaffViewSet(viewsets.ModelViewSet):
 
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
-    filterset_fields = ["role__name", "is_active"]
+    filterset_fields = ["role__name", "is_active", "staff_profile__statut"]
     search_fields = ["first_name", "last_name", "email"]
     ordering_fields = ["first_name", "last_name", "created_at"]
     ordering = ["first_name"]
@@ -304,7 +305,7 @@ class StaffViewSet(viewsets.ModelViewSet):
             tenant=self.request.tenant,
         ).exclude(
             role__name__in=["DIRECTOR", "SUPER_ADMIN"],
-        ).select_related("role")
+        ).select_related("role", "staff_profile")
 
     def retrieve(self, request, *args, **kwargs):
         instance = self.get_object()
@@ -325,6 +326,13 @@ class StaffViewSet(viewsets.ModelViewSet):
             phone=serializer.validated_data.get("phone", ""),
             subjects_taught=serializer.validated_data.get("subjects_taught", []),
             ip_address=get_client_ip(request),
+            date_naissance=serializer.validated_data.get("date_naissance"),
+            sexe=serializer.validated_data.get("sexe", ""),
+            date_embauche=serializer.validated_data.get("date_embauche"),
+            type_contrat=serializer.validated_data.get("type_contrat", ""),
+            numero_cnss=serializer.validated_data.get("numero_cnss", ""),
+            type_compte_paie=serializer.validated_data.get("type_compte_paie", ""),
+            numero_compte_paie=serializer.validated_data.get("numero_compte_paie", ""),
         )
 
         response_data = StaffDetailSerializer(user).data
@@ -332,13 +340,39 @@ class StaffViewSet(viewsets.ModelViewSet):
         return created_response(response_data)
 
     def partial_update(self, request, *args, **kwargs):
+        """
+        STAFF-V2-01 : les champs validés sont routés vers `User` ou vers
+        `StaffProfile` selon leur appartenance à `STAFF_PROFILE_FIELDS` —
+        `StaffProfile` est un modèle séparé (cf. sa docstring), la boucle
+        générique précédente (`setattr` direct sur `instance`) ne peut plus
+        s'appliquer telle quelle à tous les champs.
+        """
         instance = self.get_object()
         serializer = self.get_serializer(data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
 
+        user_fields = {}
+        profile_fields = {}
         for field, value in serializer.validated_data.items():
-            setattr(instance, field, value)
-        instance.save(update_fields=list(serializer.validated_data.keys()))
+            if field in STAFF_PROFILE_FIELDS:
+                profile_fields[field] = value
+            else:
+                user_fields[field] = value
+
+        if user_fields:
+            for field, value in user_fields.items():
+                setattr(instance, field, value)
+            instance.save(update_fields=list(user_fields.keys()))
+
+        if profile_fields:
+            profile, _ = StaffProfile.objects.get_or_create(user=instance)
+            for field, value in profile_fields.items():
+                setattr(profile, field, value)
+            profile.save(update_fields=list(profile_fields.keys()))
+            # get_queryset() fait un select_related("staff_profile") : la
+            # réponse ci-dessous doit refléter le profil mis à jour, pas
+            # celui (obsolète) déjà mis en cache sur `instance` par ce join.
+            instance.staff_profile = profile
 
         audit_log(
             user=request.user,

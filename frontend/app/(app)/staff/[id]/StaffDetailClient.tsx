@@ -14,6 +14,10 @@ import {
   Check,
   X,
   Pencil,
+  Cake,
+  Briefcase,
+  Landmark,
+  IdCard,
 } from "lucide-react";
 import { updateStaffAction, disableStaffAction, enableStaffAction } from "../actions";
 
@@ -33,6 +37,20 @@ const ROLE_LABELS: Record<string, string> = {
   STUDENT_STUDIES: "Études",
 };
 
+const SEXE_LABELS: Record<string, string> = { M: "Masculin", F: "Féminin" };
+const CONTRAT_LABELS: Record<string, string> = {
+  CDI: "CDI", CDD: "CDD", VACATAIRE: "Vacataire", STAGE: "Stage",
+};
+const COMPTE_PAIE_LABELS: Record<string, string> = {
+  BANQUE: "Compte bancaire", ORANGE_MONEY: "Orange Money", ESPECES: "Espèces",
+};
+const STATUT_STYLES: Record<string, { bg: string; color: string; label: string }> = {
+  ACTIF: { bg: "rgba(16, 185, 129, 0.1)", color: "#10B981", label: "Actif" },
+  EN_CONGE: { bg: "rgba(14, 165, 233, 0.1)", color: "#0EA5E9", label: "En congé" },
+  SUSPENDU: { bg: "rgba(245, 158, 11, 0.1)", color: "#F59E0B", label: "Suspendu" },
+  PARTI: { bg: "rgba(100, 116, 139, 0.1)", color: "#94A3B8", label: "Parti" },
+};
+
 const inputClass =
   "w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 transition-colors";
 
@@ -48,6 +66,14 @@ export default function StaffDetailClient({ staff, subjects }: Props) {
   const [selectedSubjects, setSelectedSubjects] = useState<string[]>(
     staff.subjects_taught ?? []
   );
+  const [dateNaissance, setDateNaissance] = useState(staff.date_naissance || "");
+  const [sexe, setSexe] = useState(staff.sexe || "");
+  const [dateEmbauche, setDateEmbauche] = useState(staff.date_embauche || "");
+  const [typeContrat, setTypeContrat] = useState(staff.type_contrat || "");
+  const [numeroCnss, setNumeroCnss] = useState(staff.numero_cnss || "");
+  const [typeComptePaie, setTypeComptePaie] = useState(staff.type_compte_paie || "");
+  const [numeroComptePaie, setNumeroComptePaie] = useState(staff.numero_compte_paie || "");
+  const [statut, setStatut] = useState(staff.statut || "ACTIF");
   const [editError, setEditError] = useState<string | null>(null);
 
   // Disable/Reactivate modal
@@ -72,6 +98,14 @@ export default function StaffDetailClient({ staff, subjects }: Props) {
         last_name: lastName,
         phone,
         subjects_taught: selectedSubjects,
+        date_naissance: dateNaissance || null,
+        sexe,
+        date_embauche: dateEmbauche || null,
+        type_contrat: typeContrat,
+        numero_cnss: numeroCnss,
+        type_compte_paie: typeComptePaie,
+        numero_compte_paie: numeroComptePaie,
+        statut,
       });
       if (res.success) {
         setEditing(false);
@@ -141,6 +175,17 @@ export default function StaffDetailClient({ staff, subjects }: Props) {
                 >
                   {ROLE_LABELS[staff.role?.name] ?? staff.role?.name}
                 </span>
+                {(() => {
+                  const st = STATUT_STYLES[staff.statut] || STATUT_STYLES.ACTIF;
+                  return (
+                    <span
+                      className="inline-flex items-center px-2.5 py-0.5 rounded-lg border text-xs font-medium"
+                      style={{ background: st.bg, color: st.color, borderColor: st.color + "33" }}
+                    >
+                      {st.label}
+                    </span>
+                  );
+                })()}
               </div>
             </div>
           </div>
@@ -203,6 +248,92 @@ export default function StaffDetailClient({ staff, subjects }: Props) {
               </div>
             </div>
 
+            {/* Informations RH (STAFF-V2-01) */}
+            <div className="pt-2 border-t border-slate-800/60">
+              <p className="text-xs text-slate-500 uppercase tracking-wider mb-3">Informations RH</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-xs text-slate-500 uppercase tracking-wider">Date de naissance</label>
+                  <input
+                    type="date"
+                    value={dateNaissance}
+                    onChange={(e) => setDateNaissance(e.target.value)}
+                    className={inputClass}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs text-slate-500 uppercase tracking-wider">Sexe</label>
+                  <select value={sexe} onChange={(e) => setSexe(e.target.value)} className={inputClass}>
+                    <option value="">Non renseigné</option>
+                    <option value="M">Masculin</option>
+                    <option value="F">Féminin</option>
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs text-slate-500 uppercase tracking-wider">Date d&apos;embauche</label>
+                  <input
+                    type="date"
+                    value={dateEmbauche}
+                    onChange={(e) => setDateEmbauche(e.target.value)}
+                    className={inputClass}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs text-slate-500 uppercase tracking-wider">Type de contrat</label>
+                  <select value={typeContrat} onChange={(e) => setTypeContrat(e.target.value)} className={inputClass}>
+                    <option value="">Non renseigné</option>
+                    <option value="CDI">CDI</option>
+                    <option value="CDD">CDD</option>
+                    <option value="VACATAIRE">Vacataire</option>
+                    <option value="STAGE">Stage</option>
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs text-slate-500 uppercase tracking-wider">Numéro CNSS</label>
+                  <input
+                    value={numeroCnss}
+                    onChange={(e) => setNumeroCnss(e.target.value)}
+                    placeholder="Ex: CNSS-00123456"
+                    className={inputClass}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs text-slate-500 uppercase tracking-wider">Statut RH</label>
+                  <select value={statut} onChange={(e) => setStatut(e.target.value)} className={inputClass}>
+                    <option value="ACTIF">Actif</option>
+                    <option value="EN_CONGE">En congé</option>
+                    <option value="SUSPENDU">Suspendu</option>
+                    <option value="PARTI">Parti</option>
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs text-slate-500 uppercase tracking-wider">Type de compte de paie</label>
+                  <select
+                    value={typeComptePaie}
+                    onChange={(e) => setTypeComptePaie(e.target.value)}
+                    className={inputClass}
+                  >
+                    <option value="">Non renseigné</option>
+                    <option value="BANQUE">Compte bancaire</option>
+                    <option value="ORANGE_MONEY">Orange Money</option>
+                    <option value="ESPECES">Espèces</option>
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs text-slate-500 uppercase tracking-wider">Numéro de compte / téléphone de paie</label>
+                  <input
+                    value={numeroComptePaie}
+                    onChange={(e) => setNumeroComptePaie(e.target.value)}
+                    placeholder="Ex: BICIGUI-00998877"
+                    className={inputClass}
+                  />
+                </div>
+              </div>
+              <p className="text-[10px] text-slate-600 mt-2">
+                Le statut RH n&apos;a aucun effet sur l&apos;accès au compte — utilisez Désactiver/Réactiver ci-dessous pour ça.
+              </p>
+            </div>
+
             {/* Subjects editable (TEACHER) */}
             {staff.role?.name === "TEACHER" && subjects.length > 0 && (
               <div className="space-y-2">
@@ -258,6 +389,14 @@ export default function StaffDetailClient({ staff, subjects }: Props) {
                   setLastName(staff.last_name || "");
                   setPhone(staff.phone || "");
                   setSelectedSubjects(staff.subjects_taught ?? []);
+                  setDateNaissance(staff.date_naissance || "");
+                  setSexe(staff.sexe || "");
+                  setDateEmbauche(staff.date_embauche || "");
+                  setTypeContrat(staff.type_contrat || "");
+                  setNumeroCnss(staff.numero_cnss || "");
+                  setTypeComptePaie(staff.type_compte_paie || "");
+                  setNumeroComptePaie(staff.numero_compte_paie || "");
+                  setStatut(staff.statut || "ACTIF");
                   setEditError(null);
                 }}
                 className="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-medium transition-colors cursor-pointer"
@@ -319,6 +458,46 @@ export default function StaffDetailClient({ staff, subjects }: Props) {
               <span className="text-xs text-slate-500 block uppercase tracking-wider">Rôle</span>
               <span className="text-white font-medium">
                 {ROLE_LABELS[staff.role?.name] ?? staff.role?.name ?? "—"}
+              </span>
+            </div>
+            <div>
+              <span className="text-xs text-slate-500 block uppercase tracking-wider">
+                <Cake className="size-3.5 inline mr-1" />
+                Date de naissance
+              </span>
+              <span className="text-white font-medium">{staff.date_naissance || "—"}</span>
+            </div>
+            <div>
+              <span className="text-xs text-slate-500 block uppercase tracking-wider">Sexe</span>
+              <span className="text-white font-medium">{SEXE_LABELS[staff.sexe] || "—"}</span>
+            </div>
+            <div>
+              <span className="text-xs text-slate-500 block uppercase tracking-wider">
+                <Briefcase className="size-3.5 inline mr-1" />
+                Date d&apos;embauche
+              </span>
+              <span className="text-white font-medium">{staff.date_embauche || "—"}</span>
+            </div>
+            <div>
+              <span className="text-xs text-slate-500 block uppercase tracking-wider">Type de contrat</span>
+              <span className="text-white font-medium">{CONTRAT_LABELS[staff.type_contrat] || "—"}</span>
+            </div>
+            <div>
+              <span className="text-xs text-slate-500 block uppercase tracking-wider">
+                <IdCard className="size-3.5 inline mr-1" />
+                Numéro CNSS
+              </span>
+              <span className="text-white font-medium">{staff.numero_cnss || "—"}</span>
+            </div>
+            <div>
+              <span className="text-xs text-slate-500 block uppercase tracking-wider">
+                <Landmark className="size-3.5 inline mr-1" />
+                Compte de paie
+              </span>
+              <span className="text-white font-medium">
+                {staff.type_compte_paie
+                  ? `${COMPTE_PAIE_LABELS[staff.type_compte_paie]}${staff.numero_compte_paie ? " — " + staff.numero_compte_paie : ""}`
+                  : "—"}
               </span>
             </div>
           </div>

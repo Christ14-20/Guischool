@@ -20,6 +20,13 @@ export async function createStaffAction(_state: any, formData: FormData) {
       phone: formData.get("phone") || "",
       role: formData.get("role"),
       subjects_taught,
+      date_naissance: formData.get("date_naissance") || null,
+      sexe: formData.get("sexe") || "",
+      date_embauche: formData.get("date_embauche") || null,
+      type_contrat: formData.get("type_contrat") || "",
+      numero_cnss: formData.get("numero_cnss") || "",
+      type_compte_paie: formData.get("type_compte_paie") || "",
+      numero_compte_paie: formData.get("numero_compte_paie") || "",
     };
 
     const response = await client.post("/auth/staff/", payload);
