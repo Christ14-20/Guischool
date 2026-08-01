@@ -22,6 +22,14 @@ STAFF_PROFILE_FIELDS = (
     "type_compte_paie",
     "numero_compte_paie",
     "statut",
+    # STAFF-V2-04 : pertinents pour TEACHER, mais champs disponibles sur
+    # tout compte StaffProfile (pas de restriction en base, cf. décision) —
+    # jamais vidés automatiquement par change-role (métadonnées d'historique
+    # RH, décision PO).
+    "grade",
+    "statut_emploi",
+    "access_start_date",
+    "access_end_date",
 )
 
 
@@ -42,6 +50,10 @@ def _staff_profile_data(profile) -> dict:
             "type_compte_paie": "",
             "numero_compte_paie": "",
             "statut": StaffProfile.Status.ACTIF,
+            "grade": "",
+            "statut_emploi": "",
+            "access_start_date": None,
+            "access_end_date": None,
         }
     return {field: getattr(profile, field) for field in STAFF_PROFILE_FIELDS}
 
@@ -93,6 +105,22 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         if not user.is_active:
             from rest_framework.exceptions import PermissionDenied
             raise PermissionDenied("Compte désactivé")
+
+        # Vérification fenêtre d'accès temporelle — STAFF-V2-04 (mécanisme
+        # GUEST_TEACHER : un compte TEACHER "invité" est un compte normal
+        # avec une fenêtre d'accès, pas un rôle RBAC distinct). `getattr`
+        # avec défaut est sûr ici : `RelatedObjectDoesNotExist` hérite
+        # volontairement d'`AttributeError` côté Django pour ce cas d'usage
+        # — DIRECTOR/SUPER_ADMIN/PARENT n'ont jamais de StaffProfile.
+        profile = getattr(user, "staff_profile", None)
+        if profile is not None:
+            from datetime import date
+            from rest_framework.exceptions import PermissionDenied
+            today = date.today()
+            if profile.access_start_date and today < profile.access_start_date:
+                raise PermissionDenied("Ce compte n'est pas encore actif")
+            if profile.access_end_date and today > profile.access_end_date:
+                raise PermissionDenied("Ce compte n'est plus actif")
 
         # Vérification tenant suspendu — SUPERADMIN-V2-01 : seul SUSPENDED_HARD
         # bloque la connexion (message exact du contrat d'API §9, inchangé).
@@ -306,6 +334,14 @@ class StaffCreateSerializer(serializers.Serializer):
     numero_compte_paie = serializers.CharField(
         max_length=50, required=False, allow_blank=True, default=""
     )
+    grade = serializers.ChoiceField(
+        choices=StaffProfile.Grade.choices, required=False, allow_blank=True, default=""
+    )
+    statut_emploi = serializers.ChoiceField(
+        choices=StaffProfile.EmploymentStatus.choices, required=False, allow_blank=True, default=""
+    )
+    access_start_date = serializers.DateField(required=False, allow_null=True, default=None)
+    access_end_date = serializers.DateField(required=False, allow_null=True, default=None)
 
     def validate_phone(self, value):
         from core.utils import is_valid_guinea_phone
@@ -350,6 +386,14 @@ class StaffUpdateSerializer(serializers.Serializer):
     )
     numero_compte_paie = serializers.CharField(max_length=50, required=False, allow_blank=True)
     statut = serializers.ChoiceField(choices=StaffProfile.Status.choices, required=False)
+    grade = serializers.ChoiceField(
+        choices=StaffProfile.Grade.choices, required=False, allow_blank=True
+    )
+    statut_emploi = serializers.ChoiceField(
+        choices=StaffProfile.EmploymentStatus.choices, required=False, allow_blank=True
+    )
+    access_start_date = serializers.DateField(required=False, allow_null=True)
+    access_end_date = serializers.DateField(required=False, allow_null=True)
 
     def validate_phone(self, value):
         from core.utils import is_valid_guinea_phone

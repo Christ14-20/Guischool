@@ -68,6 +68,16 @@ const CONTRAT_LABELS: Record<string, string> = {
 const COMPTE_PAIE_LABELS: Record<string, string> = {
   BANQUE: "Compte bancaire", ORANGE_MONEY: "Orange Money", ESPECES: "Espèces",
 };
+const GRADE_LABELS: Record<string, string> = {
+  INSTITUTEUR_ADJOINT: "Instituteur adjoint",
+  INSTITUTEUR: "Instituteur",
+  PROFESSEUR_ADJOINT: "Professeur adjoint d'enseignement secondaire",
+  PROFESSEUR_ENS_SECONDAIRE: "Professeur d'enseignement secondaire",
+  PROFESSEUR_CERTIFIE: "Professeur certifié",
+};
+const STATUT_EMPLOI_LABELS: Record<string, string> = {
+  TITULAIRE: "Titulaire", CONTRACTUEL: "Contractuel", VACATAIRE: "Vacataire",
+};
 const STATUT_STYLES: Record<string, { bg: string; color: string; label: string }> = {
   ACTIF: { bg: "rgba(16, 185, 129, 0.1)", color: "#10B981", label: "Actif" },
   EN_CONGE: { bg: "rgba(14, 165, 233, 0.1)", color: "#0EA5E9", label: "En congé" },
@@ -98,6 +108,10 @@ export default function StaffDetailClient({ staff, subjects, permissionsCatalog 
   const [typeComptePaie, setTypeComptePaie] = useState(staff.type_compte_paie || "");
   const [numeroComptePaie, setNumeroComptePaie] = useState(staff.numero_compte_paie || "");
   const [statut, setStatut] = useState(staff.statut || "ACTIF");
+  const [grade, setGrade] = useState(staff.grade || "");
+  const [statutEmploi, setStatutEmploi] = useState(staff.statut_emploi || "");
+  const [accessStartDate, setAccessStartDate] = useState(staff.access_start_date || "");
+  const [accessEndDate, setAccessEndDate] = useState(staff.access_end_date || "");
   const [editError, setEditError] = useState<string | null>(null);
 
   // Disable/Reactivate modal
@@ -183,6 +197,10 @@ export default function StaffDetailClient({ staff, subjects, permissionsCatalog 
         type_compte_paie: typeComptePaie,
         numero_compte_paie: numeroComptePaie,
         statut,
+        grade,
+        statut_emploi: statutEmploi,
+        access_start_date: accessStartDate || null,
+        access_end_date: accessEndDate || null,
       });
       if (res.success) {
         setEditing(false);
@@ -411,6 +429,57 @@ export default function StaffDetailClient({ staff, subjects, permissionsCatalog 
               </p>
             </div>
 
+            {/* Spécificités enseignant (STAFF-V2-04, TEACHER only) */}
+            {staff.role?.name === "TEACHER" && (
+              <div className="pt-2 border-t border-slate-800/60 space-y-3">
+                <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Spécificités enseignant</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-xs text-slate-500 uppercase tracking-wider">Grade</label>
+                    <select value={grade} onChange={(e) => setGrade(e.target.value)} className={inputClass}>
+                      <option value="">Non renseigné</option>
+                      <option value="INSTITUTEUR_ADJOINT">Instituteur adjoint</option>
+                      <option value="INSTITUTEUR">Instituteur</option>
+                      <option value="PROFESSEUR_ADJOINT">Professeur adjoint d&apos;enseignement secondaire</option>
+                      <option value="PROFESSEUR_ENS_SECONDAIRE">Professeur d&apos;enseignement secondaire</option>
+                      <option value="PROFESSEUR_CERTIFIE">Professeur certifié</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs text-slate-500 uppercase tracking-wider">Statut d&apos;emploi</label>
+                    <select value={statutEmploi} onChange={(e) => setStatutEmploi(e.target.value)} className={inputClass}>
+                      <option value="">Non renseigné</option>
+                      <option value="TITULAIRE">Titulaire</option>
+                      <option value="CONTRACTUEL">Contractuel</option>
+                      <option value="VACATAIRE">Vacataire</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs text-slate-500 uppercase tracking-wider">Accès valide à partir du</label>
+                    <input
+                      type="date"
+                      value={accessStartDate}
+                      onChange={(e) => setAccessStartDate(e.target.value)}
+                      className={inputClass}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs text-slate-500 uppercase tracking-wider">Accès valide jusqu&apos;au</label>
+                    <input
+                      type="date"
+                      value={accessEndDate}
+                      onChange={(e) => setAccessEndDate(e.target.value)}
+                      className={inputClass}
+                    />
+                  </div>
+                </div>
+                <p className="text-[10px] text-slate-600">
+                  Laissez les dates d&apos;accès vides pour un compte permanent. En dehors de cette période, le compte
+                  ne peut plus se connecter (compte enseignant invité/remplaçant).
+                </p>
+              </div>
+            )}
+
             {/* Subjects editable (TEACHER) */}
             {staff.role?.name === "TEACHER" && subjects.length > 0 && (
               <div className="space-y-2">
@@ -474,6 +543,10 @@ export default function StaffDetailClient({ staff, subjects, permissionsCatalog 
                   setTypeComptePaie(staff.type_compte_paie || "");
                   setNumeroComptePaie(staff.numero_compte_paie || "");
                   setStatut(staff.statut || "ACTIF");
+                  setGrade(staff.grade || "");
+                  setStatutEmploi(staff.statut_emploi || "");
+                  setAccessStartDate(staff.access_start_date || "");
+                  setAccessEndDate(staff.access_end_date || "");
                   setEditError(null);
                 }}
                 className="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-medium transition-colors cursor-pointer"
@@ -530,6 +603,30 @@ export default function StaffDetailClient({ staff, subjects, permissionsCatalog 
                   ))}
                 </div>
               </div>
+            )}
+            {staff.role?.name === "TEACHER" && (staff.grade || staff.statut_emploi || staff.access_start_date || staff.access_end_date) && (
+              <>
+                {staff.grade && (
+                  <div>
+                    <span className="text-xs text-slate-500 block uppercase tracking-wider">Grade</span>
+                    <span className="text-white font-medium">{GRADE_LABELS[staff.grade] ?? staff.grade}</span>
+                  </div>
+                )}
+                {staff.statut_emploi && (
+                  <div>
+                    <span className="text-xs text-slate-500 block uppercase tracking-wider">Statut d&apos;emploi</span>
+                    <span className="text-white font-medium">{STATUT_EMPLOI_LABELS[staff.statut_emploi] ?? staff.statut_emploi}</span>
+                  </div>
+                )}
+                {(staff.access_start_date || staff.access_end_date) && (
+                  <div className="md:col-span-2">
+                    <span className="text-xs text-slate-500 block uppercase tracking-wider">Fenêtre d&apos;accès</span>
+                    <span className="text-white font-medium">
+                      {staff.access_start_date || "—"} → {staff.access_end_date || "—"}
+                    </span>
+                  </div>
+                )}
+              </>
             )}
             <div>
               <span className="text-xs text-slate-500 block uppercase tracking-wider">Rôle</span>

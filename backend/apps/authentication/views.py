@@ -359,6 +359,10 @@ class StaffViewSet(viewsets.ModelViewSet):
             numero_cnss=serializer.validated_data.get("numero_cnss", ""),
             type_compte_paie=serializer.validated_data.get("type_compte_paie", ""),
             numero_compte_paie=serializer.validated_data.get("numero_compte_paie", ""),
+            grade=serializer.validated_data.get("grade", ""),
+            statut_emploi=serializer.validated_data.get("statut_emploi", ""),
+            access_start_date=serializer.validated_data.get("access_start_date"),
+            access_end_date=serializer.validated_data.get("access_end_date"),
         )
 
         response_data = StaffDetailSerializer(user).data

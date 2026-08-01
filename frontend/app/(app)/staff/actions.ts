@@ -27,6 +27,10 @@ export async function createStaffAction(_state: any, formData: FormData) {
       numero_cnss: formData.get("numero_cnss") || "",
       type_compte_paie: formData.get("type_compte_paie") || "",
       numero_compte_paie: formData.get("numero_compte_paie") || "",
+      grade: formData.get("grade") || "",
+      statut_emploi: formData.get("statut_emploi") || "",
+      access_start_date: formData.get("access_start_date") || null,
+      access_end_date: formData.get("access_end_date") || null,
     };
 
     const response = await client.post("/auth/staff/", payload);

@@ -404,6 +404,68 @@ export default function CreateStaffForm({ subjects }: CreateStaffFormProps) {
           </div>
         </div>
 
+        {/* Spécificités enseignant (STAFF-V2-04, TEACHER only) */}
+        {selectedRole === "TEACHER" && (
+          <div className="space-y-4">
+            <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider border-l-2 border-indigo-500 pl-2">
+              Spécificités enseignant (optionnel)
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <label className="text-xs font-semibold text-slate-400 uppercase">Grade</label>
+                <select
+                  name="grade"
+                  defaultValue=""
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors"
+                >
+                  <option value="">Non renseigné</option>
+                  <option value="INSTITUTEUR_ADJOINT">Instituteur adjoint</option>
+                  <option value="INSTITUTEUR">Instituteur</option>
+                  <option value="PROFESSEUR_ADJOINT">Professeur adjoint d&apos;enseignement secondaire</option>
+                  <option value="PROFESSEUR_ENS_SECONDAIRE">Professeur d&apos;enseignement secondaire</option>
+                  <option value="PROFESSEUR_CERTIFIE">Professeur certifié</option>
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-semibold text-slate-400 uppercase">Statut d&apos;emploi</label>
+                <select
+                  name="statut_emploi"
+                  defaultValue=""
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors"
+                >
+                  <option value="">Non renseigné</option>
+                  <option value="TITULAIRE">Titulaire</option>
+                  <option value="CONTRACTUEL">Contractuel</option>
+                  <option value="VACATAIRE">Vacataire</option>
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-semibold text-slate-400 uppercase">Accès valide à partir du</label>
+                <input
+                  type="date"
+                  name="access_start_date"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-semibold text-slate-400 uppercase">Accès valide jusqu&apos;au</label>
+                <input
+                  type="date"
+                  name="access_end_date"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors"
+                />
+              </div>
+            </div>
+            <p className="text-[10px] text-slate-600">
+              Laissez les dates d&apos;accès vides pour un compte permanent. Un compte enseignant invité
+              (remplaçant, vacataire ponctuel) devient inaccessible en dehors de cette période.
+            </p>
+          </div>
+        )}
+
         {/* Matières (TEACHER only) */}
         {selectedRole === "TEACHER" && subjects.length > 0 && (
           <div className="space-y-4">

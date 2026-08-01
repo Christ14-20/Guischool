@@ -236,6 +236,24 @@ class StaffProfile(TimestampedModel):
         SUSPENDU = "SUSPENDU", "Suspendu"
         PARTI = "PARTI", "Parti"
 
+    class Grade(models.TextChoices):
+        """STAFF-V2-04 — échelle guinéenne, pertinent pour TEACHER uniquement."""
+        INSTITUTEUR_ADJOINT = "INSTITUTEUR_ADJOINT", "Instituteur adjoint"
+        INSTITUTEUR = "INSTITUTEUR", "Instituteur"
+        PROFESSEUR_ADJOINT = "PROFESSEUR_ADJOINT", "Professeur adjoint d'enseignement secondaire"
+        PROFESSEUR_ENS_SECONDAIRE = "PROFESSEUR_ENS_SECONDAIRE", "Professeur d'enseignement secondaire"
+        PROFESSEUR_CERTIFIE = "PROFESSEUR_CERTIFIE", "Professeur certifié"
+
+    class EmploymentStatus(models.TextChoices):
+        """
+        STAFF-V2-04 — statut dans la fonction publique/enseignement (décision
+        PO : axe distinct de `type_contrat`, qui reste une typologie
+        contractuelle générique — un compte peut être CDI + TITULAIRE).
+        """
+        TITULAIRE = "TITULAIRE", "Titulaire"
+        CONTRACTUEL = "CONTRACTUEL", "Contractuel"
+        VACATAIRE = "VACATAIRE", "Vacataire"
+
     user = models.OneToOneField(
         "authentication.User", on_delete=models.CASCADE, related_name="staff_profile"
     )
@@ -249,6 +267,16 @@ class StaffProfile(TimestampedModel):
     numero_compte_paie = models.CharField(max_length=50, blank=True)
     statut = models.CharField(
         max_length=10, choices=Status.choices, default=Status.ACTIF, db_index=True
+    )
+    grade = models.CharField(max_length=30, choices=Grade.choices, blank=True)
+    statut_emploi = models.CharField(max_length=15, choices=EmploymentStatus.choices, blank=True)
+    access_start_date = models.DateField(
+        null=True, blank=True,
+        help_text="STAFF-V2-04 : compte inaccessible avant cette date (mécanisme GUEST_TEACHER, vérifié au login).",
+    )
+    access_end_date = models.DateField(
+        null=True, blank=True,
+        help_text="STAFF-V2-04 : compte inaccessible après cette date (mécanisme GUEST_TEACHER, vérifié au login).",
     )
 
     def __str__(self):

@@ -37,6 +37,10 @@ def create_staff_account(
     numero_cnss: str = "",
     type_compte_paie: str = "",
     numero_compte_paie: str = "",
+    grade: str = "",
+    statut_emploi: str = "",
+    access_start_date=None,
+    access_end_date=None,
 ) -> tuple[User, str]:
     """
     Crée un compte personnel (TEACHER ou STUDENT_STUDIES) dans un tenant.
@@ -92,6 +96,10 @@ def create_staff_account(
             numero_cnss=numero_cnss,
             type_compte_paie=type_compte_paie,
             numero_compte_paie=numero_compte_paie,
+            grade=grade,
+            statut_emploi=statut_emploi,
+            access_start_date=access_start_date,
+            access_end_date=access_end_date,
         )
 
         audit_log(

@@ -269,12 +269,18 @@ Convention uniforme sur toutes les listes : `?champ=valeur` pour un filtre exact
   "numero_cnss": "CNSS-00123456",
   "type_compte_paie": "ORANGE_MONEY",
   "numero_compte_paie": "+224620000099",
-  "statut": "ACTIF"
+  "statut": "ACTIF",
+  "grade": "PROFESSEUR_CERTIFIE",
+  "statut_emploi": "TITULAIRE",
+  "access_start_date": null,
+  "access_end_date": null
 }
 ```
 `date_naissance`/`sexe`/`date_embauche`/`type_contrat`/`numero_cnss`/`type_compte_paie`/`numero_compte_paie`/`statut` : ajoutés par STAFF-V2-01. Stockés sur un modèle séparé `StaffProfile` (`OneToOneField` vers `User`, jamais exposé comme sous-objet — fusionné à plat dans la réponse pour ne pas changer le contrat). `sexe` : `M`/`F`/`""`. `type_contrat` : `CDI`/`CDD`/`VACATAIRE`/`STAGE`/`""`. `type_compte_paie` : `BANQUE`/`ORANGE_MONEY`/`ESPECES`/`""`. `statut` : `ACTIF`/`EN_CONGE`/`SUSPENDU`/`PARTI`.
 
 `role.permissions`/`custom_permissions` : ajoutés par STAFF-V2-03. `role.permissions` = codenames accordés par le rôle de base (lecture seule, dérivé de `Role.permissions`). `custom_permissions` = codenames ajoutés individuellement au-delà du rôle (mécanisme des rôles composites, cf. `PATCH .../custom-permissions/` ci-dessous) — modifiable uniquement via cet endpoint dédié, jamais via le `PATCH` générique.
+
+`grade`/`statut_emploi`/`access_start_date`/`access_end_date` : ajoutés par STAFF-V2-04 (spécificités enseignants), sur `StaffProfile` comme le reste des champs RH. Pertinents pour `TEACHER` (UI conditionnée au rôle), mais disponibles sans restriction de rôle en base — **jamais vidés automatiquement par `change-role`** (décision PO : métadonnées d'historique RH, pas un attribut de session comme `subjects_taught`). `grade` : `INSTITUTEUR_ADJOINT`/`INSTITUTEUR`/`PROFESSEUR_ADJOINT`/`PROFESSEUR_ENS_SECONDAIRE`/`PROFESSEUR_CERTIFIE`/`""` (échelle guinéenne). `statut_emploi` : `TITULAIRE`/`CONTRACTUEL`/`VACATAIRE`/`""` — axe distinct de `type_contrat` (décision PO) : `statut_emploi` reflète le statut dans la fonction publique/l'enseignement, `type_contrat` la typologie contractuelle générique ; un compte peut être `CDI` + `TITULAIRE`. `access_start_date`/`access_end_date` : mécanisme `GUEST_TEACHER` — un compte enseignant "invité" (remplaçant, vacataire ponctuel) est un compte `TEACHER` normal avec une fenêtre d'accès temporelle, pas un rôle RBAC distinct. Vérifiées à `POST /auth/login/` (cf. §9 pour les messages exacts) : `null` = pas de restriction sur ce côté de la fenêtre.
 
 > **`statut` (métadonnée RH) et `is_active` (contrôle d'accès) sont volontairement indépendants** (décision PO) : modifier l'un n'a jamais d'effet sur l'autre. L'accès reste exclusivement piloté par `disable`/`enable` ci-dessous.
 
@@ -296,10 +302,14 @@ Convention uniforme sur toutes les listes : `?champ=valeur` pour un filtre exact
   "type_contrat": "CDI",
   "numero_cnss": "CNSS-00123456",
   "type_compte_paie": "ORANGE_MONEY",
-  "numero_compte_paie": "+224620000099"
+  "numero_compte_paie": "+224620000099",
+  "grade": "PROFESSEUR_CERTIFIE",
+  "statut_emploi": "TITULAIRE",
+  "access_start_date": null,
+  "access_end_date": null
 }
 ```
-`role` accepte `TEACHER`, `STUDENT_STUDIES` ou `ACCOUNTANT`. `DIRECTOR` est refusé par ce service (réservé au Super Admin via TENANT-03). **Tous les champs RH (STAFF-V2-01) sont optionnels à la création** — complétables ensuite via `PATCH`.
+`role` accepte `TEACHER`, `STUDENT_STUDIES` ou `ACCOUNTANT`. `DIRECTOR` est refusé par ce service (réservé au Super Admin via TENANT-03). **Tous les champs RH (STAFF-V2-01/STAFF-V2-04) sont optionnels à la création** — complétables ensuite via `PATCH`.
 
 **Réponse `201` :**
 ```json
@@ -337,6 +347,7 @@ Convention uniforme sur toutes les listes : `?champ=valeur` pour un filtre exact
 **Champs modifiables en V1 :**
 - `first_name`, `last_name`, `phone`, `subjects_taught`
 - **STAFF-V2-01 :** `date_naissance`, `sexe`, `date_embauche`, `type_contrat`, `numero_cnss`, `type_compte_paie`, `numero_compte_paie`, `statut` — routés vers `StaffProfile` en interne (`StaffViewSet.partial_update`), pas vers `User`.
+- **STAFF-V2-04 :** `grade`, `statut_emploi`, `access_start_date`, `access_end_date` — également routés vers `StaffProfile`, jamais vidés automatiquement par `change-role`.
 - **Pas l'email** (identifiant de connexion, dette V2 avec reverification)
 - **Pas le rôle** (fixé à la création, dette V2)
 
@@ -1273,6 +1284,8 @@ Pour garder une expérience cohérente, le frontend doit afficher **exactement**
 | Idempotence paiement | "Ce paiement a déjà été enregistré (clé d'idempotence déjà utilisée)" |
 | Compte suspendu | "Compte suspendu" |
 | Limite de plan atteinte | "Votre plan actuel autorise {max} élèves maximum. Contactez le support pour une mise à niveau." |
+| Connexion hors fenêtre d'accès (avant `access_start_date`) | "Ce compte n'est pas encore actif" |
+| Connexion hors fenêtre d'accès (après `access_end_date`) | "Ce compte n'est plus actif" |
 
 ---
 
