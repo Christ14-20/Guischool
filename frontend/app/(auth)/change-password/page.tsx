@@ -6,6 +6,9 @@ import { signOut } from "next-auth/react";
 import { changePasswordAction } from "./actions";
 import { Key, Lock, AlertTriangle, Loader2, Check, LogOut } from "lucide-react";
 
+const fieldClass =
+  "w-full bg-paper-alt border border-line rounded-xl pl-9 pr-4 py-2.5 text-sm text-text placeholder-text-faint outline-none focus:border-accent-line transition-colors";
+
 export default function ChangePasswordPage() {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -42,12 +45,12 @@ export default function ChangePasswordPage() {
 
   if (success) {
     return (
-      <div className="space-y-6 animate-fade-in text-center">
-        <div className="h-16 w-16 rounded-full bg-emerald-500/10 flex items-center justify-center mx-auto">
-          <Check className="size-8 text-emerald-400" />
+      <div className="rounded-2xl p-10 border border-line bg-card shadow-[var(--shadow)] text-center space-y-4">
+        <div className="size-14 rounded-full bg-ok/10 flex items-center justify-center mx-auto">
+          <Check className="size-7 text-ok" />
         </div>
-        <h2 className="text-xl font-bold text-white">Mot de passe modifié</h2>
-        <p className="text-slate-400 text-sm">
+        <h2 className="font-serif text-xl font-medium">Mot de passe modifié</h2>
+        <p className="text-text-soft text-sm">
           Votre mot de passe a été changé avec succès. Vous allez être redirigé...
         </p>
       </div>
@@ -55,19 +58,19 @@ export default function ChangePasswordPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="rounded-2xl p-10 border border-line bg-card shadow-[var(--shadow)] space-y-6">
       <div className="text-center space-y-2">
-        <div className="h-12 w-12 rounded-full bg-amber-500/10 flex items-center justify-center mx-auto">
-          <Key className="size-6 text-amber-400" />
+        <div className="size-12 rounded-full bg-warn/10 flex items-center justify-center mx-auto">
+          <Key className="size-6 text-warn" />
         </div>
-        <h1 className="text-xl font-bold text-white">Changement de mot de passe</h1>
-        <p className="text-slate-400 text-sm">
+        <h1 className="font-serif text-xl font-medium">Changement de mot de passe</h1>
+        <p className="text-text-soft text-sm">
           Vous devez définir un nouveau mot de passe avant de continuer.
         </p>
       </div>
 
       {errorMsg && (
-        <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-xl text-destructive text-sm flex items-center gap-3">
+        <div className="p-4 bg-danger/10 border border-danger/20 rounded-xl text-danger text-sm flex items-center gap-3">
           <AlertTriangle className="size-5 shrink-0" />
           <span>{errorMsg}</span>
         </div>
@@ -75,49 +78,49 @@ export default function ChangePasswordPage() {
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-2">
-          <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+          <label className="text-[10.5px] font-semibold text-text-faint uppercase tracking-wider">
             Mot de passe actuel
           </label>
           <div className="relative">
-            <Lock className="absolute left-3 top-2.5 size-4 text-slate-500" />
+            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-text-faint" />
             <input
               type="password"
               name="old_password"
               required
               placeholder="Votre mot de passe actuel"
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-4 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 transition-colors"
+              className={fieldClass}
             />
           </div>
         </div>
 
         <div className="space-y-2">
-          <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+          <label className="text-[10.5px] font-semibold text-text-faint uppercase tracking-wider">
             Nouveau mot de passe
           </label>
           <div className="relative">
-            <Lock className="absolute left-3 top-2.5 size-4 text-slate-500" />
+            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-text-faint" />
             <input
               type="password"
               name="new_password"
               required
               placeholder="Minimum 12 caractères"
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-4 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 transition-colors"
+              className={fieldClass}
             />
           </div>
         </div>
 
         <div className="space-y-2">
-          <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+          <label className="text-[10.5px] font-semibold text-text-faint uppercase tracking-wider">
             Confirmer le nouveau mot de passe
           </label>
           <div className="relative">
-            <Lock className="absolute left-3 top-2.5 size-4 text-slate-500" />
+            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-text-faint" />
             <input
               type="password"
               name="new_password_confirm"
               required
               placeholder="Ressaisir le nouveau mot de passe"
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-4 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 transition-colors"
+              className={fieldClass}
             />
           </div>
         </div>
@@ -125,7 +128,7 @@ export default function ChangePasswordPage() {
         <button
           type="submit"
           disabled={isPending}
-          className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:bg-indigo-600/50 text-white font-medium rounded-xl text-sm transition-all flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/25 active:scale-[0.98] cursor-pointer"
+          className="w-full py-2.5 bg-accent hover:opacity-90 disabled:opacity-50 text-white font-medium rounded-xl text-sm transition-opacity flex items-center justify-center gap-2 cursor-pointer"
         >
           {isPending && <Loader2 className="size-4 animate-spin" />}
           {isPending ? "Changement en cours..." : "Changer le mot de passe"}
@@ -136,7 +139,7 @@ export default function ChangePasswordPage() {
         <button
           type="button"
           onClick={() => signOut({ redirectTo: "/login" })}
-          className="inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-300 transition-colors cursor-pointer"
+          className="inline-flex items-center gap-1.5 text-xs text-text-faint hover:text-text-soft transition-colors cursor-pointer"
         >
           <LogOut className="size-3.5" />
           Se déconnecter
