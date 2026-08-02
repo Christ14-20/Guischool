@@ -17,5 +17,9 @@ export default async function NewStaffPage() {
     // Silently fallback to empty subjects list
   }
 
-  return <CreateStaffForm subjects={subjects} />;
+  return (
+    <div className="p-7 px-8">
+      <CreateStaffForm subjects={subjects} />
+    </div>
+  );
 }

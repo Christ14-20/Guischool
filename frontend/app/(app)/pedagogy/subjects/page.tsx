@@ -22,7 +22,7 @@ export default async function SubjectsPage() {
   }
 
   return (
-    <div className="space-y-8 animate-fade-in">
+    <div className="space-y-8 animate-fade-in p-7 px-8">
       <div className="flex items-center gap-4">
         <Link
           href="/pedagogy/classes"

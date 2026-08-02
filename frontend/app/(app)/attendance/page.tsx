@@ -50,7 +50,7 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
   const selectedClass = classes.find((c: any) => c.id === classeId);
 
   return (
-    <div className="space-y-8 animate-fade-in">
+    <div className="space-y-8 animate-fade-in p-7 px-8">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-extrabold text-white tracking-tight bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent">

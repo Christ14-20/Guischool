@@ -38,7 +38,7 @@ export default async function YearEndDecisionsPage() {
   }
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-6 animate-fade-in p-7 px-8">
       <div>
         <h1 className="text-3xl font-extrabold text-white tracking-tight bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent">
           D&apos;écisions de fin d&apos;année

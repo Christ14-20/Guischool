@@ -38,7 +38,7 @@ export default async function SchoolYearDetailPage(props: {
   }
 
   return (
-    <div className="space-y-8 animate-fade-in">
+    <div className="space-y-8 animate-fade-in p-7 px-8">
       <Link
         href="/pedagogy/school-years"
         className="inline-flex items-center gap-2 text-sm text-slate-400 hover:text-white transition-colors"

@@ -74,7 +74,7 @@ export default async function StudentDetailPage(props: {
   }
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-6 animate-fade-in p-7 px-8">
       <Link
         href="/students"
         className="inline-flex items-center gap-2 text-sm text-slate-400 hover:text-white transition-colors"

@@ -1,34 +1,17 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React from "react";
-import Link from "next/link";
 import { signOut, auth } from "@/auth";
-import {
-  LayoutDashboard,
-  BookOpen,
-  Users,
-  UserCog,
-  BookMarked,
-  CalendarCheck,
-  FileSpreadsheet,
-  ClipboardCheck,
-  Library,
-  Landmark,
-} from "lucide-react";
+import { LogOut } from "lucide-react";
+import { SidebarNav } from "./SidebarNav";
+import { ThemeToggle } from "@/components/theme-toggle";
 
-const NAV_ITEMS = [
-  { href: "/dashboard", label: "Tableau de bord", icon: LayoutDashboard, always: true },
-  { href: "/pedagogy/school-years", label: "Pédagogie", icon: BookOpen, always: true },
-  { href: "/students", label: "Élèves", icon: Users, always: true },
-  { href: "/staff", label: "Personnel", icon: UserCog, roles: ["DIRECTOR", "STUDENT_STUDIES"] },
-  { href: "/pedagogy/classes", label: "Classes", icon: BookMarked, always: true },
-  { href: "/pedagogy/subjects", label: "Matières", icon: Library, always: true },
-  { href: "/attendance", label: "Présences", icon: CalendarCheck, always: true },
-  { href: "/grades", label: "Notes", icon: FileSpreadsheet, roles: ["DIRECTOR", "TEACHER", "STUDENT_STUDIES"] },
-  { href: "/year-end-decisions", label: "Décisions", icon: ClipboardCheck, roles: ["DIRECTOR", "STUDENT_STUDIES"] },
-  { href: "/finance/fees", label: "Frais", icon: Landmark, roles: ["DIRECTOR", "ACCOUNTANT"] },
-  { href: "/finance/payments", label: "Paiements", icon: Landmark, roles: ["DIRECTOR", "ACCOUNTANT"] },
-  { href: "/finance/invoices", label: "Factures", icon: Landmark, roles: ["DIRECTOR", "ACCOUNTANT"] },
-];
+const ROLE_LABELS: Record<string, string> = {
+  SUPER_ADMIN: "Super Admin",
+  DIRECTOR: "Directeur",
+  STUDENT_STUDIES: "Études",
+  TEACHER: "Enseignant",
+  ACCOUNTANT: "Comptable",
+};
 
 export default async function TenantAppLayout({
   children,
@@ -40,92 +23,52 @@ export default async function TenantAppLayout({
   const userName = (session as any)?.user?.name || "Directeur";
 
   return (
+    // Fond sombre en dur (pas de token) : seul le contenu repris par la
+    // refonte éditoriale pose son propre bg-paper/text-text par-dessus —
+    // même garde-fou que app/(superadmin)/layout.tsx.
     <div className="flex min-h-screen" style={{ background: "#0B0F19", color: "#F8FAFC" }}>
-      {/* Sidebar */}
-      <aside
-        className="fixed top-0 left-0 h-screen w-[260px] flex flex-col py-5 z-50"
-        style={{
-          background: "#111827",
-          borderRight: "1px solid rgba(255, 255, 255, 0.06)",
-        }}
-      >
-        {/* Brand */}
-        <div className="flex items-center gap-3 px-5 pb-6 mb-2" style={{ borderBottom: "1px solid rgba(255, 255, 255, 0.06)" }}>
-          <div
-            className="w-9 h-9 rounded-[10px] flex items-center justify-center text-white text-sm font-bold"
-            style={{
-              background: "linear-gradient(135deg, #10B981, #059669)",
-              fontFamily: "'Playfair Display', Georgia, serif",
-            }}
-          >
+      <aside className="fixed top-0 left-0 h-screen w-[248px] flex flex-col z-50 bg-sidebar-bg border-r border-sidebar-line">
+        <div className="flex items-center gap-3 px-5 py-[22px] border-b border-sidebar-line">
+          <div className="size-[34px] rounded-[9px] bg-accent flex items-center justify-center text-white font-serif font-semibold text-sm">
             EG
           </div>
-          <span className="text-base font-semibold text-white">Mon École</span>
+          <div>
+            <div className="text-[#F4F2F8] text-sm font-semibold leading-tight">Mon École</div>
+            <div className="text-sidebar-text-dim text-[11px] mt-px">Eduguinée 3.0</div>
+          </div>
         </div>
 
-        {/* Section label */}
-        <div className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[#475569] px-5 pt-4 pb-2">
-          Menu principal
-        </div>
+        <SidebarNav role={role} />
 
-        {/* Nav items */}
-        <nav className="flex-1 px-2">
-          {NAV_ITEMS.map((item) => {
-            if (item.always || (item.roles && item.roles.includes(role))) {
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className="flex items-center gap-3 px-4 py-2.5 mx-0.5 mb-0.5 rounded-[10px] text-[14px] transition-all duration-150 relative text-[#64748B] hover:bg-white/3 hover:text-[#94A3B8]"
-                >
-                  <item.icon className="w-[18px] h-[18px] opacity-60 flex-shrink-0" />
-                  {item.label}
-                </Link>
-              );
-            }
-            return null;
-          })}
-        </nav>
-
-        {/* User profile */}
-        <div className="mt-auto px-5 pt-4" style={{ borderTop: "1px solid rgba(255, 255, 255, 0.06)" }}>
-          <div className="flex items-center gap-3 p-2 rounded-[10px] transition-colors duration-150 hover:bg-white/3 cursor-pointer">
-            <div
-              className="w-9 h-9 rounded-full flex items-center justify-center text-white text-[13px] font-semibold"
-              style={{ background: "linear-gradient(135deg, #F59E0B, #d97706)" }}
-            >
-              {userName.charAt(0).toUpperCase()}
-            </div>
-            <div className="leading-[1.3]">
-              <div className="text-[13px] font-medium text-white">{userName}</div>
-              <div className="text-[11px] text-[#475569]">
-                {role === "SUPER_ADMIN" ? "Super Admin" : "Directeur"}
-              </div>
+        <div className="border-t border-sidebar-line px-[18px] py-4 flex items-center gap-2.5">
+          <div className="size-[30px] rounded-full bg-[#2A2836] text-[#D8D5E6] flex items-center justify-center text-xs font-semibold shrink-0">
+            {userName.charAt(0).toUpperCase()}
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="text-[12.5px] text-[#EDEBF2] leading-tight truncate">{userName}</div>
+            <div className="text-[11px] text-sidebar-text-dim">
+              {ROLE_LABELS[role] || role || "—"}
             </div>
           </div>
+          <ThemeToggle />
           <form
             action={async () => {
               "use server";
               await signOut({ redirectTo: "/login" });
             }}
-            className="mt-2"
           >
             <button
               type="submit"
-              className="w-full text-left text-[13px] text-[#64748B] hover:text-white px-2 py-1.5 cursor-pointer transition-colors"
+              title="Déconnexion"
+              className="size-7 rounded-full border border-sidebar-line bg-transparent text-sidebar-text-dim flex items-center justify-center cursor-pointer hover:text-sidebar-text hover:border-accent-line transition-colors shrink-0"
             >
-              Déconnexion
+              <LogOut className="size-3.5" />
             </button>
           </form>
         </div>
       </aside>
 
-      {/* Main Content */}
-      <main className="flex-1 ml-[260px] min-h-screen">
-        <div className="p-7 px-8">
-          {children}
-        </div>
-      </main>
+      <main className="flex-1 ml-[248px] min-h-screen">{children}</main>
     </div>
   );
 }

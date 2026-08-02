@@ -50,7 +50,7 @@ export default async function ClassDetailPage(props: { params: Promise<{ id: str
   );
 
   return (
-    <div className="space-y-8 animate-fade-in">
+    <div className="space-y-8 animate-fade-in p-7 px-8">
       {/* Back link */}
       <Link
         href="/pedagogy/classes"
