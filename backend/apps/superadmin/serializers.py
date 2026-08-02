@@ -69,10 +69,17 @@ class TenantCreateSerializer(serializers.Serializer):
     contact_name = serializers.CharField(max_length=150)
     contact_phone = serializers.CharField(max_length=20)
     contact_email = serializers.EmailField()
-    region = serializers.CharField(max_length=100, required=False, default="")
-    prefecture = serializers.CharField(max_length=100, required=False, default="")
-    commune = serializers.CharField(max_length=100, required=False, default="")
-    quartier = serializers.CharField(max_length=150, required=False, default="")
+    # allow_blank=True indispensable : `required=False` ne dispense que de la
+    # clé absente, pas d'une chaîne vide explicitement fournie — le
+    # formulaire frontend (CreateSchoolForm.tsx) envoie toujours ces champs
+    # avec "" quand ils sont laissés vides, jamais omis (même bug de forme
+    # que STAFF-V2-01 sur `phone`). Sans allow_blank=True, la section
+    # "Localisation (optionnel)" du formulaire rejetait systématiquement
+    # toute création où elle était réellement laissée vide.
+    region = serializers.CharField(max_length=100, required=False, allow_blank=True, default="")
+    prefecture = serializers.CharField(max_length=100, required=False, allow_blank=True, default="")
+    commune = serializers.CharField(max_length=100, required=False, allow_blank=True, default="")
+    quartier = serializers.CharField(max_length=150, required=False, allow_blank=True, default="")
     plan_id = serializers.UUIDField()
     latitude = serializers.DecimalField(max_digits=9, decimal_places=6, required=False, allow_null=True)
     longitude = serializers.DecimalField(max_digits=9, decimal_places=6, required=False, allow_null=True)

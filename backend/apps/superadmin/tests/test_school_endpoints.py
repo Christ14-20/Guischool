@@ -175,6 +175,36 @@ class TestSchoolEndpoints:
         assert resp.status_code == 400
         assert "plan_id" in resp.json()["errors"]
 
+    def test_create_school_with_blank_location_fields_succeeds(self, superadmin_user, plan):
+        """
+        Régression : CreateSchoolForm.tsx envoie toujours region/prefecture/
+        commune/quartier avec "" quand la section "Localisation (optionnel)"
+        est laissée vide côté client (jamais omis) — required=False seul ne
+        suffit pas, il faut allow_blank=True pour accepter une chaîne vide
+        explicitement fournie. Repéré en marge de la refonte visuelle
+        (docs/design), corrigé sur TenantCreateSerializer.
+        """
+        client = APIClient()
+        token = login_user(client, superadmin_user.email)
+        client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
+
+        url = reverse("superadmin-schools-list")
+        payload = {
+            "name": "École Sans Localisation",
+            "school_type": "PRIMAIRE",
+            "contact_name": "Directeur Sans Localisation",
+            "contact_phone": "+224620000098",
+            "contact_email": "sans-localisation@ecole.gn",
+            "region": "",
+            "prefecture": "",
+            "commune": "",
+            "quartier": "",
+            "plan_id": str(plan.id),
+        }
+        resp = client.post(url, payload, format="json")
+        assert resp.status_code == 201, resp.json()
+        assert Tenant.objects.get(name="École Sans Localisation").region == ""
+
     def test_superadmin_can_list_and_filter_schools(self, superadmin_user, plan):
         """Vérifie le filtrage, la recherche et le tri sur la liste des écoles."""
         client = APIClient()
