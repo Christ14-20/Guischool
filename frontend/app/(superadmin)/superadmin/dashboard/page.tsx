@@ -7,7 +7,7 @@ import {
   Ban, XCircle,
 } from "lucide-react";
 import MonthlyCreationsChart from "./MonthlyCreationsChart";
-import { ThemeToggle } from "@/components/theme-toggle";
+import { STATUS_STYLES } from "../statusStyles";
 
 export const dynamic = "force-dynamic";
 
@@ -32,18 +32,6 @@ const TONE_CLASSES: Record<string, string> = {
   info: "border-info text-info",
   warn: "border-warn text-warn",
   neutral: "border-line text-text-soft",
-};
-
-// Pastille "seal" (anneau + libellé, pas de fond plein) — pour la table de
-// cette page uniquement. STATUS_STYLES (schools/statusStyles.ts) reste
-// inchangé pour la liste/le détail écoles, pas encore repris dans cette
-// refonte : les deux styles cohabitent le temps que les autres pages suivent.
-const SEAL_STYLES: Record<string, { color: string; label: string }> = {
-  ACTIVE: { color: "var(--ok)", label: "Actif" },
-  TRIAL: { color: "var(--info)", label: "Essai" },
-  SUSPENDED_SOFT: { color: "var(--warn)", label: "Suspendu (lecture seule)" },
-  SUSPENDED_HARD: { color: "var(--danger)", label: "Suspendu (bloqué)" },
-  CANCELLED: { color: "var(--mute)", label: "Résilié" },
 };
 
 function formatGNF(value: string) {
@@ -86,7 +74,6 @@ export default async function SuperAdminDashboard() {
           </p>
         </div>
         <div className="flex items-center gap-2.5">
-          <ThemeToggle />
           <Link
             href="/superadmin/schools/new"
             className="inline-flex items-center gap-1.5 rounded-lg bg-accent text-white text-[13px] font-semibold px-4 py-2.5 hover:opacity-90 transition-opacity"
@@ -174,7 +161,7 @@ export default async function SuperAdminDashboard() {
                   </tr>
                 ) : (
                   recentSchools.map((school: any) => {
-                    const seal = SEAL_STYLES[school.status] || SEAL_STYLES.TRIAL;
+                    const seal = STATUS_STYLES[school.status] || STATUS_STYLES.TRIAL;
                     return (
                       <tr key={school.id} className="group">
                         <td className="py-[15px] px-2 border-b border-line last:border-b-0">

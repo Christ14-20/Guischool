@@ -1,6 +1,8 @@
 import React from "react";
 import { signOut } from "@/auth";
+import { LogOut } from "lucide-react";
 import { SidebarNav } from "./SidebarNav";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export default function SuperAdminLayout({
   children,
@@ -36,6 +38,7 @@ export default function SuperAdminLayout({
             <div className="text-[12.5px] text-[#EDEBF2] leading-tight truncate">Nabou</div>
             <div className="text-[11px] text-sidebar-text-dim">Super Admin</div>
           </div>
+          <ThemeToggle />
           <form
             action={async () => {
               "use server";
@@ -45,9 +48,9 @@ export default function SuperAdminLayout({
             <button
               type="submit"
               title="Déconnexion"
-              className="text-sidebar-text-dim hover:text-white text-[11px] transition-colors cursor-pointer"
+              className="size-7 rounded-full border border-sidebar-line bg-transparent text-sidebar-text-dim flex items-center justify-center cursor-pointer hover:text-sidebar-text hover:border-accent-line transition-colors shrink-0"
             >
-              Quitter
+              <LogOut className="size-3.5" />
             </button>
           </form>
         </div>

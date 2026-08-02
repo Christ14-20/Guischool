@@ -57,23 +57,23 @@ export default function SchoolActions({ schoolId, schoolName, status }: SchoolAc
 
   return (
     <div className="relative">
-      <div className="flex items-center justify-end gap-3">
+      <div className="flex items-center justify-end gap-2">
         <Link
           href={`/superadmin/schools/${schoolId}`}
-          className="p-1.5 rounded-lg bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 transition-colors"
+          className="size-[30px] rounded-full border border-line text-text-soft flex items-center justify-center hover:border-accent-line hover:text-accent transition-colors"
           title="Détails"
         >
-          <Eye className="size-4" />
+          <Eye className="size-3.5" />
         </Link>
 
         {suspended ? (
           <button
             onClick={handleReactivate}
             disabled={isPending}
-            className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/20 transition-colors disabled:opacity-50"
+            className="size-[30px] rounded-full border border-line text-text-soft flex items-center justify-center hover:border-ok hover:text-ok transition-colors disabled:opacity-50"
             title="Réactiver"
           >
-            {isPending ? <Loader2 className="size-4 animate-spin" /> : <PlayCircle className="size-4" />}
+            {isPending ? <Loader2 className="size-3.5 animate-spin" /> : <PlayCircle className="size-3.5" />}
           </button>
         ) : (
           <button
@@ -82,34 +82,34 @@ export default function SchoolActions({ schoolId, schoolName, status }: SchoolAc
               setShowSuspendModal(true);
             }}
             disabled={isPending}
-            className="p-1.5 rounded-lg bg-amber-500/10 text-amber-400 hover:text-amber-300 hover:bg-amber-500/20 transition-colors disabled:opacity-50"
+            className="size-[30px] rounded-full border border-line text-text-soft flex items-center justify-center hover:border-warn hover:text-warn transition-colors disabled:opacity-50"
             title="Suspendre"
           >
-            <ShieldAlert className="size-4" />
+            <ShieldAlert className="size-3.5" />
           </button>
         )}
       </div>
 
       {/* Suspend Modal */}
       {showSuspendModal && createPortal(
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm animate-fade-in">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 w-full max-w-md shadow-2xl space-y-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in">
+          <div className="bg-card border border-line rounded-2xl p-6 w-full max-w-md shadow-2xl space-y-4">
             <div>
-              <h3 className="text-lg font-bold text-white">Suspendre l’établissement</h3>
-              <p className="text-slate-400 text-sm mt-1">
+              <h3 className="font-serif text-lg font-medium text-text">Suspendre l&apos;établissement</h3>
+              <p className="text-text-soft text-sm mt-1">
                 Veuillez indiquer la raison de la suspension pour <strong>{schoolName}</strong>.
               </p>
             </div>
 
             {errorMsg && (
-              <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-xl text-destructive text-xs">
+              <div className="p-3 bg-danger/10 border border-danger/20 rounded-xl text-danger text-xs">
                 {errorMsg}
               </div>
             )}
 
             <form onSubmit={handleSuspendSubmit} className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
+                <label className="block text-[10.5px] font-semibold text-text-faint uppercase tracking-wider mb-2">
                   Type de suspension
                 </label>
                 <div className="grid grid-cols-2 gap-2">
@@ -118,8 +118,8 @@ export default function SchoolActions({ schoolId, schoolName, status }: SchoolAc
                     onClick={() => setSuspensionType("SOFT")}
                     className={`px-3 py-2 rounded-xl text-xs font-semibold text-left transition-colors border ${
                       suspensionType === "SOFT"
-                        ? "bg-amber-500/10 border-amber-500/40 text-amber-300"
-                        : "bg-slate-950 border-slate-800 text-slate-400 hover:text-slate-200"
+                        ? "bg-warn/10 border-warn/40 text-warn"
+                        : "bg-paper-alt border-line text-text-soft hover:text-text"
                     }`}
                   >
                     Lecture seule (soft)
@@ -132,8 +132,8 @@ export default function SchoolActions({ schoolId, schoolName, status }: SchoolAc
                     onClick={() => setSuspensionType("HARD")}
                     className={`px-3 py-2 rounded-xl text-xs font-semibold text-left transition-colors border ${
                       suspensionType === "HARD"
-                        ? "bg-destructive/10 border-destructive/40 text-destructive"
-                        : "bg-slate-950 border-slate-800 text-slate-400 hover:text-slate-200"
+                        ? "bg-danger/10 border-danger/40 text-danger"
+                        : "bg-paper-alt border-line text-text-soft hover:text-text"
                     }`}
                   >
                     Blocage total (hard)
@@ -145,7 +145,7 @@ export default function SchoolActions({ schoolId, schoolName, status }: SchoolAc
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
+                <label className="block text-[10.5px] font-semibold text-text-faint uppercase tracking-wider mb-2">
                   Raison de la suspension
                 </label>
                 <textarea
@@ -153,7 +153,7 @@ export default function SchoolActions({ schoolId, schoolName, status }: SchoolAc
                   onChange={(e) => setReason(e.target.value)}
                   placeholder="Ex: Facture impayée, non respect des CGUs..."
                   rows={3}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 transition-colors resize-none"
+                  className="w-full bg-paper-alt border border-line rounded-xl px-4 py-2 text-sm text-text placeholder-text-faint outline-none focus:border-accent-line transition-colors resize-none"
                   required
                 />
               </div>
@@ -162,14 +162,14 @@ export default function SchoolActions({ schoolId, schoolName, status }: SchoolAc
                 <button
                   type="button"
                   onClick={() => setShowSuspendModal(false)}
-                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium rounded-xl text-sm transition-colors"
+                  className="px-4 py-2 bg-paper-alt border border-line hover:border-accent-line text-text font-medium rounded-xl text-sm transition-colors"
                 >
                   Annuler
                 </button>
                 <button
                   type="submit"
                   disabled={isPending}
-                  className="px-4 py-2 bg-amber-600 hover:bg-amber-500 disabled:bg-amber-600/50 text-white font-medium rounded-xl text-sm transition-colors flex items-center gap-1.5"
+                  className="px-4 py-2 bg-warn hover:opacity-90 disabled:opacity-50 text-white font-medium rounded-xl text-sm transition-colors flex items-center gap-1.5"
                 >
                   {isPending && <Loader2 className="size-4 animate-spin" />}
                   Suspendre

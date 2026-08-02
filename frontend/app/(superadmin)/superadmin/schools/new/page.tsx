@@ -27,13 +27,15 @@ export default async function NewSchoolPage() {
   }
 
   return (
-    <div className="space-y-6 p-7 px-8">
-      {errorMsg && (
-        <div className="max-w-4xl mx-auto p-4 bg-destructive/10 border border-destructive/20 rounded-xl text-destructive text-sm">
-          {errorMsg}
-        </div>
-      )}
-      <CreateSchoolForm plans={plans} />
+    <div className="min-h-screen bg-paper text-text">
+      <div className="px-11 pt-9 pb-12">
+        {errorMsg && (
+          <div className="max-w-[820px] mx-auto mb-5 p-4 bg-danger/10 border border-danger/20 rounded-xl text-danger text-sm">
+            {errorMsg}
+          </div>
+        )}
+        <CreateSchoolForm plans={plans} />
+      </div>
     </div>
   );
 }

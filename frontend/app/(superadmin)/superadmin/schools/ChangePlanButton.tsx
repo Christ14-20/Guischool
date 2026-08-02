@@ -46,24 +46,24 @@ export default function ChangePlanButton({ schoolId, currentPlanId, plans }: Cha
     <>
       <button
         onClick={() => setIsOpen(true)}
-        className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 hover:text-indigo-300 rounded-full transition-colors cursor-pointer"
+        className="inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-accent hover:opacity-75 transition-opacity cursor-pointer bg-transparent border-none p-0"
       >
-        <ArrowLeftRight className="size-3" />
+        <ArrowLeftRight className="size-3.5" />
         Changer de plan
       </button>
 
       {isOpen && createPortal(
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm animate-fade-in">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 w-full max-w-md shadow-2xl space-y-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in">
+          <div className="bg-card border border-line rounded-2xl p-6 w-full max-w-md shadow-2xl space-y-4">
             <div>
-              <h3 className="text-lg font-bold text-white">Changer de plan</h3>
-              <p className="text-slate-400 text-sm mt-1">
+              <h3 className="font-serif text-lg font-medium text-text">Changer de plan</h3>
+              <p className="text-text-soft text-sm mt-1">
                 Effet immédiat sur les limites d&apos;élèves et de personnel de cet établissement.
               </p>
             </div>
 
             {errorMsg && (
-              <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-xl text-destructive text-xs flex items-start gap-2">
+              <div className="p-3 bg-danger/10 border border-danger/20 rounded-xl text-danger text-xs flex items-start gap-2">
                 <AlertTriangle className="size-4 shrink-0 mt-0.5" />
                 <span>{errorMsg}</span>
               </div>
@@ -71,13 +71,13 @@ export default function ChangePlanButton({ schoolId, currentPlanId, plans }: Cha
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                <label className="block text-[10.5px] font-semibold text-text-faint uppercase tracking-wider">
                   Nouveau plan
                 </label>
                 <select
                   value={selectedPlanId}
                   onChange={(e) => setSelectedPlanId(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors"
+                  className="w-full bg-paper-alt border border-line rounded-xl px-3 py-2 text-sm text-text outline-none focus:border-accent-line transition-colors"
                 >
                   {plans.map((plan) => (
                     <option key={plan.id} value={plan.id}>
@@ -91,14 +91,14 @@ export default function ChangePlanButton({ schoolId, currentPlanId, plans }: Cha
                 <button
                   type="button"
                   onClick={() => setIsOpen(false)}
-                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium rounded-xl text-sm transition-colors"
+                  className="px-4 py-2 bg-paper-alt border border-line hover:border-accent-line text-text font-medium rounded-xl text-sm transition-colors"
                 >
                   Annuler
                 </button>
                 <button
                   type="submit"
                   disabled={isPending || !selectedPlanId || selectedPlanId === currentPlanId}
-                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:bg-indigo-600/50 text-white font-medium rounded-xl text-sm transition-colors flex items-center gap-1.5 cursor-pointer"
+                  className="px-4 py-2 bg-accent hover:opacity-90 disabled:opacity-50 text-white font-medium rounded-xl text-sm transition-colors flex items-center gap-1.5 cursor-pointer"
                 >
                   {isPending && <Loader2 className="size-4 animate-spin" />}
                   Confirmer
