@@ -7,8 +7,9 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-inter);
+  --font-serif: var(--font-fraunces);
+  --font-mono: var(--font-plex-mono);
   --font-heading: var(--font-heading);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
@@ -46,75 +47,139 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+
+  /* ── Refonte éditoriale (INFRA design 2026-08-01) — Super Admin d'abord,
+     pensée pour être réutilisée sur le reste de l'app ensuite. ── */
+  --color-paper: var(--paper);
+  --color-paper-alt: var(--paper-alt);
+  --color-line: var(--line);
+  --color-text: var(--text);
+  --color-text-soft: var(--text-soft);
+  --color-text-faint: var(--text-faint);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-line: var(--accent-line);
+  --color-sidebar-bg: var(--sidebar-bg);
+  --color-sidebar-line: var(--sidebar-line);
+  --color-sidebar-text: var(--sidebar-text);
+  --color-sidebar-text-dim: var(--sidebar-text-dim);
+  --color-sidebar-active: var(--sidebar-active);
+  --color-ok: var(--ok);
+  --color-info: var(--info);
+  --color-warn: var(--warn);
+  --color-danger: var(--danger);
+  --color-mute: var(--mute);
 }
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
+  /* ── Palette éditoriale claire (redesign Super Admin, 2026-08-01) ── */
+  --paper: #FAF9F6;
+  --paper-alt: #F2EFEA;
+  --line: #E6E2DB;
+  --text: #1B1A1F;
+  --text-soft: #726C63;
+  --text-faint: #A39C8F;
+  --accent: #5B4FE0;
+  --accent-soft: rgba(91, 79, 224, .10);
+  --accent-line: rgba(91, 79, 224, .28);
+  --shadow: 0 1px 2px rgba(20, 18, 10, .04);
+  --sidebar-bg: #16151C;
+  --sidebar-line: #262530;
+  --sidebar-text: #C9C6D6;
+  --sidebar-text-dim: #6E6B7C;
+  --sidebar-active: #FFFFFF;
+  --ok: #3E9C6E;
+  --info: #3E7FBF;
+  --warn: #C08A2E;
+  --danger: #BD5A50;
+  --mute: #918C7F;
+
+  /* Bridge shadcn (Button, primitives existants) sur la nouvelle palette. */
+  --background: var(--paper);
+  --foreground: var(--text);
+  --card: #FFFFFF;
+  --card-foreground: var(--text);
+  --popover: #FFFFFF;
+  --popover-foreground: var(--text);
+  --primary: var(--accent);
+  --primary-foreground: #FFFFFF;
+  --secondary: var(--paper-alt);
+  --secondary-foreground: var(--text);
+  --muted: var(--paper-alt);
+  --muted-foreground: var(--text-soft);
+  --accent-foreground: #FFFFFF;
+  --destructive: var(--danger);
+  --border: var(--line);
+  --input: var(--line);
+  --ring: var(--accent);
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
   --chart-4: oklch(0.371 0 0);
   --chart-5: oklch(0.269 0 0);
   --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --sidebar: var(--sidebar-bg);
+  --sidebar-foreground: var(--sidebar-text);
+  --sidebar-primary: var(--accent);
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: var(--accent-soft);
+  --sidebar-accent-foreground: var(--accent);
+  --sidebar-border: var(--sidebar-line);
+  --sidebar-ring: var(--accent);
 }
 
 .dark {
-  --background: #0B0F19;
-  --foreground: #F8FAFC;
-  --card: #151B2B;
-  --card-foreground: #F8FAFC;
-  --popover: #151B2B;
-  --popover-foreground: #F8FAFC;
-  --primary: #6366f1;
-  --primary-foreground: #F8FAFC;
-  --secondary: #111827;
-  --secondary-foreground: #F8FAFC;
-  --muted: #111827;
-  --muted-foreground: #94A3B8;
-  --accent: #818cf8;
-  --accent-foreground: #F8FAFC;
-  --destructive: #EF4444;
-  --border: rgba(255, 255, 255, 0.06);
-  --input: rgba(255, 255, 255, 0.08);
-  --ring: #6366f1;
+  /* ── Palette éditoriale sombre (redesign Super Admin, 2026-08-01) ── */
+  --paper: #0F0E13;
+  --paper-alt: #17151D;
+  --line: #26242F;
+  --text: #EEEBEF;
+  --text-soft: #9A96A6;
+  --text-faint: #6B677A;
+  --accent: #7B71EE;
+  --accent-soft: rgba(123, 113, 238, .13);
+  --accent-line: rgba(123, 113, 238, .32);
+  --shadow: none;
+  --sidebar-bg: #16151C;
+  --sidebar-line: #262530;
+  --sidebar-text: #C9C6D6;
+  --sidebar-text-dim: #6E6B7C;
+  --sidebar-active: #FFFFFF;
+  --ok: #57B786;
+  --info: #63A0DD;
+  --warn: #D8A247;
+  --danger: #D97A70;
+  --mute: #7C7889;
+
+  --background: var(--paper);
+  --foreground: var(--text);
+  --card: #17151D;
+  --card-foreground: var(--text);
+  --popover: #17151D;
+  --popover-foreground: var(--text);
+  --primary: var(--accent);
+  --primary-foreground: #FFFFFF;
+  --secondary: var(--paper-alt);
+  --secondary-foreground: var(--text);
+  --muted: var(--paper-alt);
+  --muted-foreground: var(--text-soft);
+  --accent-foreground: #FFFFFF;
+  --destructive: var(--danger);
+  --border: var(--line);
+  --input: var(--line);
+  --ring: var(--accent);
   --chart-1: #6366f1;
   --chart-2: #10B981;
   --chart-3: #F59E0B;
   --chart-4: #0EA5E9;
   --chart-5: #EF4444;
-  --sidebar: #111827;
-  --sidebar-foreground: #F8FAFC;
-  --sidebar-primary: #6366f1;
-  --sidebar-primary-foreground: #F8FAFC;
-  --sidebar-accent: rgba(99, 102, 241, 0.08);
-  --sidebar-accent-foreground: #818cf8;
-  --sidebar-border: rgba(255, 255, 255, 0.06);
-  --sidebar-ring: #6366f1;
+  --sidebar: var(--sidebar-bg);
+  --sidebar-foreground: var(--sidebar-text);
+  --sidebar-primary: var(--accent);
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: var(--accent-soft);
+  --sidebar-accent-foreground: var(--accent);
+  --sidebar-border: var(--sidebar-line);
+  --sidebar-ring: var(--accent);
 }
 
 @layer base {

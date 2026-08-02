@@ -59,7 +59,7 @@ export default async function SchoolDetailPage({ params }: SchoolDetailPageProps
   const statusStyle = STATUS_STYLES[school.status] || STATUS_STYLES.TRIAL;
 
   return (
-    <div className="max-w-5xl mx-auto space-y-8 animate-fade-in">
+    <div className="max-w-5xl mx-auto space-y-8 animate-fade-in p-7 px-8">
       {/* Top Navigation / Breadcrumb */}
       <div className="flex items-center justify-between">
         <Link

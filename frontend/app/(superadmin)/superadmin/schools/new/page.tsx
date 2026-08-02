@@ -27,7 +27,7 @@ export default async function NewSchoolPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-7 px-8">
       {errorMsg && (
         <div className="max-w-4xl mx-auto p-4 bg-destructive/10 border border-destructive/20 rounded-xl text-destructive text-sm">
           {errorMsg}

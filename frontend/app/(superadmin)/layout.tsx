@@ -1,17 +1,6 @@
 import React from "react";
-import Link from "next/link";
 import { signOut } from "@/auth";
-import {
-  LayoutDashboard,
-  Building2,
-  CreditCard,
-} from "lucide-react";
-
-const SUPERADMIN_NAV = [
-  { href: "/superadmin/dashboard", label: "Tableau de bord", icon: LayoutDashboard },
-  { href: "/superadmin/schools", label: "Établissements", icon: Building2 },
-  { href: "/superadmin/plans", label: "Plans & Quotas", icon: CreditCard },
-];
+import { SidebarNav } from "./SidebarNav";
 
 export default function SuperAdminLayout({
   children,
@@ -19,85 +8,52 @@ export default function SuperAdminLayout({
   children: React.ReactNode;
 }) {
   return (
+    // Fond sombre en dur (pas de token) : seul /superadmin/dashboard a été
+    // repris par la refonte éditoriale pour l'instant — les autres pages
+    // (schools, plans) codent encore en dur des classes text-white/slate-*
+    // qui supposent ce fond sombre. Chaque page reprise pose son propre
+    // bg-paper/text-text par-dessus (cf. dashboard/page.tsx).
     <div className="flex min-h-screen" style={{ background: "#0B0F19", color: "#F8FAFC" }}>
-      {/* Sidebar */}
-      <aside
-        className="fixed top-0 left-0 h-screen w-[260px] flex flex-col py-5 z-50"
-        style={{
-          background: "#111827",
-          borderRight: "1px solid rgba(255, 255, 255, 0.06)",
-        }}
-      >
-        {/* Brand */}
-        <div className="flex items-center gap-3 px-5 pb-6 mb-2" style={{ borderBottom: "1px solid rgba(255, 255, 255, 0.06)" }}>
-          <div
-            className="w-9 h-9 rounded-[10px] flex items-center justify-center text-white text-sm font-bold"
-            style={{
-              background: "linear-gradient(135deg, #6366f1, #4f46e5)",
-              fontFamily: "'Playfair Display', Georgia, serif",
-            }}
-          >
+      {/* Sidebar — toujours sombre, quel que soit le thème */}
+      <aside className="fixed top-0 left-0 h-screen w-[248px] flex flex-col z-50 bg-sidebar-bg border-r border-sidebar-line">
+        <div className="flex items-center gap-3 px-5 py-[22px] border-b border-sidebar-line">
+          <div className="size-[34px] rounded-[9px] bg-accent flex items-center justify-center text-white font-serif font-semibold text-sm">
             SA
           </div>
-          <span className="text-base font-semibold text-white">Super Admin</span>
+          <div>
+            <div className="text-[#F4F2F8] text-sm font-semibold leading-tight">Super Admin</div>
+            <div className="text-sidebar-text-dim text-[11px] mt-px">Eduguinée 3.0</div>
+          </div>
         </div>
 
-        {/* Section label */}
-        <div className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[#475569] px-5 pt-4 pb-2">
-          Gestion
-        </div>
+        <SidebarNav />
 
-        {/* Nav items */}
-        <nav className="flex-1 px-2">
-          {SUPERADMIN_NAV.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="flex items-center gap-3 px-4 py-2.5 mx-0.5 mb-0.5 rounded-[10px] text-[14px] transition-all duration-150 relative text-[#64748B] hover:bg-white/3 hover:text-[#94A3B8]"
-            >
-              <item.icon className="w-[18px] h-[18px] opacity-60 flex-shrink-0" />
-              {item.label}
-            </Link>
-          ))}
-        </nav>
-
-        {/* User profile */}
-        <div className="mt-auto px-5 pt-4" style={{ borderTop: "1px solid rgba(255, 255, 255, 0.06)" }}>
-          <div className="flex items-center gap-3 p-2 rounded-[10px] transition-colors duration-150 hover:bg-white/3 cursor-pointer">
-            <div
-              className="w-9 h-9 rounded-full flex items-center justify-center text-white text-[13px] font-semibold"
-              style={{ background: "linear-gradient(135deg, #6366f1, #4f46e5)" }}
-            >
-              N
-            </div>
-            <div className="leading-[1.3]">
-              <div className="text-[13px] font-medium text-white">Nabou</div>
-              <div className="text-[11px] text-[#475569]">Super Admin</div>
-            </div>
+        <div className="border-t border-sidebar-line px-[18px] py-4 flex items-center gap-2.5">
+          <div className="size-[30px] rounded-full bg-[#2A2836] text-[#D8D5E6] flex items-center justify-center text-xs font-semibold shrink-0">
+            N
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="text-[12.5px] text-[#EDEBF2] leading-tight truncate">Nabou</div>
+            <div className="text-[11px] text-sidebar-text-dim">Super Admin</div>
           </div>
           <form
             action={async () => {
               "use server";
               await signOut({ redirectTo: "/login" });
             }}
-            className="mt-2"
           >
             <button
               type="submit"
-              className="w-full text-left text-[13px] text-[#64748B] hover:text-white px-2 py-1.5 cursor-pointer transition-colors"
+              title="Déconnexion"
+              className="text-sidebar-text-dim hover:text-white text-[11px] transition-colors cursor-pointer"
             >
-              Déconnexion
+              Quitter
             </button>
           </form>
         </div>
       </aside>
 
-      {/* Main Content */}
-      <main className="flex-1 ml-[260px] min-h-screen">
-        <div className="p-7 px-8">
-          {children}
-        </div>
-      </main>
+      <main className="flex-1 ml-[248px] min-h-screen">{children}</main>
     </div>
   );
 }
