@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<title>Eduguinée · Super Admin — Refonte</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper: #FAF9F6;
+    --paper-alt: #F2EFEA;
+    --line: #E6E2DB;
+    --text: #1B1A1F;
+    --text-soft: #726C63;
+    --text-faint: #A39C8F;
+    --accent: #5B4FE0;
+    --accent-soft: rgba(91,79,224,.10);
+    --accent-line: rgba(91,79,224,.28);
+    --card: #FFFFFF;
+    --shadow: 0 1px 2px rgba(20,18,10,.04);
+    --sidebar-bg: #16151C;
+    --sidebar-line: #262530;
+    --sidebar-text: #C9C6D6;
+    --sidebar-text-dim: #6E6B7C;
+    --sidebar-active: #FFFFFF;
+    --ok: #3E9C6E;
+    --info: #3E7FBF;
+    --warn: #C08A2E;
+    --danger: #BD5A50;
+    --mute: #918C7F;
+  }
+  [data-theme="dark"]{
+    --paper: #0F0E13;
+    --paper-alt: #17151D;
+    --line: #26242F;
+    --text: #EEEBEF;
+    --text-soft: #9A96A6;
+    --text-faint: #6B677A;
+    --accent: #7B71EE;
+    --accent-soft: rgba(123,113,238,.13);
+    --accent-line: rgba(123,113,238,.32);
+    --card: #17151D;
+    --shadow: none;
+    --ok: #57B786;
+    --info: #63A0DD;
+    --warn: #D8A247;
+    --danger: #D97A70;
+    --mute: #7C7889;
+  }
+
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--paper);
+    color:var(--text);
+    font-family:'Inter',sans-serif;
+    display:flex;
+    min-height:100vh;
+    transition:background .25s ease, color .25s ease;
+  }
+  h1,h2,h3,.serif{ font-family:'Fraunces', serif; letter-spacing:-0.01em; }
+  .mono{ font-family:'IBM Plex Mono', monospace; letter-spacing:-0.01em; }
+
+  /* ===== SIDEBAR — toujours sombre ===== */
+  aside{
+    width:248px;
+    flex:0 0 248px;
+    background:var(--sidebar-bg);
+    border-right:1px solid var(--sidebar-line);
+    display:flex;
+    flex-direction:column;
+    height:100vh;
+    position:sticky;
+    top:0;
+  }
+  .brand{
+    display:flex; align-items:center; gap:12px;
+    padding:22px 20px;
+    border-bottom:1px solid var(--sidebar-line);
+  }
+  .brand .mark{
+    width:34px;height:34px;border-radius:9px;
+    background:var(--accent);
+    display:flex;align-items:center;justify-content:center;
+    color:#fff; font-family:'Fraunces',serif; font-weight:600; font-size:14px;
+  }
+  .brand .name{ color:#F4F2F8; font-size:14px; font-weight:600; line-height:1.2; }
+  .brand .role{ color:var(--sidebar-text-dim); font-size:11px; margin-top:1px; }
+
+  nav{ padding:20px 12px; flex:1; }
+  .nav-label{
+    color:var(--sidebar-text-dim); font-size:10.5px; letter-spacing:.11em;
+    text-transform:uppercase; padding:0 12px 10px;
+  }
+  .nav-item{
+    display:flex; align-items:center; gap:11px;
+    padding:9px 12px; border-radius:8px;
+    color:var(--sidebar-text); font-size:13.5px;
+    cursor:pointer; margin-bottom:2px;
+    border-left:2px solid transparent;
+  }
+  .nav-item svg{ width:16px; height:16px; opacity:.85; }
+  .nav-item.active{
+    background:rgba(123,113,238,.16);
+    color:#fff;
+    border-left:2px solid var(--accent);
+  }
+  .nav-item:hover:not(.active){ background:rgba(255,255,255,.04); }
+
+  .side-foot{
+    border-top:1px solid var(--sidebar-line);
+    padding:16px 18px;
+    display:flex; align-items:center; gap:10px;
+  }
+  .avatar{
+    width:30px;height:30px;border-radius:50%;
+    background:#2A2836; color:#D8D5E6;
+    display:flex;align-items:center;justify-content:center;
+    font-size:12px; font-weight:600;
+  }
+  .side-foot .who{ font-size:12.5px; color:#EDEBF2; line-height:1.25; }
+  .side-foot .sub{ font-size:11px; color:var(--sidebar-text-dim); }
+
+  /* ===== MAIN ===== */
+  main{ flex:1; min-width:0; }
+  .topbar{
+    display:flex; align-items:flex-start; justify-content:space-between;
+    padding:36px 44px 22px;
+  }
+  .topbar h1{ font-size:26px; font-weight:500; margin:0 0 6px; }
+  .topbar p{ margin:0; color:var(--text-soft); font-size:13.5px; }
+
+  .topbar-actions{ display:flex; align-items:center; gap:10px; }
+  .theme-toggle{
+    width:38px;height:38px;border-radius:50%;
+    border:1px solid var(--line); background:var(--card);
+    display:flex;align-items:center;justify-content:center; cursor:pointer;
+    color:var(--text-soft);
+  }
+  .btn{
+    border:none; border-radius:8px; font-family:'Inter'; font-size:13px; font-weight:600;
+    padding:10px 16px; cursor:pointer; display:inline-flex; align-items:center; gap:7px;
+  }
+  .btn-primary{ background:var(--accent); color:#fff; }
+  .btn-primary:hover{ opacity:.92; }
+
+  .content{ padding:0 44px 48px; }
+
+  /* MRR banner */
+  .banner{
+    border:1px solid var(--line); background:var(--card);
+    border-radius:12px; padding:22px 26px;
+    display:flex; align-items:baseline; justify-content:space-between;
+    margin-bottom:22px; box-shadow:var(--shadow);
+  }
+  .banner .label{ font-size:11.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--text-faint); }
+  .banner .value{ font-size:15px; color:var(--text-soft); margin-top:6px; }
+  .banner .num{ font-size:30px; color:var(--text); }
+  .banner .tag{ font-size:11px; color:var(--text-faint); }
+
+  /* stat grid */
+  .stats{
+    display:grid; grid-template-columns:repeat(6, 1fr); gap:14px;
+    margin-bottom:22px;
+  }
+  .stat{
+    border:1px solid var(--line); background:var(--card);
+    border-radius:12px; padding:18px; box-shadow:var(--shadow);
+  }
+  .stat .icon{
+    width:26px;height:26px;border-radius:50%;
+    border:1.4px solid var(--line);
+    display:flex;align-items:center;justify-content:center;
+    margin-bottom:14px; color:var(--text-soft);
+  }
+  .stat .icon svg{ width:13px;height:13px; }
+  .stat.ok .icon{ border-color:var(--ok); color:var(--ok); }
+  .stat.info .icon{ border-color:var(--info); color:var(--info); }
+  .stat.warn .icon{ border-color:var(--warn); color:var(--warn); }
+  .stat .lbl{ font-size:11.5px; color:var(--text-faint); margin-bottom:4px; }
+  .stat .n{ font-size:24px; font-weight:500; }
+
+  /* chart card */
+  .card{
+    border:1px solid var(--line); background:var(--card);
+    border-radius:12px; padding:24px 26px; box-shadow:var(--shadow);
+    margin-bottom:22px;
+  }
+  .card-head{ display:flex; justify-content:space-between; align-items:baseline; margin-bottom:2px; }
+  .card-head h2{ font-size:16.5px; font-weight:500; margin:0; }
+  .card-head .hint{ font-size:12px; color:var(--text-faint); }
+  .card-sub{ font-size:12.5px; color:var(--text-soft); margin:2px 0 22px; }
+
+  .bars{ display:flex; align-items:flex-end; gap:14px; height:120px; }
+  .bar-col{ flex:1; display:flex; flex-direction:column; align-items:center; gap:8px; height:100%; justify-content:flex-end; }
+  .bar{ width:60%; background:var(--accent-soft); border-radius:4px 4px 0 0; }
+  .bar.on{ background:var(--accent); }
+  .bar-col .m{ font-size:10px; color:var(--text-faint); }
+
+  /* table */
+  .tbl-head{ display:flex; justify-content:space-between; align-items:baseline; margin-bottom:16px; }
+  .tbl-head h2{ font-size:16.5px; font-weight:500; margin:0; }
+  .tbl-head a{ font-size:12.5px; color:var(--accent); text-decoration:none; }
+
+  table{ width:100%; border-collapse:collapse; }
+  thead th{
+    text-align:left; font-size:10.5px; letter-spacing:.08em; text-transform:uppercase;
+    color:var(--text-faint); font-weight:500; padding:0 8px 10px; border-bottom:1px solid var(--line);
+  }
+  tbody td{ padding:15px 8px; border-bottom:1px solid var(--line); font-size:13.5px; vertical-align:middle; }
+  tbody tr:last-child td{ border-bottom:none; }
+  .school{ font-weight:600; }
+  .domain{ color:var(--text-faint); font-size:12px; font-family:'IBM Plex Mono',monospace; margin-top:2px; }
+  .plan-pill{
+    display:inline-block; padding:3px 10px; border-radius:999px;
+    border:1px solid var(--line); font-size:11.5px; color:var(--text-soft);
+  }
+  .elv{ font-family:'IBM Plex Mono',monospace; color:var(--text-soft); }
+
+  .seal{ display:inline-flex; align-items:center; gap:7px; font-size:12.5px; }
+  .ring{ width:11px; height:11px; border-radius:50%; border:2px solid; }
+  .seal.actif .ring{ border-color:var(--ok); }
+  .seal.actif{ color:var(--ok); }
+  .seal.essai .ring{ border-color:var(--info); }
+  .seal.essai{ color:var(--info); }
+  .date{ color:var(--text-faint); font-size:12.5px; }
+
+  @media (max-width:1100px){ .stats{ grid-template-columns:repeat(3,1fr); } }
+</style>
+</head>
+<body>
+
+  <aside>
+    <div class="brand">
+      <div class="mark">SA</div>
+      <div>
+        <div class="name">Super Admin</div>
+        <div class="role">Eduguinée 3.0</div>
+      </div>
+    </div>
+    <nav>
+      <div class="nav-label">Gestion</div>
+      <div class="nav-item active">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="7" height="9" rx="1.2"/><rect x="14" y="3" width="7" height="5" rx="1.2"/><rect x="14" y="12" width="7" height="9" rx="1.2"/><rect x="3" y="16" width="7" height="5" rx="1.2"/></svg>
+        Tableau de bord
+      </div>
+      <div class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 21V8l8-5 8 5v13"/><path d="M9 21v-6h6v6"/></svg>
+        Établissements
+      </div>
+      <div class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2" y="6" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
+        Plans &amp; Quotas
+      </div>
+    </nav>
+    <div class="side-foot">
+      <div class="avatar">N</div>
+      <div>
+        <div class="who">Nabou</div>
+        <div class="sub">Super Admin</div>
+      </div>
+    </div>
+  </aside>
+
+  <main>
+    <div class="topbar">
+      <div>
+        <h1>Vue d'ensemble</h1>
+        <p>Supervision globale des établissements scolaires Eduguinée 3.0</p>
+      </div>
+      <div class="topbar-actions">
+        <div class="theme-toggle" onclick="toggleTheme()" title="Changer de thème">
+          <svg id="theme-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="4.2"/><path d="M12 2v2.4M12 19.6V22M4.2 4.2l1.7 1.7M18.1 18.1l1.7 1.7M2 12h2.4M19.6 12H22M4.2 19.8l1.7-1.7M18.1 5.9l1.7-1.7"/></svg>
+        </div>
+        <button class="btn btn-primary">＋ Nouvel établissement</button>
+      </div>
+    </div>
+
+    <div class="content">
+
+      <div class="banner">
+        <div>
+          <div class="label">MRR estimé — établissements actifs uniquement</div>
+          <div class="value mono num">0 <span class="tag">GNF</span></div>
+        </div>
+      </div>
+
+      <div class="stats">
+        <div class="stat ok">
+          <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 21V8l8-5 8 5v13"/></svg></div>
+          <div class="lbl">Total établissements</div>
+          <div class="n serif">3</div>
+        </div>
+        <div class="stat ok">
+          <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 6L9 17l-5-5"/></svg></div>
+          <div class="lbl">Actives</div>
+          <div class="n serif">1</div>
+        </div>
+        <div class="stat info">
+          <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div>
+          <div class="lbl">Périodes d'essai</div>
+          <div class="n serif">2</div>
+        </div>
+        <div class="stat warn">
+          <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9L2.5 18a1 1 0 00.9 1.5h17.2a1 1 0 00.9-1.5L13.7 3.9a1.6 1.6 0 00-2.8 0z"/></svg></div>
+          <div class="lbl">Suspendues (lecture seule)</div>
+          <div class="n serif">0</div>
+        </div>
+        <div class="stat">
+          <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M6 6l12 12"/></svg></div>
+          <div class="lbl">Suspendues (bloquées)</div>
+          <div class="n serif">0</div>
+        </div>
+        <div class="stat">
+          <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M15 9l-6 6M9 9l6 6"/></svg></div>
+          <div class="lbl">Résiliées</div>
+          <div class="n serif">0</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <h2>Créations d'écoles par mois</h2>
+          <span class="hint">12 derniers mois</span>
+        </div>
+        <div class="card-sub">Toutes créations confondues</div>
+        <div class="bars">
+          <div class="bar-col"><div class="bar" style="height:4%"></div><div class="m">Sep</div></div>
+          <div class="bar-col"><div class="bar" style="height:4%"></div><div class="m">Oct</div></div>
+          <div class="bar-col"><div class="bar" style="height:4%"></div><div class="m">Nov</div></div>
+          <div class="bar-col"><div class="bar" style="height:4%"></div><div class="m">Déc</div></div>
+          <div class="bar-col"><div class="bar" style="height:4%"></div><div class="m">Jan</div></div>
+          <div class="bar-col"><div class="bar" style="height:4%"></div><div class="m">Fév</div></div>
+          <div class="bar-col"><div class="bar" style="height:4%"></div><div class="m">Mar</div></div>
+          <div class="bar-col"><div class="bar" style="height:4%"></div><div class="m">Avr</div></div>
+          <div class="bar-col"><div class="bar" style="height:4%"></div><div class="m">Mai</div></div>
+          <div class="bar-col"><div class="bar" style="height:4%"></div><div class="m">Jun</div></div>
+          <div class="bar-col"><div class="bar on" style="height:100%"></div><div class="m">Jul</div></div>
+          <div class="bar-col"><div class="bar" style="height:4%"></div><div class="m">Aoû</div></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="tbl-head">
+          <h2>Dernières écoles créées</h2>
+          <a href="#">Voir toutes les écoles →</a>
+        </div>
+        <table>
+          <thead>
+            <tr><th>Établissement</th><th>Plan</th><th>Élèves</th><th>Statut</th><th>Date d'ajout</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><div class="school">Test</div><div class="domain">test.eduguinee.gn</div></td>
+              <td><span class="plan-pill">Test</span></td>
+              <td class="elv">0</td>
+              <td><span class="seal actif"><span class="ring"></span>Actif</span></td>
+              <td class="date">26/07/2026</td>
+            </tr>
+            <tr>
+              <td><div class="school">Collège Kanbal</div><div class="domain">college-kanbal.eduguinee.gn</div></td>
+              <td><span class="plan-pill">Pro</span></td>
+              <td class="elv">0</td>
+              <td><span class="seal essai"><span class="ring"></span>Essai</span></td>
+              <td class="date">23/07/2026</td>
+            </tr>
+            <tr>
+              <td><div class="school">Lycée Donka</div><div class="domain">lycee-donka.eduguinee.gn</div></td>
+              <td><span class="plan-pill">Starter</span></td>
+              <td class="elv">1</td>
+              <td><span class="seal essai"><span class="ring"></span>Essai</span></td>
+              <td class="date">20/07/2026</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+  </main>
+
+<script>
+function toggleTheme(){
+  const html = document.documentElement;
+  const next = html.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+  html.setAttribute('data-theme', next);
+}
+</script>
+</body>
+</html>

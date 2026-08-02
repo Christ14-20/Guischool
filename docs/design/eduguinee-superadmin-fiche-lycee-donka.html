@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<title>Eduguinée · Super Admin — Lycée Donka</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper: #FAF9F6;
+    --paper-alt: #F2EFEA;
+    --line: #E6E2DB;
+    --text: #1B1A1F;
+    --text-soft: #726C63;
+    --text-faint: #A39C8F;
+    --accent: #5B4FE0;
+    --accent-soft: rgba(91,79,224,.10);
+    --accent-line: rgba(91,79,224,.28);
+    --card: #FFFFFF;
+    --shadow: 0 1px 2px rgba(20,18,10,.04);
+    --sidebar-bg: #16151C;
+    --sidebar-line: #262530;
+    --sidebar-text: #C9C6D6;
+    --sidebar-text-dim: #6E6B7C;
+    --sidebar-active: #FFFFFF;
+    --ok: #3E9C6E;
+    --info: #3E7FBF;
+    --warn: #C08A2E;
+    --danger: #BD5A50;
+    --mute: #918C7F;
+  }
+  [data-theme="dark"]{
+    --paper: #0F0E13;
+    --paper-alt: #17151D;
+    --line: #26242F;
+    --text: #EEEBEF;
+    --text-soft: #9A96A6;
+    --text-faint: #6B677A;
+    --accent: #7B71EE;
+    --accent-soft: rgba(123,113,238,.13);
+    --accent-line: rgba(123,113,238,.32);
+    --card: #17151D;
+    --shadow: none;
+    --ok: #57B786;
+    --info: #63A0DD;
+    --warn: #D8A247;
+    --danger: #D97A70;
+    --mute: #7C7889;
+  }
+
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--paper);
+    color:var(--text);
+    font-family:'Inter',sans-serif;
+    display:flex;
+    min-height:100vh;
+    transition:background .25s ease, color .25s ease;
+  }
+  h1,h2,h3,.serif{ font-family:'Fraunces', serif; letter-spacing:-0.01em; }
+  .mono{ font-family:'IBM Plex Mono', monospace; letter-spacing:-0.01em; }
+
+  /* ===== SIDEBAR — toujours sombre ===== */
+  aside{
+    width:248px;
+    flex:0 0 248px;
+    background:var(--sidebar-bg);
+    border-right:1px solid var(--sidebar-line);
+    display:flex;
+    flex-direction:column;
+    height:100vh;
+    position:sticky;
+    top:0;
+  }
+  .brand{
+    display:flex; align-items:center; gap:12px;
+    padding:22px 20px;
+    border-bottom:1px solid var(--sidebar-line);
+  }
+  .brand .mark{
+    width:34px;height:34px;border-radius:9px;
+    background:var(--accent);
+    display:flex;align-items:center;justify-content:center;
+    color:#fff; font-family:'Fraunces',serif; font-weight:600; font-size:14px;
+  }
+  .brand .name{ color:#F4F2F8; font-size:14px; font-weight:600; line-height:1.2; }
+  .brand .role{ color:var(--sidebar-text-dim); font-size:11px; margin-top:1px; }
+
+  nav{ padding:20px 12px; flex:1; }
+  .nav-label{
+    color:var(--sidebar-text-dim); font-size:10.5px; letter-spacing:.11em;
+    text-transform:uppercase; padding:0 12px 10px;
+  }
+  .nav-item{
+    display:flex; align-items:center; gap:11px;
+    padding:9px 12px; border-radius:8px;
+    color:var(--sidebar-text); font-size:13.5px;
+    cursor:pointer; margin-bottom:2px;
+    border-left:2px solid transparent;
+  }
+  .nav-item svg{ width:16px; height:16px; opacity:.85; }
+  .nav-item.active{
+    background:rgba(123,113,238,.16);
+    color:#fff;
+    border-left:2px solid var(--accent);
+  }
+  .nav-item:hover:not(.active){ background:rgba(255,255,255,.04); }
+
+  .side-foot{
+    border-top:1px solid var(--sidebar-line);
+    padding:16px 18px;
+    display:flex; align-items:center; gap:10px;
+  }
+  .avatar{
+    width:30px;height:30px;border-radius:50%;
+    background:#2A2836; color:#D8D5E6;
+    display:flex;align-items:center;justify-content:center;
+    font-size:12px; font-weight:600;
+  }
+  .side-foot .who{ font-size:12.5px; color:#EDEBF2; line-height:1.25; }
+  .side-foot .sub{ font-size:11px; color:var(--sidebar-text-dim); }
+
+  /* ===== MAIN ===== */
+  main{ flex:1; min-width:0; }
+  .topbar{
+    display:flex; align-items:flex-start; justify-content:space-between;
+    padding:36px 44px 22px;
+  }
+  .topbar h1{ font-size:26px; font-weight:500; margin:0 0 6px; }
+  .topbar p{ margin:0; color:var(--text-soft); font-size:13.5px; }
+
+  .topbar-actions{ display:flex; align-items:center; gap:10px; }
+  .theme-toggle{
+    width:28px;height:28px;border-radius:50%;
+    border:1px solid var(--sidebar-line); background:transparent;
+    display:flex;align-items:center;justify-content:center; cursor:pointer;
+    color:var(--sidebar-text-dim); flex-shrink:0;
+  }
+  .theme-toggle:hover{ color:var(--sidebar-text); border-color:var(--accent-line); }
+  .btn{
+    border:none; border-radius:8px; font-family:'Inter'; font-size:13px; font-weight:600;
+    padding:10px 16px; cursor:pointer; display:inline-flex; align-items:center; gap:7px;
+  }
+  .btn-primary{ background:var(--accent); color:#fff; }
+  .btn-primary:hover{ opacity:.92; }
+
+  .content{ padding:0 44px 48px; }
+
+  /* MRR banner */
+  .banner{
+    border:1px solid var(--line); background:var(--card);
+    border-radius:12px; padding:22px 26px;
+    display:flex; align-items:baseline; justify-content:space-between;
+    margin-bottom:22px; box-shadow:var(--shadow);
+  }
+  .banner .label{ font-size:11.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--text-faint); }
+  .banner .value{ font-size:15px; color:var(--text-soft); margin-top:6px; }
+  .banner .num{ font-size:30px; color:var(--text); }
+  .banner .tag{ font-size:11px; color:var(--text-faint); }
+
+  /* stat grid */
+  .stats{
+    display:grid; grid-template-columns:repeat(6, 1fr); gap:14px;
+    margin-bottom:22px;
+  }
+  .stat{
+    border:1px solid var(--line); background:var(--card);
+    border-radius:12px; padding:18px; box-shadow:var(--shadow);
+  }
+  .stat .icon{
+    width:26px;height:26px;border-radius:50%;
+    border:1.4px solid var(--line);
+    display:flex;align-items:center;justify-content:center;
+    margin-bottom:14px; color:var(--text-soft);
+  }
+  .stat .icon svg{ width:13px;height:13px; }
+  .stat.ok .icon{ border-color:var(--ok); color:var(--ok); }
+  .stat.info .icon{ border-color:var(--info); color:var(--info); }
+  .stat.warn .icon{ border-color:var(--warn); color:var(--warn); }
+  .stat .lbl{ font-size:11.5px; color:var(--text-faint); margin-bottom:4px; }
+  .stat .n{ font-size:24px; font-weight:500; }
+
+  /* chart card */
+  .card{
+    border:1px solid var(--line); background:var(--card);
+    border-radius:12px; padding:24px 26px; box-shadow:var(--shadow);
+    margin-bottom:22px;
+  }
+  .card-head{ display:flex; justify-content:space-between; align-items:baseline; margin-bottom:2px; }
+  .card-head h2{ font-size:16.5px; font-weight:500; margin:0; }
+  .card-head .hint{ font-size:12px; color:var(--text-faint); }
+  .card-sub{ font-size:12.5px; color:var(--text-soft); margin:2px 0 22px; }
+
+  .bars{ display:flex; align-items:flex-end; gap:14px; height:120px; }
+  .bar-col{ flex:1; display:flex; flex-direction:column; align-items:center; gap:8px; height:100%; justify-content:flex-end; }
+  .bar{ width:60%; background:var(--accent-soft); border-radius:4px 4px 0 0; }
+  .bar.on{ background:var(--accent); }
+  .bar-col .m{ font-size:10px; color:var(--text-faint); }
+
+  /* table */
+  .tbl-head{ display:flex; justify-content:space-between; align-items:baseline; margin-bottom:16px; }
+  .tbl-head h2{ font-size:16.5px; font-weight:500; margin:0; }
+  .tbl-head a{ font-size:12.5px; color:var(--accent); text-decoration:none; }
+
+  table{ width:100%; border-collapse:collapse; }
+  thead th{
+    text-align:left; font-size:10.5px; letter-spacing:.08em; text-transform:uppercase;
+    color:var(--text-faint); font-weight:500; padding:0 8px 10px; border-bottom:1px solid var(--line);
+  }
+  tbody td{ padding:15px 8px; border-bottom:1px solid var(--line); font-size:13.5px; vertical-align:middle; }
+  tbody tr:last-child td{ border-bottom:none; }
+  .school{ font-weight:600; }
+  .domain{ color:var(--text-faint); font-size:12px; font-family:'IBM Plex Mono',monospace; margin-top:2px; }
+  .plan-pill{
+    display:inline-block; padding:3px 10px; border-radius:999px;
+    border:1px solid var(--line); font-size:11.5px; color:var(--text-soft);
+  }
+  .elv{ font-family:'IBM Plex Mono',monospace; color:var(--text-soft); }
+
+  .seal{ display:inline-flex; align-items:center; gap:7px; font-size:12.5px; }
+  .ring{ width:11px; height:11px; border-radius:50%; border:2px solid; }
+  .seal.actif .ring{ border-color:var(--ok); }
+  .seal.actif{ color:var(--ok); }
+  .seal.essai .ring{ border-color:var(--info); }
+  .seal.essai{ color:var(--info); }
+  .date{ color:var(--text-faint); font-size:12.5px; }
+  .muted{ color:var(--text-faint); }
+
+  /* filters */
+  .filters{
+    display:flex; align-items:flex-end; gap:16px; flex-wrap:wrap;
+  }
+  .field{ display:flex; flex-direction:column; gap:7px; }
+  .field label{
+    font-size:10.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--text-faint);
+  }
+  .field input, .field select{
+    font-family:'Inter'; font-size:13px; color:var(--text);
+    background:var(--paper-alt); border:1px solid var(--line); border-radius:8px;
+    padding:9px 12px; min-width:190px; outline:none;
+  }
+  .field input::placeholder{ color:var(--text-faint); }
+  .field.grow{ flex:1; min-width:220px; }
+  .btn-ghost{
+    background:transparent; color:var(--text-soft); border:1px solid var(--line);
+  }
+  .btn-ghost:hover{ border-color:var(--accent-line); color:var(--text); }
+
+  /* row actions */
+  .rowactions{ display:flex; gap:8px; }
+  .iconbtn{
+    width:30px;height:30px;border-radius:50%;
+    border:1px solid var(--line); background:transparent;
+    display:flex;align-items:center;justify-content:center; cursor:pointer;
+    color:var(--text-soft);
+  }
+  .iconbtn svg{ width:14px;height:14px; }
+  .iconbtn:hover{ border-color:var(--accent-line); color:var(--accent); }
+  .iconbtn.warn:hover{ border-color:var(--warn); color:var(--warn); }
+
+  th.actions-th, td.actions-td{ text-align:right; }
+  .rowactions{ justify-content:flex-end; }
+
+  /* ===== fiche établissement ===== */
+  .back-link{
+    display:inline-flex; align-items:center; gap:7px;
+    font-size:13px; color:var(--text-soft); text-decoration:none; margin-bottom:18px;
+  }
+  .back-link:hover{ color:var(--accent); }
+  .back-link svg{ width:14px; height:14px; }
+
+  .detail-head{
+    display:flex; justify-content:space-between; align-items:flex-start;
+    padding-bottom:24px; border-bottom:1px solid var(--line); margin-bottom:26px;
+  }
+  .detail-title{ font-size:24px; font-weight:500; margin:0 0 4px; }
+  .detail-domain{ color:var(--accent); font-family:'IBM Plex Mono',monospace; font-size:13px; }
+  .detail-meta{
+    display:flex; align-items:center; gap:8px; margin-top:10px;
+    color:var(--text-faint); font-size:12.5px;
+  }
+  .detail-meta .dot{ width:3px; height:3px; border-radius:50%; background:var(--text-faint); }
+
+  .status-actions{ text-align:right; }
+  .status-actions .lbl{
+    font-size:10.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--text-faint);
+    margin-bottom:9px;
+  }
+  .status-actions .rowactions{ margin-bottom:8px; }
+  .status-actions .sub-link{ font-size:12px; color:var(--text-soft); cursor:pointer; }
+  .status-actions .sub-link:hover{ color:var(--accent); }
+
+  .grid-detail{ display:grid; grid-template-columns:2fr 1fr; gap:20px; align-items:start; }
+  .stack{ display:flex; flex-direction:column; gap:20px; }
+
+  .card-title{ display:flex; align-items:center; gap:10px; margin-bottom:20px; }
+  .card-title .ic{
+    width:26px;height:26px;border-radius:50%; border:1.4px solid var(--line);
+    display:flex;align-items:center;justify-content:center; color:var(--text-soft); flex-shrink:0;
+  }
+  .card-title .ic svg{ width:13px;height:13px; }
+  .card-title h2{ font-size:15.5px; font-weight:500; margin:0; }
+  .card-title .count{ color:var(--text-faint); font-size:13px; margin-left:4px; }
+  .card-title .grow{ flex:1; }
+  .link-btn{
+    background:none; border:none; color:var(--accent); font-family:'Inter'; font-size:12.5px;
+    font-weight:600; display:inline-flex; align-items:center; gap:6px; cursor:pointer; padding:0;
+  }
+  .link-btn:hover{ opacity:.75; }
+
+  .kv-grid{ display:grid; grid-template-columns:1fr 1fr; gap:22px 26px; }
+  .kv .lbl{ font-size:10.5px; letter-spacing:.07em; text-transform:uppercase; color:var(--text-faint); margin-bottom:6px; }
+  .kv .val{ font-size:14px; display:flex; align-items:center; gap:7px; }
+  .kv .val svg{ width:13px; height:13px; color:var(--text-faint); }
+
+  .plan-top{ display:flex; justify-content:space-between; align-items:baseline; margin-bottom:20px; }
+  .plan-name{ font-size:22px; }
+  .pill-accent{
+    background:var(--accent-soft); color:var(--accent); border-radius:999px;
+    padding:3px 11px; font-size:11.5px; font-weight:600;
+  }
+  .rows .row{
+    display:flex; justify-content:space-between; padding:13px 0;
+    border-bottom:1px solid var(--line); font-size:13.5px;
+  }
+  .rows .row:last-child{ border-bottom:none; padding-bottom:0; }
+  .rows .row .lbl{ color:var(--text-soft); }
+  .rows .row .val{ font-family:'IBM Plex Mono',monospace; font-weight:500; }
+
+  .progress-item + .progress-item{ margin-top:20px; }
+  .progress-top{ display:flex; justify-content:space-between; font-size:13px; margin-bottom:9px; }
+  .progress-top .val{ font-family:'IBM Plex Mono',monospace; color:var(--text-soft); }
+  .track{ height:5px; border-radius:999px; background:var(--paper-alt); border:1px solid var(--line); overflow:hidden; }
+  .fill{ height:100%; background:var(--accent); border-radius:999px; }
+
+  .empty-state{ color:var(--text-faint); font-size:13px; padding:6px 0 2px; }
+
+  @media (max-width:900px){ .grid-detail{ grid-template-columns:1fr; } .kv-grid{ grid-template-columns:1fr; } }
+
+  @media (max-width:1100px){ .stats{ grid-template-columns:repeat(3,1fr); } }
+</style>
+</head>
+<body>
+
+  <aside>
+    <div class="brand">
+      <div class="mark">SA</div>
+      <div>
+        <div class="name">Super Admin</div>
+        <div class="role">Eduguinée 3.0</div>
+      </div>
+    </div>
+    <nav>
+      <div class="nav-label">Gestion</div>
+      <div class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="7" height="9" rx="1.2"/><rect x="14" y="3" width="7" height="5" rx="1.2"/><rect x="14" y="12" width="7" height="9" rx="1.2"/><rect x="3" y="16" width="7" height="5" rx="1.2"/></svg>
+        Tableau de bord
+      </div>
+      <div class="nav-item active">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 21V8l8-5 8 5v13"/><path d="M9 21v-6h6v6"/></svg>
+        Établissements
+      </div>
+      <div class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2" y="6" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
+        Plans &amp; Quotas
+      </div>
+    </nav>
+    <div class="side-foot">
+      <div class="avatar">N</div>
+      <div>
+        <div class="who">Nabou</div>
+        <div class="sub">Super Admin</div>
+      </div>
+      <div class="theme-toggle" onclick="toggleTheme()" title="Changer de thème">
+        <svg id="theme-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="4.2"/><path d="M12 2v2.4M12 19.6V22M4.2 4.2l1.7 1.7M18.1 18.1l1.7 1.7M2 12h2.4M19.6 12H22M4.2 19.8l1.7-1.7M18.1 5.9l1.7-1.7"/></svg>
+      </div>
+    </div>
+  </aside>
+
+  <main>
+    <div class="content" style="padding-top:36px;">
+
+      <a class="back-link" href="#">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M19 12H5M11 18l-6-6 6-6"/></svg>
+        Retour aux établissements
+      </a>
+
+      <div class="detail-head">
+        <div>
+          <h1 class="detail-title">Lycée Donka</h1>
+          <div class="detail-domain">lycee-donka.eduguinee.gn</div>
+          <div class="detail-meta">
+            <span>Créé le 20/07/2026</span>
+            <span class="dot"></span>
+            <span>Code MINEDU · GN-CKY-00123</span>
+          </div>
+        </div>
+        <div class="status-actions">
+          <div class="lbl">Actions de statut</div>
+          <div class="rowactions">
+            <div class="iconbtn" title="Voir"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="2.8"/></svg></div>
+            <div class="iconbtn warn" title="Suspendre"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3l7 3v5c0 5-3 8-7 10-4-2-7-5-7-10V6l7-3z"/></svg></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid-detail">
+        <div class="stack">
+
+          <div class="card">
+            <div class="card-title">
+              <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="3.4"/><path d="M4 20c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg></div>
+              <h2>Contacts &amp; informations générales</h2>
+            </div>
+            <div class="kv-grid">
+              <div class="kv">
+                <div class="lbl">Directeur principal</div>
+                <div class="val">Mamadou Diallo</div>
+              </div>
+              <div class="kv">
+                <div class="lbl">Téléphone</div>
+                <div class="val">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M22 16.9v3a2 2 0 01-2.2 2 19.8 19.8 0 01-8.6-3.1 19.5 19.5 0 01-6-6A19.8 19.8 0 012.1 4.2 2 2 0 014.1 2h3a2 2 0 012 1.7c.1 1 .3 2 .7 3a2 2 0 01-.5 2.1L8 10a16 16 0 006 6l1.2-1.2a2 2 0 012.1-.5c1 .4 2 .6 3 .7a2 2 0 011.7 2z"/></svg>
+                  +224 623 08 64 01
+                </div>
+              </div>
+              <div class="kv">
+                <div class="lbl">Adresse email</div>
+                <div class="val">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 6l10 7 10-7"/></svg>
+                  k4nt3.os@gmail.com
+                </div>
+              </div>
+              <div class="kv">
+                <div class="lbl">Type d'établissement</div>
+                <div class="val">Lycée</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-title">
+              <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="10" r="3"/><path d="M12 21s7-5.2 7-11a7 7 0 00-14 0c0 5.8 7 11 7 11z"/></svg></div>
+              <h2>Localisation géographique</h2>
+            </div>
+            <div class="kv-grid">
+              <div class="kv"><div class="lbl">Région</div><div class="val">Conakry</div></div>
+              <div class="kv"><div class="lbl">Préfecture</div><div class="val">Conakry</div></div>
+              <div class="kv"><div class="lbl">Commune</div><div class="val">Ratoma</div></div>
+              <div class="kv"><div class="lbl">Quartier</div><div class="val">Nongo</div></div>
+            </div>
+          </div>
+
+        </div>
+
+        <div class="stack">
+
+          <div class="card">
+            <div class="card-title">
+              <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2l3 6 6 .9-4.5 4.3 1 6-5.5-3-5.5 3 1-6L3 8.9 9 8l3-6z"/></svg></div>
+              <h2 class="grow">Plan d'abonnement</h2>
+              <button class="link-btn">⇄ Changer de plan</button>
+            </div>
+            <div class="plan-top">
+              <div class="plan-name serif">Starter</div>
+              <span class="pill-accent">Plan actif</span>
+            </div>
+            <div class="rows">
+              <div class="row"><span class="lbl">Tarif mensuel</span><span class="val">300 000 GNF</span></div>
+              <div class="row"><span class="lbl">Limite élèves</span><span class="val">500</span></div>
+              <div class="row"><span class="lbl">Limite personnel (staff)</span><span class="val">20</span></div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-title">
+              <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.9M16 3.1a4 4 0 010 7.8"/></svg></div>
+              <h2>Utilisation actuelle</h2>
+            </div>
+            <div class="progress-item">
+              <div class="progress-top"><span>Nombre d'élèves</span><span class="val">1 / 500</span></div>
+              <div class="track"><div class="fill" style="width:2%"></div></div>
+            </div>
+            <div class="progress-item">
+              <div class="progress-top"><span>Membres du personnel</span><span class="val">3 / 20</span></div>
+              <div class="track"><div class="fill" style="width:15%"></div></div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:20px;">
+        <div class="card-title">
+          <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M8 14h3"/></svg></div>
+          <h2>Facturation <span class="count">(0)</span></h2>
+        </div>
+        <div class="empty-state">Aucune facture d'abonnement pour le moment.</div>
+      </div>
+
+    </div>
+  </main>
+
+<script>
+function toggleTheme(){
+  const html = document.documentElement;
+  const next = html.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+  html.setAttribute('data-theme', next);
+}
+</script>
+</body>
+</html>
