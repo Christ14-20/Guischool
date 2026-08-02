@@ -21,71 +21,68 @@ export default function PlansManager({ plans }: PlansManagerProps) {
   const [editingPlan, setEditingPlan] = useState<Plan | null | undefined>(undefined);
 
   return (
-    <div className="space-y-6">
+    <>
       <div className="flex items-center justify-end">
         <button
           onClick={() => setEditingPlan(null)}
-          className="inline-flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-medium rounded-xl shadow-lg shadow-indigo-600/25 transition-all active:scale-[0.98] cursor-pointer"
+          className="inline-flex items-center gap-1.5 rounded-lg bg-accent text-white text-[13px] font-semibold px-4 py-2.5 hover:opacity-90 transition-opacity cursor-pointer"
         >
           <Plus className="size-4" />
           Nouveau plan
         </button>
       </div>
 
-      <div className="bg-slate-900/20 border border-slate-800/80 rounded-xl shadow-xl overflow-hidden backdrop-blur-md">
+      <div className="border border-line bg-card rounded-xl px-[26px] py-6 shadow-[var(--shadow)] mt-[22px]">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="border-b border-slate-800/50 bg-slate-900/40 text-slate-400 text-xs font-semibold uppercase tracking-wider">
-                <th className="px-6 py-4">Plan</th>
-                <th className="px-6 py-4">Tarif mensuel</th>
-                <th className="px-6 py-4 text-center">Limite élèves</th>
-                <th className="px-6 py-4 text-center">Limite personnel</th>
-                <th className="px-6 py-4">Statut</th>
-                <th className="px-6 py-4 text-right">Actions</th>
+              <tr>
+                <th className="text-left text-[10.5px] tracking-[.08em] uppercase text-text-faint font-medium pb-2.5 px-2 border-b border-line">Plan</th>
+                <th className="text-left text-[10.5px] tracking-[.08em] uppercase text-text-faint font-medium pb-2.5 px-2 border-b border-line">Tarif mensuel</th>
+                <th className="text-center text-[10.5px] tracking-[.08em] uppercase text-text-faint font-medium pb-2.5 px-2 border-b border-line">Limite élèves</th>
+                <th className="text-center text-[10.5px] tracking-[.08em] uppercase text-text-faint font-medium pb-2.5 px-2 border-b border-line">Limite personnel</th>
+                <th className="text-left text-[10.5px] tracking-[.08em] uppercase text-text-faint font-medium pb-2.5 px-2 border-b border-line">Statut</th>
+                <th className="text-right text-[10.5px] tracking-[.08em] uppercase text-text-faint font-medium pb-2.5 px-2 border-b border-line">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/30 text-sm text-slate-300">
+            <tbody>
               {plans.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-10 text-center text-slate-500">
+                  <td colSpan={6} className="py-10 text-center text-text-faint text-sm">
                     Aucun plan d&apos;abonnement enregistré pour le moment.
                   </td>
                 </tr>
               ) : (
                 plans.map((plan) => (
-                  <tr key={plan.id} className="hover:bg-slate-900/35 transition-colors group">
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2.5 font-semibold text-white group-hover:text-indigo-300 transition-colors">
-                        <CreditCard className="size-4 text-indigo-400" />
+                  <tr key={plan.id}>
+                    <td className="py-[15px] px-2 border-b border-line last:border-b-0">
+                      <div className="flex items-center gap-2.5 font-semibold text-[13.5px]">
+                        <CreditCard className="size-3.5 text-accent" />
                         {plan.name}
                       </div>
                     </td>
-                    <td className="px-6 py-4 font-mono text-xs text-slate-300">
+                    <td className="py-[15px] px-2 border-b border-line font-mono text-xs text-text-soft">
                       {Number(plan.price_monthly).toLocaleString("fr-FR")} GNF
                     </td>
-                    <td className="px-6 py-4 text-center tabular-nums">{plan.max_students}</td>
-                    <td className="px-6 py-4 text-center tabular-nums">{plan.max_staff}</td>
-                    <td className="px-6 py-4">
+                    <td className="py-[15px] px-2 border-b border-line text-center font-mono text-text-soft text-[13.5px]">
+                      {plan.max_students}
+                    </td>
+                    <td className="py-[15px] px-2 border-b border-line text-center font-mono text-text-soft text-[13.5px]">
+                      {plan.max_staff}
+                    </td>
+                    <td className="py-[15px] px-2 border-b border-line">
                       <span
-                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${
-                          plan.is_active
-                            ? "bg-emerald-500/10 text-emerald-400"
-                            : "bg-slate-700/30 text-slate-400"
-                        }`}
+                        className="inline-flex items-center gap-[7px] text-[12.5px]"
+                        style={{ color: plan.is_active ? "var(--ok)" : "var(--mute)" }}
                       >
-                        {plan.is_active ? (
-                          <CheckCircle2 className="size-3" />
-                        ) : (
-                          <Ban className="size-3" />
-                        )}
+                        {plan.is_active ? <CheckCircle2 className="size-3" /> : <Ban className="size-3" />}
                         {plan.is_active ? "Actif" : "Inactif"}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-right">
+                    <td className="py-[15px] px-2 border-b border-line text-right">
                       <button
                         onClick={() => setEditingPlan(plan)}
-                        className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-white font-medium transition-colors cursor-pointer"
+                        className="inline-flex items-center gap-1.5 text-xs text-text-soft hover:text-accent font-medium transition-colors cursor-pointer"
                       >
                         <Pencil className="size-3.5" />
                         Modifier
@@ -102,6 +99,6 @@ export default function PlansManager({ plans }: PlansManagerProps) {
       {editingPlan !== undefined && (
         <PlanFormSheet plan={editingPlan} onClose={() => setEditingPlan(undefined)} />
       )}
-    </div>
+    </>
   );
 }
