@@ -2,7 +2,7 @@
 scripts/init_data.py
 
 Script d'initialisation des données de base.
-Usage : python manage.py shell < scripts/init_data.py
+Usage (depuis le dossier backend/, quel que soit l'OS) : python scripts/init_data.py
 
 Crée dans l'ordre :
   1. Le Plan "Starter" par défaut (stub — sera complété en Épic 2)
