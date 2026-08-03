@@ -6,11 +6,26 @@ Usage (depuis le dossier backend/, quel que soit l'OS) : python scripts/init_dat
 
 Crée dans l'ordre :
   1. Le Plan "Starter" par défaut (stub — sera complété en Épic 2)
-  2. Les 5 Rôles MVP
+  2. Les 6 Rôles MVP
+  2bis. Rattachement des permissions métier aux rôles (voir note ci-dessous)
   3. Les Permissions auth de base (Épic 1)
   4. Le compte Super Admin initial
 
 À exécuter une seule fois sur un projet vierge, ou après une réinitialisation de la DB.
+
+Note (bug trouvé en marge, sur une machine fraîchement clonée) : les migrations de
+données qui attachent des permissions métier aux rôles (authentication
+0002/0003/0005/0006/0007, pedagogy 0002/0008/0010/0012/0014/0016/0020/0021) créent
+bien chaque `Permission` de façon inconditionnelle, mais n'attachent la permission
+au `Role` correspondant QUE si ce rôle existe déjà en base au moment où `migrate`
+s'exécute (`Role.objects.filter(name=...).first()` + `if role:`). Comme ce script
+est l'unique endroit qui crée les 6 rôles MVP, et qu'il s'exécute nécessairement
+APRÈS `migrate` (les rôles n'existent pas encore pendant les migrations sur un
+projet vierge), TOUTES ces migrations no-opent silencieusement sur un premier
+`migrate` — chaque rôle démarre avec zéro permission métier tant que l'étape 2bis
+ci-dessous n'a pas tourné. L'étape 2bis referme cette fenêtre en rejouant, de façon
+idempotente, le mapping rôle → permissions historique (les `Permission` existent
+déjà en base grâce aux migrations ; il ne reste qu'à les attacher aux rôles).
 """
 
 import os
@@ -53,6 +68,59 @@ for r in ROLES:
     roles_created.append(role)
     status = "créé" if created else "existant"
     print(f"[OK] Rôle {role.name} ({status})")
+
+
+# ── 2bis. Rattachement des permissions métier aux rôles ────────────────────────
+# Reconstruit à partir des migrations de données authentication/0002,0003,0005,
+# 0006,0007 et pedagogy/0002,0008,0010,0012,0014,0016,0020,0021 — voir la note
+# en tête de fichier. Idempotent : ManyToManyField.add() ignore les doublons.
+ROLE_PERMISSIONS = {
+    "DIRECTOR": [
+        "authentication:read:teachers",
+        "staff:create", "staff:read", "staff:update", "staff:disable",
+        "finance:read", "finance:create", "finance:update", "finance:validate",
+        "communication:send",
+        "pedagogy:create:schoolyear", "pedagogy:create:period",
+        "eleves:create", "eleves:read", "eleves:update",
+        "attendance:create", "attendance:justify",
+        "notes:create:evaluation", "notes:read", "notes:lock", "notes:validate",
+        "pedagogy:update:schoolyear", "pedagogy:close:schoolyear",
+        "pedagogy:override:schoolyear",
+    ],
+    "STUDENT_STUDIES": [
+        "authentication:read:teachers",
+        "staff:read",
+        "finance:read",
+        "communication:send",
+        "pedagogy:create:schoolyear", "pedagogy:create:period",
+        "eleves:create", "eleves:read", "eleves:update",
+        "attendance:create", "attendance:justify",
+        "notes:create:evaluation", "notes:read", "notes:lock",
+    ],
+    "TEACHER": [
+        "communication:send",
+        "attendance:create",
+        "notes:create:evaluation", "notes:read", "notes:lock",
+    ],
+    "ACCOUNTANT": [
+        "finance:read", "finance:create", "finance:update",
+        "communication:send",
+    ],
+    "PARENT": [
+        "notes:read",
+    ],
+}
+
+for role_name, codenames in ROLE_PERMISSIONS.items():
+    role = Role.objects.filter(name=role_name).first()
+    if not role:
+        continue
+    perms = Permission.objects.filter(codename__in=codenames)
+    missing = set(codenames) - set(perms.values_list("codename", flat=True))
+    if missing:
+        print(f"[WARN] Permissions introuvables pour {role_name} (avez-vous lancé `migrate` ?) : {sorted(missing)}")
+    role.permissions.add(*perms)
+    print(f"[OK] Permissions attachées à {role_name} ({perms.count()}/{len(codenames)})")
 
 
 # ── 3. Permissions auth de base ────────────────────────────────────────────────

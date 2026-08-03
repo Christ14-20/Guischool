@@ -97,8 +97,11 @@ python scripts/init_data.py
 Crée, de façon idempotente :
 - le plan `Starter` (stub),
 - les 6 rôles MVP : `SUPER_ADMIN`, `DIRECTOR`, `STUDENT_STUDIES`, `TEACHER`, `ACCOUNTANT`, `PARENT`,
+- **le rattachement des permissions métier à ces rôles** (`staff:*`, `finance:*`, `eleves:*`, `attendance:*`, `notes:*`, `pedagogy:*`, `communication:send`...) — étape indispensable : ces permissions sont créées par les migrations de données, mais ne peuvent être attachées à un rôle qu'après la création du rôle lui-même, qui n'a lieu qu'ici. **Sans cette étape, tous les rôles (y compris `DIRECTOR`) démarrent avec zéro permission métier et chaque appel API protégé renvoie 403**, quel que soit le compte connecté,
 - les permissions de base du module auth (`auth:login`, `auth:refresh`, `auth:logout`, `users:read:me`, `users:update:me`, `auth:permissions:read`),
 - un compte Super Admin (`admin@eduguinee.gn` / `changeme123!` par défaut — surchargeable via les variables d'environnement `SUPER_ADMIN_EMAIL` / `SUPER_ADMIN_PASSWORD`, **à changer avant tout déploiement réel**).
+
+> Si vous obtenez des `403 Forbidden` sur des endpoints métier (`/auth/staff/`, etc.) alors que vous êtes bien connecté avec le bon rôle, la cause la plus probable est que ce script n'a jamais tourné (ou a tourné avant une migration ajoutant de nouvelles permissions) — relancez-le, il est sûr à ré-exécuter à tout moment.
 
 ### 6. Lancer le serveur
 
