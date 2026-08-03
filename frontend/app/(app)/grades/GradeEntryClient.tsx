@@ -34,7 +34,7 @@ interface Props {
 }
 
 const INPUT_CLASS =
-  "w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors";
+  "w-full bg-paper-alt border border-line rounded-lg px-3 py-2 text-sm text-text outline-none focus:border-accent-line transition-colors";
 
 const EVAL_TYPES = [
   { value: "DS", label: "Devoir Surveillé" },
@@ -301,7 +301,7 @@ export default function GradeEntryClient({
   return (
     <div className="space-y-6">
       {/* Cascade filters */}
-      <div className="bg-slate-900/40 border border-slate-800/80 rounded-xl p-5 shadow-xl backdrop-blur-md">
+      <div className="border border-line bg-card rounded-xl p-5 shadow-[var(--shadow)]">
         <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-6 gap-4 items-end">
           <Field label="Année">
             <select
@@ -354,7 +354,7 @@ export default function GradeEntryClient({
               ))}
             </select>
             {syId && periods.length === 0 && !error && (
-              <p className="text-[11px] text-amber-400/80 mt-1">
+              <p className="text-[11px] mt-1" style={{ color: "var(--warn)" }}>
                 Aucune période configurée. Créez-en une dans Pédagogie → Années scolaires.
               </p>
             )}
@@ -375,14 +375,14 @@ export default function GradeEntryClient({
       </div>
 
       {error && (
-        <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-xl text-destructive text-sm flex items-center gap-2">
+        <div className="p-4 rounded-xl text-sm bg-danger/10 border border-danger/20 text-danger flex items-center gap-2">
           <AlertTriangle className="size-4 shrink-0" />
           {error}
         </div>
       )}
 
       {warnings.length > 0 && (
-        <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl text-amber-400 text-sm space-y-1">
+        <div className="p-4 rounded-xl text-sm space-y-1 bg-warn/10 border border-warn/20" style={{ color: "var(--warn)" }}>
           <p className="font-medium flex items-center gap-2">
             <AlertTriangle className="size-4" />
             Notes rejetées
@@ -395,12 +395,12 @@ export default function GradeEntryClient({
 
       {/* Evaluation creation form */}
       {showCreateForm && !selectedEval && (
-        <div className="bg-slate-900/40 border border-slate-800/80 rounded-xl p-5 shadow-xl backdrop-blur-md space-y-4">
-          <div className="flex items-center gap-2 text-white font-medium">
-            <FileSpreadsheet className="size-5 text-indigo-400" />
+        <div className="border border-line bg-card rounded-xl p-5 shadow-[var(--shadow)] space-y-4">
+          <div className="flex items-center gap-2 font-medium">
+            <FileSpreadsheet className="size-5 text-accent" />
             Nouvelle évaluation
           </div>
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-text-faint">
             Aucune évaluation trouvée pour cette combinaison. Créez-en une pour commencer la saisie.
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -437,7 +437,7 @@ export default function GradeEntryClient({
                 type="date"
                 value={newEval.date}
                 onChange={(e) => setNewEval((p) => ({ ...p, date: e.target.value }))}
-                className={`${INPUT_CLASS} [color-scheme:dark]`}
+                className={INPUT_CLASS}
               />
             </Field>
           </div>
@@ -445,7 +445,7 @@ export default function GradeEntryClient({
             <button
               onClick={handleCreateEval}
               disabled={isPending}
-              className="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-medium rounded-xl shadow-lg shadow-indigo-600/25 transition-all disabled:opacity-50 cursor-pointer"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-accent hover:opacity-90 text-white font-medium transition-opacity disabled:opacity-50 cursor-pointer"
             >
               {isPending ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
               Créer l&apos;évaluation
@@ -459,20 +459,26 @@ export default function GradeEntryClient({
         <div className="space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h2 className="text-lg font-semibold text-white">
+              <h2 className="font-serif text-lg font-medium">
                 {selectedEval.title}
               </h2>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-text-faint">
                 Barème : {selectedEval.max_score} / Coef. {selectedEval.coefficient} / {selectedEval.date}
               </p>
             </div>
             <div className="flex items-center gap-2">
               {evalIsLocked ? (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs font-medium">
+                <span
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium"
+                  style={{ color: "var(--ok)", boxShadow: "inset 0 0 0 1px var(--ok)" }}
+                >
                   <Lock className="size-3.5" /> Verrouillé
                 </span>
               ) : (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500/10 text-amber-400 border border-amber-500/20 text-xs font-medium">
+                <span
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium"
+                  style={{ color: "var(--warn)", boxShadow: "inset 0 0 0 1px var(--warn)" }}
+                >
                   <Clock className="size-3.5" /> Brouillon
                 </span>
               )}
@@ -480,25 +486,25 @@ export default function GradeEntryClient({
           </div>
 
           {students.length === 0 ? (
-            <div className="p-12 text-center text-slate-500 bg-slate-900/20 border border-slate-800/80 rounded-xl flex flex-col items-center gap-3">
-              <FileSpreadsheet className="size-8 text-slate-600" />
+            <div className="p-12 text-center text-text-faint border border-line bg-card rounded-xl flex flex-col items-center gap-3">
+              <FileSpreadsheet className="size-8 text-text-faint" />
               Aucun élève actif dans cette classe.
             </div>
           ) : (
-            <div className="bg-slate-900/40 border border-slate-800/80 rounded-xl shadow-xl backdrop-blur-md overflow-hidden">
+            <div className="border border-line bg-card rounded-xl shadow-[var(--shadow)]">
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                   <thead>
-                    <tr className="border-b border-slate-800/50 text-slate-400 text-xs font-semibold uppercase tracking-wider">
-                      <th className="px-6 py-4">Élève</th>
-                      <th className="px-6 py-4">Note /{selectedEval.max_score}</th>
-                      <th className="px-6 py-4">/20</th>
-                      <th className="px-6 py-4">Absent</th>
-                      <th className="px-6 py-4">Statut</th>
-                      {canValidate && !evalIsLocked && <th className="px-6 py-4">Actions</th>}
+                    <tr>
+                      <th className="text-left text-[10.5px] tracking-[.08em] uppercase text-text-faint font-medium px-6 py-4 border-b border-line">Élève</th>
+                      <th className="text-left text-[10.5px] tracking-[.08em] uppercase text-text-faint font-medium px-6 py-4 border-b border-line">Note /{selectedEval.max_score}</th>
+                      <th className="text-left text-[10.5px] tracking-[.08em] uppercase text-text-faint font-medium px-6 py-4 border-b border-line">/20</th>
+                      <th className="text-left text-[10.5px] tracking-[.08em] uppercase text-text-faint font-medium px-6 py-4 border-b border-line">Absent</th>
+                      <th className="text-left text-[10.5px] tracking-[.08em] uppercase text-text-faint font-medium px-6 py-4 border-b border-line">Statut</th>
+                      {canValidate && !evalIsLocked && <th className="text-left text-[10.5px] tracking-[.08em] uppercase text-text-faint font-medium px-6 py-4 border-b border-line">Actions</th>}
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-800/30 text-sm text-slate-300">
+                  <tbody className="text-sm">
                     {students.map((s: any) => {
                       const grade = grades.find((g: any) => g.student?.id === s.id);
                       const draft = draftScores[s.id] ?? { score: "", is_absent: false };
@@ -507,14 +513,14 @@ export default function GradeEntryClient({
                       const isValidated = grade?.is_validated ?? false;
 
                       return (
-                        <tr key={s.id} className="hover:bg-slate-900/35 transition-colors">
-                          <td className="px-6 py-4 font-medium text-white whitespace-nowrap">
-                            <span className="font-mono text-xs bg-slate-800/50 px-2 py-0.5 rounded text-slate-400 mr-2">
+                        <tr key={s.id} className="hover:bg-paper-alt transition-colors">
+                          <td className="px-6 py-4 border-b border-line last:border-b-0 font-medium whitespace-nowrap">
+                            <span className="font-mono text-xs bg-paper-alt border border-line px-2 py-0.5 rounded text-text-soft mr-2">
                               {s.matricule}
                             </span>
                             {s.nom} {s.prenom}
                           </td>
-                          <td className="px-6 py-4">
+                          <td className="px-6 py-4 border-b border-line">
                             {evalIsLocked ? (
                               <span className="font-mono text-sm">
                                 {grade?.score ?? (grade?.is_absent ? "—" : "—")}
@@ -533,16 +539,16 @@ export default function GradeEntryClient({
                               />
                             )}
                           </td>
-                          <td className="px-6 py-4 font-mono text-sm">
+                          <td className="px-6 py-4 border-b border-line font-mono text-sm">
                             {draft.is_absent ? (
-                              <span className="text-slate-500">—</span>
+                              <span className="text-text-faint">—</span>
                             ) : noteConvertie ? (
-                              <span className="text-indigo-400">{noteConvertie}</span>
+                              <span className="text-accent">{noteConvertie}</span>
                             ) : (
-                              <span className="text-slate-600">—</span>
+                              <span className="text-text-faint">—</span>
                             )}
                           </td>
-                          <td className="px-6 py-4">
+                          <td className="px-6 py-4 border-b border-line">
                             {evalIsLocked ? (
                               <span>{grade?.is_absent ? "Absent" : "—"}</span>
                             ) : (
@@ -551,31 +557,38 @@ export default function GradeEntryClient({
                                   type="checkbox"
                                   checked={draft.is_absent}
                                   onChange={() => setAbsent(s.id)}
-                                  className="rounded border-slate-700 bg-slate-950 text-indigo-600 focus:ring-indigo-500"
+                                  className="rounded border-line bg-paper-alt accent-accent"
                                 />
-                                <span className="text-xs text-slate-500">Abs</span>
+                                <span className="text-xs text-text-faint">Abs</span>
                               </label>
                             )}
                           </td>
-                          <td className="px-6 py-4">
+                          <td className="px-6 py-4 border-b border-line">
                             {isValidated ? (
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs font-medium">
+                              <span
+                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-xs font-medium"
+                                style={{ color: "var(--ok)", boxShadow: "inset 0 0 0 1px var(--ok)" }}
+                              >
                                 <CheckCircle2 className="size-3" /> Validée
                               </span>
                             ) : isGraded ? (
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-amber-500/10 text-amber-400 border border-amber-500/20 text-xs font-medium">
+                              <span
+                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-xs font-medium"
+                                style={{ color: "var(--warn)", boxShadow: "inset 0 0 0 1px var(--warn)" }}
+                              >
                                 <Clock className="size-3" /> Provisoire
                               </span>
                             ) : (
-                              <span className="text-xs text-slate-600">En attente</span>
+                              <span className="text-xs text-text-faint">En attente</span>
                             )}
                           </td>
                           {canValidate && !evalIsLocked && (
-                            <td className="px-6 py-4">
+                            <td className="px-6 py-4 border-b border-line">
                               {grade && !grade.is_validated && !isPending && (
                                 <button
                                   onClick={() => handleValidateGrade(grade.id)}
-                                  className="inline-flex items-center gap-1 px-2.5 py-1 text-xs bg-indigo-600/10 hover:bg-indigo-600/20 text-indigo-400 border border-indigo-500/20 rounded-lg transition-colors cursor-pointer"
+                                  className="inline-flex items-center gap-1 px-2.5 py-1 text-xs text-accent rounded-lg transition-colors cursor-pointer"
+                                  style={{ boxShadow: "inset 0 0 0 1px var(--accent-line)" }}
                                 >
                                   <ShieldCheck className="size-3" /> Valider
                                 </button>
@@ -598,7 +611,8 @@ export default function GradeEntryClient({
                 <button
                   onClick={handleLock}
                   disabled={isPending || !canLockEvaluation}
-                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-amber-600 hover:bg-amber-500 text-white font-medium rounded-xl shadow-lg shadow-amber-600/25 transition-all disabled:opacity-40 cursor-pointer"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-white font-medium transition-opacity disabled:opacity-40 cursor-pointer hover:opacity-90"
+                  style={{ background: "var(--warn)" }}
                 >
                   {isPending ? <Loader2 className="size-4 animate-spin" /> : <Lock className="size-4" />}
                   Verrouiller
@@ -607,7 +621,7 @@ export default function GradeEntryClient({
               <button
                 onClick={handleBulkSave}
                 disabled={isPending}
-                className="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-medium rounded-xl shadow-lg shadow-indigo-600/25 transition-all disabled:opacity-50 cursor-pointer"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-accent hover:opacity-90 text-white font-medium transition-opacity disabled:opacity-50 cursor-pointer"
               >
                 {isPending ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
                 Enregistrer
@@ -616,14 +630,14 @@ export default function GradeEntryClient({
           )}
 
           {evalIsLocked && canValidate && students.length > 0 && (
-            <div className="p-4 bg-indigo-500/5 border border-indigo-500/10 rounded-xl text-sm text-slate-400">
+            <div className="p-4 rounded-xl text-sm bg-accent-soft text-text-soft">
               Évaluation verrouillée. Les notes ne peuvent plus être modifiées.
               {students.some((s: any) => {
                 const g = grades.find((gg: any) => gg.student?.id === s.id);
                 return g && !g.is_validated;
               }) && (
                 <span className="ml-1">
-                  Cliquez sur <span className="text-indigo-400 font-medium">Valider</span> pour chaque note afin de les officialiser.
+                  Cliquez sur <span className="text-accent font-medium">Valider</span> pour chaque note afin de les officialiser.
                 </span>
               )}
             </div>
@@ -632,8 +646,8 @@ export default function GradeEntryClient({
       )}
 
       {!selectedEval && !showCreateForm && classId && periodId && subjectId && (
-        <div className="p-12 text-center text-slate-500 bg-slate-900/20 border border-slate-800/80 rounded-xl flex flex-col items-center gap-3">
-          <FileSpreadsheet className="size-8 text-slate-600" />
+        <div className="p-12 text-center text-text-faint border border-line bg-card rounded-xl flex flex-col items-center gap-3">
+          <FileSpreadsheet className="size-8 text-text-faint" />
           Chargez les évaluations en sélectionnant une classe et une période.
         </div>
       )}
@@ -644,7 +658,7 @@ export default function GradeEntryClient({
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="space-y-1.5">
-      <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider">
+      <label className="block text-[10.5px] font-semibold text-text-faint uppercase tracking-[.08em]">
         {label}
       </label>
       {children}

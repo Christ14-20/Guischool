@@ -48,30 +48,30 @@ export default async function GradesPage() {
   }
 
   return (
-    <div className="space-y-6 animate-fade-in p-7 px-8">
-      <div>
-        <h1 className="text-3xl font-extrabold text-white tracking-tight bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent">
-          Saisie des notes
-        </h1>
-        <p className="text-slate-400 mt-1">
+    <div className="min-h-screen bg-paper text-text">
+      <div className="px-11 pt-9 pb-[22px]">
+        <h1 className="font-serif text-[26px] font-medium m-0 mb-1.5">Saisie des notes</h1>
+        <p className="m-0 text-text-soft text-[13.5px]">
           Sélectionnez une classe, une matière et une période pour saisir ou consulter les notes.
         </p>
       </div>
 
-      {errorMsg && (
-        <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-xl text-destructive text-sm">
-          {errorMsg}
-        </div>
-      )}
+      <div className="px-11 pb-12 space-y-[22px]">
+        {errorMsg && (
+          <div className="p-4 rounded-xl text-sm bg-danger/10 border border-danger/20 text-danger">
+            {errorMsg}
+          </div>
+        )}
 
-      <GradeEntryClient
-        schoolYears={schoolYears}
-        classes={classes}
-        subjects={subjects}
-        classSubjects={classSubjects}
-        role={role}
-        userId={user?.id}
-      />
+        <GradeEntryClient
+          schoolYears={schoolYears}
+          classes={classes}
+          subjects={subjects}
+          classSubjects={classSubjects}
+          role={role}
+          userId={user?.id}
+        />
+      </div>
     </div>
   );
 }
