@@ -1,28 +1,22 @@
 import React from "react";
 
-const STYLES: Record<string, string> = {
-  ACTIF: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
-  SUSPENDU: "bg-amber-500/10 text-amber-400 border-amber-500/20",
-  TRANSFERE: "bg-sky-500/10 text-sky-400 border-sky-500/20",
-  SORTI: "bg-slate-500/10 text-slate-400 border-slate-500/20",
-  ARCHIVE: "bg-rose-500/10 text-rose-400 border-rose-500/20",
-};
-
-const LABELS: Record<string, string> = {
-  ACTIF: "Actif",
-  SUSPENDU: "Suspendu",
-  TRANSFERE: "Transféré",
-  SORTI: "Sorti",
-  ARCHIVE: "Archivé",
+const STYLES: Record<string, { color: string; label: string }> = {
+  ACTIF: { color: "var(--ok)", label: "Actif" },
+  SUSPENDU: { color: "var(--warn)", label: "Suspendu" },
+  TRANSFERE: { color: "var(--info)", label: "Transféré" },
+  SORTI: { color: "var(--mute)", label: "Sorti" },
+  ARCHIVE: { color: "var(--danger)", label: "Archivé" },
 };
 
 export default function StatutBadge({ statut }: { statut: string }) {
   const style = STYLES[statut] || STYLES.SORTI;
   return (
     <span
-      className={`inline-flex items-center px-2.5 py-0.5 rounded-full border text-xs font-medium ${style}`}
+      className="inline-flex items-center gap-[7px] text-[12.5px]"
+      style={{ color: style.color }}
     >
-      {LABELS[statut] || statut}
+      <span className="size-[9px] rounded-full border-2" style={{ borderColor: style.color }} />
+      {style.label}
     </span>
   );
 }

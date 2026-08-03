@@ -45,7 +45,7 @@ const ALL_TABS = [
 ];
 
 const inputClass =
-  "w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 transition-colors";
+  "w-full bg-paper-alt border border-line rounded-lg px-4 py-2.5 text-sm text-text placeholder-text-faint outline-none focus:border-accent-line transition-colors";
 
 export default function StudentTabs({
   student,
@@ -63,23 +63,23 @@ export default function StudentTabs({
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="bg-slate-900/40 border border-slate-800/80 rounded-xl p-6 shadow-xl backdrop-blur-md">
+      <div className="border border-line bg-card rounded-xl p-6 shadow-[var(--shadow)]">
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-4">
-            <div className="size-14 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-indigo-400 text-xl font-bold">
+            <div className="size-14 rounded-2xl bg-accent-soft text-accent flex items-center justify-center text-xl font-semibold">
               {student.prenom?.[0]}
               {student.nom?.[0]}
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-white">
+              <h1 className="font-serif text-2xl font-medium">
                 {student.nom} {student.prenom}
               </h1>
               <div className="flex items-center gap-3 mt-1">
-                <span className="font-mono text-xs bg-slate-800/50 px-2 py-0.5 rounded text-slate-400">
+                <span className="font-mono text-xs bg-paper-alt border border-line px-2 py-0.5 rounded text-text-soft">
                   {student.matricule}
                 </span>
                 <StatutBadge statut={student.statut} />
-                <span className="text-sm text-slate-400">
+                <span className="text-sm text-text-soft">
                   {student.classe_actuelle?.name || "Sans classe"}
                 </span>
               </div>
@@ -89,14 +89,14 @@ export default function StudentTabs({
       </div>
 
       {/* Tabs nav */}
-      <div className="flex gap-1 border-b border-slate-800">
+      <div className="flex gap-1 border-b border-line">
         {TABS.map(({ key, label, icon: Icon }) => (
           <button
             key={key}
             onClick={() => setTab(key)}
             className={`inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors cursor-pointer ${tab === key
-                ? "border-indigo-500 text-white"
-                : "border-transparent text-slate-400 hover:text-white"
+                ? "border-accent text-text"
+                : "border-transparent text-text-faint hover:text-text"
               }`}
           >
             <Icon className="size-4" />
@@ -122,15 +122,6 @@ export default function StudentTabs({
   );
 }
 
-function Placeholder({ label, epic }: { label: string; epic: string }) {
-  return (
-    <div className="p-12 text-center text-slate-500 bg-slate-900/20 border border-slate-800/80 rounded-xl">
-      <p className="font-medium text-slate-400">{label}</p>
-      <p className="text-xs mt-1">Disponible prochainement ({epic}).</p>
-    </div>
-  );
-}
-
 const PRESENCE_LABELS: Record<string, string> = {
   PRESENT: "Présent",
   ABSENT: "Absent",
@@ -138,11 +129,11 @@ const PRESENCE_LABELS: Record<string, string> = {
   RETARD: "Retard",
 };
 
-const PRESENCE_STYLES: Record<string, string> = {
-  PRESENT: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
-  ABSENT: "bg-rose-500/10 text-rose-400 border-rose-500/20",
-  ABSENT_JUSTIFIE: "bg-amber-500/10 text-amber-400 border-amber-500/20",
-  RETARD: "bg-orange-500/10 text-orange-400 border-orange-500/20",
+const PRESENCE_STYLES: Record<string, { color: string }> = {
+  PRESENT: { color: "var(--ok)" },
+  ABSENT: { color: "var(--danger)" },
+  ABSENT_JUSTIFIE: { color: "var(--warn)" },
+  RETARD: { color: "var(--info)" },
 };
 
 function PresencesTab({ attendances }: { attendances: any[] }) {
@@ -161,38 +152,38 @@ function PresencesTab({ attendances }: { attendances: any[] }) {
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard
-          label="Taux d'assiduité"
-          value={taux === null ? "—" : `${taux}%`}
-          accent="text-indigo-400"
-        />
-        <StatCard label="Présences" value={String(present)} accent="text-emerald-400" />
-        <StatCard label="Absences" value={String(absent)} accent="text-rose-400" />
-        <StatCard label="Retards" value={String(retard)} accent="text-orange-400" />
+        <StatCard label="Taux d'assiduité" value={taux === null ? "—" : `${taux}%`} color="var(--accent)" />
+        <StatCard label="Présences" value={String(present)} color="var(--ok)" />
+        <StatCard label="Absences" value={String(absent)} color="var(--danger)" />
+        <StatCard label="Retards" value={String(retard)} color="var(--info)" />
       </div>
 
       {total === 0 ? (
-        <div className="p-12 text-center text-slate-500 bg-slate-900/20 border border-slate-800/80 rounded-xl">
+        <div className="p-12 text-center text-text-faint border border-line bg-card rounded-xl">
           Aucune présence enregistrée pour cet élève.
         </div>
       ) : (
-        <div className="bg-slate-900/40 border border-slate-800/80 rounded-xl shadow-xl backdrop-blur-md overflow-hidden">
+        <div className="border border-line bg-card rounded-xl shadow-[var(--shadow)]">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="border-b border-slate-800/50 text-slate-400 text-xs font-semibold uppercase tracking-wider">
-                <th className="px-6 py-4">Date</th>
-                <th className="px-6 py-4">Statut</th>
+              <tr>
+                <th className="text-left text-[10.5px] tracking-[.08em] uppercase text-text-faint font-medium px-6 py-4 border-b border-line">Date</th>
+                <th className="text-left text-[10.5px] tracking-[.08em] uppercase text-text-faint font-medium px-6 py-4 border-b border-line">Statut</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/30 text-sm text-slate-300">
+            <tbody className="text-sm">
               {sorted.map((a: any) => (
-                <tr key={a.id} className="hover:bg-slate-900/35 transition-colors">
-                  <td className="px-6 py-4 text-white">{a.date}</td>
-                  <td className="px-6 py-4">
+                <tr key={a.id} className="hover:bg-paper-alt transition-colors">
+                  <td className="px-6 py-4 border-b border-line last:border-b-0">{a.date}</td>
+                  <td className="px-6 py-4 border-b border-line">
                     <span
-                      className={`inline-flex items-center px-2.5 py-0.5 rounded-lg border text-xs font-medium ${PRESENCE_STYLES[a.status] ?? ""
-                        }`}
+                      className="inline-flex items-center gap-[7px] text-[12.5px]"
+                      style={{ color: PRESENCE_STYLES[a.status]?.color ?? "var(--mute)" }}
                     >
+                      <span
+                        className="size-[9px] rounded-full border-2"
+                        style={{ borderColor: PRESENCE_STYLES[a.status]?.color ?? "var(--mute)" }}
+                      />
                       {PRESENCE_LABELS[a.status] ?? a.status}
                     </span>
                   </td>
@@ -209,16 +200,16 @@ function PresencesTab({ attendances }: { attendances: any[] }) {
 function StatCard({
   label,
   value,
-  accent,
+  color,
 }: {
   label: string;
   value: string;
-  accent: string;
+  color: string;
 }) {
   return (
-    <div className="bg-slate-900/40 border border-slate-800/80 rounded-xl p-5 shadow-xl backdrop-blur-md">
-      <p className="text-xs text-slate-500 uppercase tracking-wider">{label}</p>
-      <p className={`text-2xl font-bold mt-1 ${accent}`}>{value}</p>
+    <div className="border border-line bg-card rounded-xl p-5 shadow-[var(--shadow)]">
+      <p className="text-[10.5px] tracking-[.08em] uppercase text-text-faint">{label}</p>
+      <p className="text-2xl font-semibold mt-1" style={{ color }}>{value}</p>
     </div>
   );
 }
@@ -261,15 +252,15 @@ function ProfilTab({
     <div className="space-y-6">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Identité */}
-        <div className="bg-slate-900/40 border border-slate-800/80 rounded-xl p-6 shadow-xl backdrop-blur-md space-y-4">
+        <div className="border border-line bg-card rounded-xl p-6 shadow-[var(--shadow)] space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider">
+            <h3 className="text-[10.5px] font-semibold text-text-faint uppercase tracking-[.08em]">
               Identité
             </h3>
             {!editing && (
               <button
                 onClick={() => setEditing(true)}
-                className="text-xs text-indigo-400 hover:text-indigo-300 cursor-pointer"
+                className="text-xs text-accent hover:opacity-80 cursor-pointer"
               >
                 Modifier
               </button>
@@ -280,7 +271,7 @@ function ProfilTab({
           <Field label="Date de naissance" value={student.date_naissance} />
           <Field label="Sexe" value={student.sexe === "F" ? "Féminin" : "Masculin"} />
           <div className="space-y-1">
-            <span className="text-xs text-slate-500 uppercase tracking-wider">
+            <span className="text-[10.5px] tracking-[.08em] uppercase text-text-faint">
               Lieu de naissance
             </span>
             {editing ? (
@@ -293,7 +284,7 @@ function ProfilTab({
                 <button
                   onClick={saveProfil}
                   disabled={isPending}
-                  className="px-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl disabled:opacity-50 cursor-pointer"
+                  className="px-3 bg-accent hover:opacity-90 text-white rounded-lg disabled:opacity-50 cursor-pointer transition-opacity"
                 >
                   {isPending ? <Loader2 className="size-4 animate-spin" /> : <Check className="size-4" />}
                 </button>
@@ -302,38 +293,38 @@ function ProfilTab({
                     setEditing(false);
                     setLieu(student.lieu_naissance || "");
                   }}
-                  className="px-3 bg-slate-800 hover:bg-slate-700 text-white rounded-xl cursor-pointer"
+                  className="px-3 border border-line hover:border-accent-line text-text rounded-lg cursor-pointer transition-colors"
                 >
                   <X className="size-4" />
                 </button>
               </div>
             ) : (
-              <p className="text-sm font-medium text-white">
+              <p className="text-sm font-medium">
                 {student.lieu_naissance || "—"}
               </p>
             )}
           </div>
-          {error && <p className="text-xs text-destructive">{error}</p>}
+          {error && <p className="text-xs text-danger">{error}</p>}
         </div>
 
         {/* Responsables */}
-        <div className="bg-slate-900/40 border border-slate-800/80 rounded-xl p-6 shadow-xl backdrop-blur-md space-y-4">
-          <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider">
+        <div className="border border-line bg-card rounded-xl p-6 shadow-[var(--shadow)] space-y-4">
+          <h3 className="text-[10.5px] font-semibold text-text-faint uppercase tracking-[.08em]">
             Responsables légaux
           </h3>
           {(student.guardians ?? []).length === 0 && (
-            <p className="text-sm text-slate-500">Aucun responsable enregistré.</p>
+            <p className="text-sm text-text-faint">Aucun responsable enregistré.</p>
           )}
           {(student.guardians ?? []).map((g: any) => (
             <div
               key={g.id}
-              className="border border-slate-800/50 rounded-xl p-4 space-y-2"
+              className="border border-line rounded-xl p-4 space-y-2"
             >
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-white">{g.nom_complet}</span>
-                <span className="text-xs text-slate-500">{g.lien}</span>
+                <span className="text-sm font-medium">{g.nom_complet}</span>
+                <span className="text-xs text-text-faint">{g.lien}</span>
               </div>
-              <div className="flex items-center gap-4 text-xs text-slate-400">
+              <div className="flex items-center gap-4 text-xs text-text-soft">
                 <span className="inline-flex items-center gap-1">
                   <Phone className="size-3.5" /> {g.telephone}
                 </span>
@@ -349,21 +340,22 @@ function ProfilTab({
       </div>
 
       {/* Actions */}
-      <div className="bg-slate-900/40 border border-slate-800/80 rounded-xl p-6 shadow-xl backdrop-blur-md space-y-4">
-        <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider">
+      <div className="border border-line bg-card rounded-xl p-6 shadow-[var(--shadow)] space-y-4">
+        <h3 className="text-[10.5px] font-semibold text-text-faint uppercase tracking-[.08em]">
           Actions
         </h3>
         <div className="flex flex-wrap gap-3">
           <button
             onClick={() => setShowReinscription((v) => !v)}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white text-sm font-medium rounded-xl transition-colors cursor-pointer"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-line text-text-soft hover:border-accent-line hover:text-text text-sm font-medium transition-colors cursor-pointer"
           >
             <RefreshCw className="size-4" /> Réinscrire
           </button>
           {student.statut !== "ARCHIVE" && (
             <button
               onClick={() => setShowArchive((v) => !v)}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-rose-600/10 hover:bg-rose-600/20 text-rose-400 text-sm font-medium rounded-xl transition-colors cursor-pointer"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-danger text-sm font-medium transition-colors cursor-pointer"
+              style={{ boxShadow: "inset 0 0 0 1px var(--danger)" }}
             >
               <Archive className="size-4" /> Archiver
             </button>
@@ -432,7 +424,7 @@ function ReinscriptionForm({
   };
 
   return (
-    <div className="border border-slate-800/50 rounded-xl p-4 space-y-3 bg-slate-950/40">
+    <div className="border border-line rounded-xl p-4 space-y-3 bg-paper-alt">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {canOverrideSchoolYear && (
           <select value={yearId} onChange={(e) => setYearId(e.target.value)} className={inputClass}>
@@ -453,11 +445,11 @@ function ReinscriptionForm({
           ))}
         </select>
       </div>
-      {error && <p className="text-xs text-destructive">{error}</p>}
+      {error && <p className="text-xs text-danger">{error}</p>}
       <button
         onClick={submit}
         disabled={isPending}
-        className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium rounded-xl disabled:opacity-50 cursor-pointer"
+        className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-accent hover:opacity-90 text-white text-sm font-medium disabled:opacity-50 cursor-pointer transition-opacity"
       >
         {isPending && <Loader2 className="size-4 animate-spin" />}
         Confirmer la réinscription
@@ -481,18 +473,19 @@ function ArchiveForm({ studentId, onDone }: { studentId: string; onDone: () => v
   };
 
   return (
-    <div className="border border-rose-500/20 rounded-xl p-4 space-y-3 bg-rose-950/10">
+    <div className="border border-danger/20 rounded-xl p-4 space-y-3 bg-danger/5">
       <input
         value={motif}
         onChange={(e) => setMotif(e.target.value)}
         placeholder="Motif (ex: Fin de scolarité)"
         className={inputClass}
       />
-      {error && <p className="text-xs text-destructive">{error}</p>}
+      {error && <p className="text-xs text-danger">{error}</p>}
       <button
         onClick={submit}
         disabled={isPending}
-        className="inline-flex items-center gap-2 px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white text-sm font-medium rounded-xl disabled:opacity-50 cursor-pointer"
+        className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-white text-sm font-medium disabled:opacity-50 cursor-pointer transition-opacity hover:opacity-90"
+        style={{ background: "var(--danger)" }}
       >
         {isPending && <Loader2 className="size-4 animate-spin" />}
         Confirmer l&apos;archivage
@@ -504,29 +497,29 @@ function ArchiveForm({ studentId, onDone }: { studentId: string; onDone: () => v
 function HistoriqueTab({ enrollments }: { enrollments: any[] }) {
   if (!enrollments.length) {
     return (
-      <div className="p-12 text-center text-slate-500 bg-slate-900/20 border border-slate-800/80 rounded-xl">
+      <div className="p-12 text-center text-text-faint border border-line bg-card rounded-xl">
         Aucun historique d&apos;inscription.
       </div>
     );
   }
   return (
-    <div className="bg-slate-900/40 border border-slate-800/80 rounded-xl shadow-xl backdrop-blur-md overflow-hidden">
+    <div className="border border-line bg-card rounded-xl shadow-[var(--shadow)]">
       <table className="w-full text-left border-collapse">
         <thead>
-          <tr className="border-b border-slate-800/50 text-slate-400 text-xs font-semibold uppercase tracking-wider">
-            <th className="px-6 py-4">Année</th>
-            <th className="px-6 py-4">Classe</th>
-            <th className="px-6 py-4">Type</th>
-            <th className="px-6 py-4">Date</th>
+          <tr>
+            <th className="text-left text-[10.5px] tracking-[.08em] uppercase text-text-faint font-medium px-6 py-4 border-b border-line">Année</th>
+            <th className="text-left text-[10.5px] tracking-[.08em] uppercase text-text-faint font-medium px-6 py-4 border-b border-line">Classe</th>
+            <th className="text-left text-[10.5px] tracking-[.08em] uppercase text-text-faint font-medium px-6 py-4 border-b border-line">Type</th>
+            <th className="text-left text-[10.5px] tracking-[.08em] uppercase text-text-faint font-medium px-6 py-4 border-b border-line">Date</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-slate-800/30 text-sm text-slate-300">
+        <tbody className="text-sm">
           {enrollments.map((e: any) => (
-            <tr key={e.id} className="hover:bg-slate-900/35 transition-colors">
-              <td className="px-6 py-4 text-white">{e.school_year?.label}</td>
-              <td className="px-6 py-4">{e.classe?.name}</td>
-              <td className="px-6 py-4">{e.type_inscription}</td>
-              <td className="px-6 py-4 text-slate-400">{e.date_inscription}</td>
+            <tr key={e.id} className="hover:bg-paper-alt transition-colors">
+              <td className="px-6 py-4 border-b border-line last:border-b-0">{e.school_year?.label}</td>
+              <td className="px-6 py-4 border-b border-line">{e.classe?.name}</td>
+              <td className="px-6 py-4 border-b border-line">{e.type_inscription}</td>
+              <td className="px-6 py-4 border-b border-line text-text-soft">{e.date_inscription}</td>
             </tr>
           ))}
         </tbody>
@@ -538,8 +531,8 @@ function HistoriqueTab({ enrollments }: { enrollments: any[] }) {
 function Field({ label, value }: { label: string; value: any }) {
   return (
     <div className="space-y-1">
-      <span className="text-xs text-slate-500 uppercase tracking-wider">{label}</span>
-      <p className="text-sm font-medium text-white">{value || "—"}</p>
+      <span className="text-[10.5px] tracking-[.08em] uppercase text-text-faint">{label}</span>
+      <p className="text-sm font-medium">{value || "—"}</p>
     </div>
   );
 }

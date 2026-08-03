@@ -57,7 +57,7 @@ export default function ExportCsvButton({ query }: Props) {
       <button
         onClick={handleExport}
         disabled={isPending}
-        className="inline-flex items-center gap-2 px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-white font-medium rounded-xl transition-colors disabled:opacity-50 cursor-pointer"
+        className="inline-flex items-center gap-1.5 rounded-lg border border-line text-text-soft text-[13px] font-semibold px-4 py-2.5 hover:border-accent-line hover:text-text transition-colors disabled:opacity-50 cursor-pointer"
       >
         {isPending ? (
           <Loader2 className="size-4 animate-spin" />
@@ -66,7 +66,7 @@ export default function ExportCsvButton({ query }: Props) {
         )}
         Export CSV
       </button>
-      {error && <span className="text-xs text-destructive mt-1">{error}</span>}
+      {error && <span className="text-xs text-danger mt-1">{error}</span>}
     </div>
   );
 }

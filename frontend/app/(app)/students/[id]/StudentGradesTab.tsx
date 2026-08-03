@@ -2,6 +2,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useTransition } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import {
   Loader2,
@@ -227,10 +228,10 @@ const handleDecisionSubmit = useCallback(async () => {
   return (
     <div className="space-y-6">
       {/* Period selector + Bulletin + Decision buttons */}
-      <div className="bg-slate-900/40 border border-slate-800/80 rounded-xl p-5 shadow-xl backdrop-blur-md">
+      <div className="border border-line bg-card rounded-xl p-5 shadow-[var(--shadow)]">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
           <div className="space-y-1.5">
-            <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider">
+            <label className="block text-[10.5px] font-semibold text-text-faint uppercase tracking-[.08em]">
               Période
             </label>
             <select
@@ -240,7 +241,7 @@ const handleDecisionSubmit = useCallback(async () => {
                 setBulletinStatus("idle");
                 setPdfUrl(null);
               }}
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors"
+              className="w-full bg-paper-alt border border-line rounded-lg px-3 py-2 text-sm text-text outline-none focus:border-accent-line transition-colors"
             >
               {periods.length === 0 && (
                 <option value="">Aucune période disponible</option>
@@ -262,7 +263,7 @@ const handleDecisionSubmit = useCallback(async () => {
                 bulletinStatus === "loading" ||
                 bulletinStatus === "polling"
               }
-              className="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-medium rounded-xl shadow-lg shadow-indigo-600/25 transition-all disabled:opacity-50 cursor-pointer"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-accent hover:opacity-90 text-white font-medium transition-opacity disabled:opacity-50 cursor-pointer"
             >
               {bulletinStatus === "loading" || bulletinStatus === "polling" ? (
                 <>
@@ -283,7 +284,8 @@ const handleDecisionSubmit = useCallback(async () => {
             <div className="flex items-end">
               <button
                 onClick={openDecisionModal}
-                className="inline-flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded-xl shadow-lg shadow-emerald-600/25 transition-all cursor-pointer"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-white font-medium transition-opacity hover:opacity-90 cursor-pointer"
+                style={{ background: "var(--ok)" }}
               >
                 <GraduationCap className="size-4" />
                 D&apos;écision de fin d&apos;année
@@ -294,21 +296,21 @@ const handleDecisionSubmit = useCallback(async () => {
       </div>
 
       {error && (
-        <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-xl text-destructive text-sm flex items-center gap-2">
+        <div className="p-4 rounded-xl text-sm bg-danger/10 border border-danger/20 text-danger flex items-center gap-2">
           <AlertTriangle className="size-4 shrink-0" />
           {error}
         </div>
       )}
 
       {bulletinStatus === "done" && pdfUrl && (
-        <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-emerald-400 text-sm flex items-center gap-2">
+        <div className="p-4 rounded-xl text-sm flex items-center gap-2 bg-ok/10 border border-ok/20 text-ok">
           <CheckCircle2 className="size-4 shrink-0" />
           Bulletin généré avec succès.
           <a
             href={pdfUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="ml-auto underline hover:text-emerald-300"
+            className="ml-auto underline hover:opacity-80"
           >
             Ouvrir le PDF
           </a>
@@ -317,85 +319,86 @@ const handleDecisionSubmit = useCallback(async () => {
 
       {/* Moyenne data */}
       {loadingMoyenne ? (
-        <div className="p-12 text-center text-slate-500 bg-slate-900/20 border border-slate-800/80 rounded-xl flex items-center justify-center gap-3">
-          <Loader2 className="size-5 animate-spin text-indigo-400" />
+        <div className="p-12 text-center text-text-faint border border-line bg-card rounded-xl flex items-center justify-center gap-3">
+          <Loader2 className="size-5 animate-spin text-accent" />
           Calcul des moyennes...
         </div>
       ) : moyenneData ? (
         <>
           {/* Summary cards */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="bg-slate-900/40 border border-slate-800/80 rounded-xl p-5 shadow-xl backdrop-blur-md text-center">
-              <p className="text-xs text-slate-500 uppercase tracking-wider">
+            <div className="border border-line bg-card rounded-xl p-5 shadow-[var(--shadow)] text-center">
+              <p className="text-[10.5px] tracking-[.08em] uppercase text-text-faint">
                 Moyenne Générale
               </p>
-              <p className="text-3xl font-bold text-white mt-1">
+              <p className="text-3xl font-semibold mt-1">
                 {moyenneData.moyenne_generale ?? "—"}
               </p>
             </div>
-            <div className="bg-slate-900/40 border border-slate-800/80 rounded-xl p-5 shadow-xl backdrop-blur-md text-center">
-              <p className="text-xs text-slate-500 uppercase tracking-wider">
+            <div className="border border-line bg-card rounded-xl p-5 shadow-[var(--shadow)] text-center">
+              <p className="text-[10.5px] tracking-[.08em] uppercase text-text-faint">
                 Mention
               </p>
-              <p className="text-2xl font-bold mt-1">
+              <p className="text-2xl font-semibold mt-1">
                 {moyenneData.mention ? (
                   <span
-                    className={
-                      moyenneData.mention === "Excellent"
-                        ? "text-emerald-400"
-                        : moyenneData.mention === "Insuffisant"
-                        ? "text-rose-400"
-                        : "text-indigo-400"
-                    }
+                    style={{
+                      color:
+                        moyenneData.mention === "Excellent"
+                          ? "var(--ok)"
+                          : moyenneData.mention === "Insuffisant"
+                          ? "var(--danger)"
+                          : "var(--accent)",
+                    }}
                   >
                     {moyenneData.mention}
                   </span>
                 ) : (
-                  <span className="text-slate-500">—</span>
+                  <span className="text-text-faint">—</span>
                 )}
               </p>
             </div>
-            <div className="bg-slate-900/40 border border-slate-800/80 rounded-xl p-5 shadow-xl backdrop-blur-md text-center">
-              <p className="text-xs text-slate-500 uppercase tracking-wider">
+            <div className="border border-line bg-card rounded-xl p-5 shadow-[var(--shadow)] text-center">
+              <p className="text-[10.5px] tracking-[.08em] uppercase text-text-faint">
                 Période
               </p>
-              <p className="text-lg font-bold text-white mt-1">
+              <p className="text-lg font-semibold mt-1">
                 {selectedPeriod?.name ?? "—"}
               </p>
             </div>
           </div>
 
           {/* Per-subject table */}
-          <div className="bg-slate-900/40 border border-slate-800/80 rounded-xl shadow-xl backdrop-blur-md overflow-hidden">
+          <div className="border border-line bg-card rounded-xl shadow-[var(--shadow)]">
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="border-b border-slate-800/50 text-slate-400 text-xs font-semibold uppercase tracking-wider">
-                    <th className="px-6 py-4">Matière</th>
-                    <th className="px-6 py-4">Moyenne</th>
-                    <th className="px-6 py-4">Coefficient</th>
+                  <tr>
+                    <th className="text-left text-[10.5px] tracking-[.08em] uppercase text-text-faint font-medium px-6 py-4 border-b border-line">Matière</th>
+                    <th className="text-left text-[10.5px] tracking-[.08em] uppercase text-text-faint font-medium px-6 py-4 border-b border-line">Moyenne</th>
+                    <th className="text-left text-[10.5px] tracking-[.08em] uppercase text-text-faint font-medium px-6 py-4 border-b border-line">Coefficient</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-800/30 text-sm text-slate-300">
+                <tbody className="text-sm">
                   {(moyenneData.par_matiere ?? []).length === 0 ? (
                     <tr>
-                      <td colSpan={3} className="px-6 py-8 text-center text-slate-500">
+                      <td colSpan={3} className="px-6 py-8 text-center text-text-faint">
                         <div className="flex flex-col items-center gap-2">
-                          <BookOpen className="size-5 text-slate-600" />
+                          <BookOpen className="size-5 text-text-faint" />
                           Aucune note disponible pour cette période.
                         </div>
                       </td>
                     </tr>
                   ) : (
                     moyenneData.par_matiere.map((item: any, i: number) => (
-                      <tr key={i} className="hover:bg-slate-900/35 transition-colors">
-                        <td className="px-6 py-4 font-medium text-white">
+                      <tr key={i} className="hover:bg-paper-alt transition-colors">
+                        <td className="px-6 py-4 border-b border-line last:border-b-0 font-medium">
                           {item.subject ?? item.subject_name ?? "—"}
                         </td>
-                        <td className="px-6 py-4 font-mono">
+                        <td className="px-6 py-4 border-b border-line font-mono">
                           {item.moyenne ?? "—"}
                         </td>
-                        <td className="px-6 py-4 text-slate-400">
+                        <td className="px-6 py-4 border-b border-line text-text-soft">
                           {item.coefficient ?? "—"}
                         </td>
                       </tr>
@@ -407,8 +410,8 @@ const handleDecisionSubmit = useCallback(async () => {
           </div>
         </>
       ) : (
-        <div className="p-12 text-center text-slate-500 bg-slate-900/20 border border-slate-800/80 rounded-xl flex flex-col items-center gap-3">
-          <Clock className="size-8 text-slate-600" />
+        <div className="p-12 text-center text-text-faint border border-line bg-card rounded-xl flex flex-col items-center gap-3">
+          <Clock className="size-8 text-text-faint" />
           {periodId
             ? "Aucune moyenne calculée pour cette période."
             : "Sélectionnez une période pour afficher les notes."}
@@ -416,115 +419,117 @@ const handleDecisionSubmit = useCallback(async () => {
       )}
 
       {/* Year-end decision modal */}
-      {decisionModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
-            <div className="p-6 space-y-6">
-              <div className="flex items-center justify-between">
-                <h2 className="text-xl font-bold text-white">
-                  D&apos;écision de fin d&apos;année
-                </h2>
-                <button
-                  onClick={() => setDecisionModalOpen(false)}
-                  className="text-slate-400 hover:text-white cursor-pointer"
-                >
-                  <X className="size-5" />
-                </button>
-              </div>
-
-              {decisionError && (
-                <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-lg text-rose-400 text-sm">
-                  {decisionError}
-                </div>
-              )}
-
-              <div className="space-y-4">
-                <div className="space-y-1.5">
-                  <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                    Année scolaire
-                  </label>
-                  <select
-                    value={decisionForm.school_year_id}
-                    onChange={(e) =>
-                      setDecisionForm((p) => ({ ...p, school_year_id: e.target.value }))
-                    }
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors"
+      {decisionModalOpen &&
+        createPortal(
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+            <div className="bg-card border border-line rounded-2xl shadow-[var(--shadow)] w-full max-w-md max-h-[90vh] overflow-y-auto">
+              <div className="p-6 space-y-6">
+                <div className="flex items-center justify-between">
+                  <h2 className="font-serif text-xl font-medium text-text">
+                    D&apos;écision de fin d&apos;année
+                  </h2>
+                  <button
+                    onClick={() => setDecisionModalOpen(false)}
+                    className="text-text-faint hover:text-text cursor-pointer"
                   >
-                    {schoolYears.map((sy: any) => (
-                      <option key={sy.id} value={sy.id}>
-                        {sy.label}
-                      </option>
-                    ))}
-                  </select>
+                    <X className="size-5" />
+                  </button>
                 </div>
 
-                <div className="space-y-1.5">
-                  <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                    Décision
-                  </label>
-                  <select
-                    value={decisionForm.decision}
-                    onChange={(e) =>
-                      setDecisionForm((p) => ({ ...p, decision: e.target.value }))
-                    }
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors"
-                  >
-                    <option value="ADMIS">Admis</option>
-                    <option value="REDOUBLE">Redouble</option>
-                    <option value="EXCLU">Exclu</option>
-                  </select>
-                </div>
+                {decisionError && (
+                  <div className="p-3 rounded-lg text-sm bg-danger/10 border border-danger/20 text-danger">
+                    {decisionError}
+                  </div>
+                )}
 
-                {(decisionForm.decision === "ADMIS" || decisionForm.decision === "REDOUBLE") && (
+                <div className="space-y-4">
                   <div className="space-y-1.5">
-                    <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                      Classe de destination
+                    <label className="block text-[10.5px] font-semibold text-text-faint uppercase tracking-[.08em]">
+                      Année scolaire
                     </label>
                     <select
-                      value={decisionForm.classe_destination_id}
+                      value={decisionForm.school_year_id}
                       onChange={(e) =>
-                        setDecisionForm((p) => ({
-                          ...p,
-                          classe_destination_id: e.target.value,
-                        }))
+                        setDecisionForm((p) => ({ ...p, school_year_id: e.target.value }))
                       }
-                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors"
+                      className="w-full bg-paper-alt border border-line rounded-lg px-3 py-2 text-sm text-text outline-none focus:border-accent-line transition-colors"
                     >
-                      <option value="">Sélectionner...</option>
-                      {classes.map((c: any) => (
-                        <option key={c.id} value={c.id}>
-                          {c.name}
+                      {schoolYears.map((sy: any) => (
+                        <option key={sy.id} value={sy.id}>
+                          {sy.label}
                         </option>
                       ))}
                     </select>
                   </div>
-                )}
 
-                <div className="flex justify-end gap-3 pt-4 border-t border-slate-800">
-                  <button
-                    onClick={() => setDecisionModalOpen(false)}
-                    className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-sm font-medium transition-colors"
-                  >
-                    Annuler
-                  </button>
-                  <button
-                    onClick={handleDecisionSubmit}
-                    disabled={decisionLoading}
-                    className="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-medium rounded-xl shadow-lg shadow-indigo-600/25 transition-all disabled:opacity-50 cursor-pointer"
-                  >
-                    {decisionLoading ? (
-                      <Loader2 className="size-4 animate-spin" />
-                    ) : (
-                      <Plus className="size-4" />
-                    )}
-                    Créer la décision
-                  </button>
+                  <div className="space-y-1.5">
+                    <label className="block text-[10.5px] font-semibold text-text-faint uppercase tracking-[.08em]">
+                      Décision
+                    </label>
+                    <select
+                      value={decisionForm.decision}
+                      onChange={(e) =>
+                        setDecisionForm((p) => ({ ...p, decision: e.target.value }))
+                      }
+                      className="w-full bg-paper-alt border border-line rounded-lg px-3 py-2 text-sm text-text outline-none focus:border-accent-line transition-colors"
+                    >
+                      <option value="ADMIS">Admis</option>
+                      <option value="REDOUBLE">Redouble</option>
+                      <option value="EXCLU">Exclu</option>
+                    </select>
+                  </div>
+
+                  {(decisionForm.decision === "ADMIS" || decisionForm.decision === "REDOUBLE") && (
+                    <div className="space-y-1.5">
+                      <label className="block text-[10.5px] font-semibold text-text-faint uppercase tracking-[.08em]">
+                        Classe de destination
+                      </label>
+                      <select
+                        value={decisionForm.classe_destination_id}
+                        onChange={(e) =>
+                          setDecisionForm((p) => ({
+                            ...p,
+                            classe_destination_id: e.target.value,
+                          }))
+                        }
+                        className="w-full bg-paper-alt border border-line rounded-lg px-3 py-2 text-sm text-text outline-none focus:border-accent-line transition-colors"
+                      >
+                        <option value="">Sélectionner...</option>
+                        {classes.map((c: any) => (
+                          <option key={c.id} value={c.id}>
+                            {c.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
+                  <div className="flex justify-end gap-3 pt-4 border-t border-line">
+                    <button
+                      onClick={() => setDecisionModalOpen(false)}
+                      className="px-4 py-2 rounded-lg border border-line text-text-soft text-sm font-medium hover:border-accent-line hover:text-text transition-colors cursor-pointer"
+                    >
+                      Annuler
+                    </button>
+                    <button
+                      onClick={handleDecisionSubmit}
+                      disabled={decisionLoading}
+                      className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-accent hover:opacity-90 text-white font-medium transition-opacity disabled:opacity-50 cursor-pointer"
+                    >
+                      {decisionLoading ? (
+                        <Loader2 className="size-4 animate-spin" />
+                      ) : (
+                        <Plus className="size-4" />
+                      )}
+                      Créer la décision
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body
+        )}
     </div>
   );
 }

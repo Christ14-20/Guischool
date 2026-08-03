@@ -74,32 +74,34 @@ export default async function StudentDetailPage(props: {
   }
 
   return (
-    <div className="space-y-6 animate-fade-in p-7 px-8">
-      <Link
-        href="/students"
-        className="inline-flex items-center gap-2 text-sm text-slate-400 hover:text-white transition-colors"
-      >
-        <ArrowLeft className="size-4" />
-        Retour aux élèves
-      </Link>
+    <div className="min-h-screen bg-paper text-text">
+      <div className="px-11 pt-9 pb-12">
+        <Link
+          href="/students"
+          className="inline-flex items-center gap-1.5 text-[13px] text-text-soft hover:text-accent transition-colors no-underline mb-[18px]"
+        >
+          <ArrowLeft className="size-3.5" />
+          Retour aux élèves
+        </Link>
 
-      {errorMsg && (
-        <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-xl text-destructive text-sm">
-          {errorMsg}
-        </div>
-      )}
+        {errorMsg && (
+          <div className="p-4 rounded-xl text-sm bg-danger/10 border border-danger/20 text-danger">
+            {errorMsg}
+          </div>
+        )}
 
-      {student && (
-        <StudentTabs
-          student={student}
-          classes={classes}
-          schoolYears={schoolYears}
-          attendances={attendances}
-          invoices={invoices}
-          payments={payments}
-          role={role}
-        />
-      )}
+        {student && (
+          <StudentTabs
+            student={student}
+            classes={classes}
+            schoolYears={schoolYears}
+            attendances={attendances}
+            invoices={invoices}
+            payments={payments}
+            role={role}
+          />
+        )}
+      </div>
     </div>
   );
 }
