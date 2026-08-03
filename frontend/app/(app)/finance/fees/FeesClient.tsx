@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import {
   createFeeCategoryAction,
   updateFeeCategoryAction,
@@ -42,12 +43,12 @@ type Student = {
 };
 
 const INPUT_CLASS =
-  "w-full bg-slate-900/60 border border-slate-700/60 rounded-lg px-3 py-2 text-sm text-slate-200 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500/60 transition-colors";
+  "w-full bg-paper-alt border border-line rounded-lg px-3 py-2 text-sm text-text placeholder-text-faint outline-none focus:border-accent-line transition-colors";
 
 const TABLE_CLASS = "w-full text-left border-collapse";
 const TH_CLASS =
-  "px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-400 border-b border-slate-800/50";
-const TD_CLASS = "px-4 py-3 text-sm text-slate-300 border-b border-slate-800/30";
+  "px-4 py-3 text-[10.5px] font-medium uppercase tracking-[.08em] text-text-faint border-b border-line";
+const TD_CLASS = "px-4 py-3 text-sm text-text-soft border-b border-line";
 
 export default function FeesClient({
   categories: initialCategories,
@@ -224,36 +225,36 @@ export default function FeesClient({
   const typeLabel = (t: string) => (t === "INSCRIPTION" ? "Inscription" : "Scolarité");
 
   return (
-    <div>
+    <div className="space-y-[22px]">
       {error && (
-        <div className="mb-4 px-4 py-3 rounded-lg bg-red-900/30 border border-red-700/50 text-red-300 text-sm">
+        <div className="px-4 py-3 rounded-lg bg-danger/10 border border-danger/20 text-danger text-sm">
           {error}
         </div>
       )}
       {success && (
-        <div className="mb-4 px-4 py-3 rounded-lg bg-emerald-900/30 border border-emerald-700/50 text-emerald-300 text-sm">
+        <div className="px-4 py-3 rounded-lg bg-ok/10 border border-ok/20 text-ok text-sm">
           {success}
         </div>
       )}
 
       {/* Tabs */}
-      <div className="flex gap-1 mb-6 p-1 rounded-xl bg-slate-900/60 border border-slate-800/40 w-fit">
+      <div className="flex gap-1 p-1 rounded-xl border border-line bg-card w-fit">
         <button
           onClick={() => setActiveTab("categories")}
-          className={`px-5 py-2 rounded-lg text-sm font-medium transition-all ${
+          className={`px-5 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
             activeTab === "categories"
-              ? "bg-emerald-600/20 text-emerald-300 shadow-sm"
-              : "text-slate-400 hover:text-slate-300"
+              ? "bg-accent-soft text-accent"
+              : "text-text-faint hover:text-text"
           }`}
         >
           Catégories de frais
         </button>
         <button
           onClick={() => setActiveTab("assign")}
-          className={`px-5 py-2 rounded-lg text-sm font-medium transition-all ${
+          className={`px-5 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
             activeTab === "assign"
-              ? "bg-emerald-600/20 text-emerald-300 shadow-sm"
-              : "text-slate-400 hover:text-slate-300"
+              ? "bg-accent-soft text-accent"
+              : "text-text-faint hover:text-text"
           }`}
         >
           Assigner à un élève
@@ -261,13 +262,13 @@ export default function FeesClient({
       </div>
 
       {activeTab === "categories" && (
-        <div className="bg-slate-900/40 border border-slate-800/80 rounded-xl shadow-xl backdrop-blur-md overflow-hidden">
+        <div className="border border-line bg-card rounded-xl shadow-[var(--shadow)]">
           {/* Header */}
-          <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800/50">
-            <h2 className="text-lg font-semibold text-white">Catégories de frais</h2>
+          <div className="flex items-center justify-between px-6 py-4 border-b border-line">
+            <h2 className="font-serif text-lg font-medium">Catégories de frais</h2>
             <button
               onClick={() => { resetForm(); setFormOpen(true); }}
-              className="px-4 py-2 rounded-lg text-sm font-medium bg-emerald-600 hover:bg-emerald-500 text-white transition-colors"
+              className="px-4 py-2 rounded-lg text-sm font-medium bg-accent hover:opacity-90 text-white transition-opacity cursor-pointer"
             >
               + Nouvelle catégorie
             </button>
@@ -276,7 +277,7 @@ export default function FeesClient({
           {/* Table */}
           <table className={TABLE_CLASS}>
             <thead>
-              <tr className="border-b border-slate-800/50">
+              <tr>
                 <th className={TH_CLASS}>Nom</th>
                 <th className={TH_CLASS}>Type</th>
                 <th className={TH_CLASS}>Montant</th>
@@ -288,13 +289,13 @@ export default function FeesClient({
             <tbody>
               {categories.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className={`${TD_CLASS} text-center text-slate-500 py-8`}>
+                  <td colSpan={6} className={`${TD_CLASS} text-center text-text-faint py-8`}>
                     Aucune catégorie de frais pour l&apos;instant.
                   </td>
                 </tr>
               ) : (
                 categories.map((cat) => (
-                  <tr key={cat.id} className="hover:bg-slate-900/35 transition-colors">
+                  <tr key={cat.id} className="hover:bg-paper-alt transition-colors">
                     <td className={TD_CLASS}>{cat.name}</td>
                     <td className={TD_CLASS}>{typeLabel(cat.type)}</td>
                     <td className={TD_CLASS}>{Number(cat.amount).toLocaleString()} GNF</td>
@@ -303,13 +304,13 @@ export default function FeesClient({
                     <td className={`${TD_CLASS} text-right`}>
                       <button
                         onClick={() => openEdit(cat)}
-                        className="text-emerald-400 hover:text-emerald-300 text-xs font-medium mr-3 transition-colors"
+                        className="text-accent hover:opacity-80 text-xs font-medium mr-3 transition-opacity cursor-pointer"
                       >
                         Modifier
                       </button>
                       <button
                         onClick={() => handleDeleteCategory(cat.id)}
-                        className="text-red-400 hover:text-red-300 text-xs font-medium transition-colors"
+                        className="text-danger hover:opacity-80 text-xs font-medium transition-opacity cursor-pointer"
                       >
                         Supprimer
                       </button>
@@ -325,20 +326,20 @@ export default function FeesClient({
       {activeTab === "assign" && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Assign form */}
-          <div className="bg-slate-900/40 border border-slate-800/80 rounded-xl shadow-xl backdrop-blur-md p-6">
-            <h2 className="text-lg font-semibold text-white mb-4">Assigner un frais</h2>
+          <div className="border border-line bg-card rounded-xl shadow-[var(--shadow)] p-6">
+            <h2 className="font-serif text-lg font-medium mb-4">Assigner un frais</h2>
             <div className="space-y-4">
               {/* Student search */}
               <div ref={searchRef} className="relative">
-                <label className="block text-xs font-medium text-slate-400 mb-1">Élève *</label>
+                <label className="block text-[10.5px] font-semibold text-text-faint uppercase tracking-[.08em] mb-1">Élève *</label>
                 {selectedStudent ? (
-                  <div className="flex items-center justify-between bg-slate-900/60 border border-slate-700/60 rounded-lg px-3 py-2">
-                    <span className="text-sm text-slate-200">
+                  <div className="flex items-center justify-between bg-paper-alt border border-line rounded-lg px-3 py-2">
+                    <span className="text-sm">
                       {selectedStudent.nom} {selectedStudent.prenom} ({selectedStudent.matricule})
                     </span>
                     <button
                       onClick={() => { setSelectedStudent(null); setStudentQuery(""); }}
-                      className="text-slate-500 hover:text-slate-300 text-xs"
+                      className="text-text-faint hover:text-text text-xs cursor-pointer"
                     >
                       ✕
                     </button>
@@ -352,12 +353,12 @@ export default function FeesClient({
                       placeholder="Rechercher par nom ou matricule..."
                     />
                     {searchOpen && studentResults.length > 0 && (
-                      <div className="absolute z-10 mt-1 w-full bg-slate-800 border border-slate-700 rounded-lg shadow-xl max-h-48 overflow-y-auto">
+                      <div className="absolute z-10 mt-1 w-full bg-card border border-line rounded-lg shadow-[var(--shadow)] max-h-48 overflow-y-auto">
                         {studentResults.map((s) => (
                           <button
                             key={s.id}
                             onClick={() => { setSelectedStudent(s); setSearchOpen(false); setStudentQuery(`${s.nom} ${s.prenom}`); }}
-                            className="block w-full text-left px-3 py-2 text-sm text-slate-300 hover:bg-slate-700/50 transition-colors"
+                            className="block w-full text-left px-3 py-2 text-sm text-text-soft hover:bg-paper-alt transition-colors cursor-pointer"
                           >
                             {s.nom} {s.prenom} — {s.matricule}
                           </button>
@@ -370,7 +371,7 @@ export default function FeesClient({
 
               {/* Fee category */}
               <div>
-                <label className="block text-xs font-medium text-slate-400 mb-1">Catégorie de frais *</label>
+                <label className="block text-[10.5px] font-semibold text-text-faint uppercase tracking-[.08em] mb-1">Catégorie de frais *</label>
                 <select
                   value={assignFeeCatId}
                   onChange={(e) => {
@@ -392,7 +393,7 @@ export default function FeesClient({
               {/* Amount & Discount */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-medium text-slate-400 mb-1">Montant total *</label>
+                  <label className="block text-[10.5px] font-semibold text-text-faint uppercase tracking-[.08em] mb-1">Montant total *</label>
                   <input
                     type="number"
                     value={assignAmount}
@@ -402,7 +403,7 @@ export default function FeesClient({
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-slate-400 mb-1">Remise</label>
+                  <label className="block text-[10.5px] font-semibold text-text-faint uppercase tracking-[.08em] mb-1">Remise</label>
                   <input
                     type="number"
                     value={assignDiscount}
@@ -415,7 +416,7 @@ export default function FeesClient({
 
               <button
                 onClick={handleAssign}
-                className="w-full py-2.5 rounded-lg text-sm font-medium bg-emerald-600 hover:bg-emerald-500 text-white transition-colors"
+                className="w-full py-2.5 rounded-lg text-sm font-medium bg-accent hover:opacity-90 text-white transition-opacity cursor-pointer"
               >
                 Assigner
               </button>
@@ -423,14 +424,14 @@ export default function FeesClient({
           </div>
 
           {/* Recent assignments */}
-          <div className="bg-slate-900/40 border border-slate-800/80 rounded-xl shadow-xl backdrop-blur-md overflow-hidden">
-            <div className="px-6 py-4 border-b border-slate-800/50">
-              <h2 className="text-lg font-semibold text-white">Frais assignés</h2>
+          <div className="border border-line bg-card rounded-xl shadow-[var(--shadow)]">
+            <div className="px-6 py-4 border-b border-line">
+              <h2 className="font-serif text-lg font-medium">Frais assignés</h2>
             </div>
             <div className="overflow-x-auto">
               <table className={TABLE_CLASS}>
                 <thead>
-                  <tr className="border-b border-slate-800/50">
+                  <tr>
                     <th className={TH_CLASS}>Élève</th>
                     <th className={TH_CLASS}>Catégorie</th>
                     <th className={TH_CLASS}>Restant dû</th>
@@ -439,13 +440,13 @@ export default function FeesClient({
                 <tbody>
                   {studentFees.length === 0 ? (
                     <tr>
-                      <td colSpan={3} className={`${TD_CLASS} text-center text-slate-500 py-8`}>
+                      <td colSpan={3} className={`${TD_CLASS} text-center text-text-faint py-8`}>
                         Aucun frais assigné.
                       </td>
                     </tr>
                   ) : (
                     studentFees.slice(0, 20).map((sf) => (
-                      <tr key={sf.id} className="hover:bg-slate-900/35 transition-colors">
+                      <tr key={sf.id} className="hover:bg-paper-alt transition-colors">
                         <td className={TD_CLASS}>{sf.student_name}</td>
                         <td className={TD_CLASS}>{sf.fee_category?.name || "-"}</td>
                         <td className={TD_CLASS}>{Number(sf.balance_due).toLocaleString()} GNF</td>
@@ -460,102 +461,107 @@ export default function FeesClient({
       )}
 
       {/* Form modal */}
-      {formOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={(e) => { if (e.target === e.currentTarget) resetForm(); }}>
-          <div className="bg-slate-900 border border-slate-700/80 rounded-xl p-6 w-full max-w-md mx-4 shadow-2xl">
-            <h3 className="text-lg font-semibold text-white mb-4">
-              {editId ? "Modifier la catégorie" : "Nouvelle catégorie"}
-            </h3>
-            <div className="space-y-4">
-              {canOverrideSchoolYear && (
+      {formOpen &&
+        createPortal(
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+            onClick={(e) => { if (e.target === e.currentTarget) resetForm(); }}
+          >
+            <div className="bg-card border border-line rounded-2xl p-6 w-full max-w-md mx-4 shadow-[var(--shadow)]">
+              <h3 className="font-serif text-lg font-medium mb-4">
+                {editId ? "Modifier la catégorie" : "Nouvelle catégorie"}
+              </h3>
+              <div className="space-y-4">
+                {canOverrideSchoolYear && (
+                  <div>
+                    <label className="block text-[10.5px] font-semibold text-text-faint uppercase tracking-[.08em] mb-1">
+                      Année scolaire {!editId && <span className="normal-case text-text-faint">(par défaut : année courante)</span>}
+                    </label>
+                    <select
+                      value={formData.school_year}
+                      onChange={(e) => setFormData({ ...formData, school_year: e.target.value })}
+                      className={INPUT_CLASS}
+                    >
+                      <option value="">Année courante (par défaut)</option>
+                      {schoolYears.map((sy) => (
+                        <option key={sy.id} value={sy.id}>{sy.label}</option>
+                      ))}
+                    </select>
+                    {schoolYears.length === 0 && (
+                      <p className="mt-1 text-xs text-danger">Aucune année scolaire disponible.</p>
+                    )}
+                  </div>
+                )}
                 <div>
-                  <label className="block text-xs font-medium text-slate-400 mb-1">
-                    Année scolaire {!editId && <span className="normal-case text-slate-500">(par défaut : année courante)</span>}
-                  </label>
-                  <select
-                    value={formData.school_year}
-                    onChange={(e) => setFormData({ ...formData, school_year: e.target.value })}
-                    className={INPUT_CLASS}
-                  >
-                    <option value="">Année courante (par défaut)</option>
-                    {schoolYears.map((sy) => (
-                      <option key={sy.id} value={sy.id}>{sy.label}</option>
-                    ))}
-                  </select>
-                  {schoolYears.length === 0 && (
-                    <p className="mt-1 text-xs text-red-400">Aucune année scolaire disponible.</p>
-                  )}
-                </div>
-              )}
-              <div>
-                <label className="block text-xs font-medium text-slate-400 mb-1">Nom *</label>
-                <input
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className={INPUT_CLASS}
-                  placeholder="Ex: Scolarité 1er trimestre"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-medium text-slate-400 mb-1">Type *</label>
-                  <select
-                    value={formData.type}
-                    onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                    className={INPUT_CLASS}
-                  >
-                    <option value="SCOLARITE">Scolarité</option>
-                    <option value="INSCRIPTION">Inscription</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-slate-400 mb-1">Montant (GNF) *</label>
+                  <label className="block text-[10.5px] font-semibold text-text-faint uppercase tracking-[.08em] mb-1">Nom *</label>
                   <input
-                    type="number"
-                    value={formData.amount}
-                    onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     className={INPUT_CLASS}
-                    placeholder="50000"
+                    placeholder="Ex: Scolarité 1er trimestre"
                   />
                 </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-medium text-slate-400 mb-1">Date échéance</label>
-                  <input
-                    type="date"
-                    value={formData.due_date}
-                    onChange={(e) => setFormData({ ...formData, due_date: e.target.value })}
-                    className={INPUT_CLASS}
-                  />
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[10.5px] font-semibold text-text-faint uppercase tracking-[.08em] mb-1">Type *</label>
+                    <select
+                      value={formData.type}
+                      onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                      className={INPUT_CLASS}
+                    >
+                      <option value="SCOLARITE">Scolarité</option>
+                      <option value="INSCRIPTION">Inscription</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-[10.5px] font-semibold text-text-faint uppercase tracking-[.08em] mb-1">Montant (GNF) *</label>
+                    <input
+                      type="number"
+                      value={formData.amount}
+                      onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+                      className={INPUT_CLASS}
+                      placeholder="50000"
+                    />
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-xs font-medium text-slate-400 mb-1">Obligatoire</label>
-                  <select
-                    value={formData.is_mandatory ? "true" : "false"}
-                    onChange={(e) => setFormData({ ...formData, is_mandatory: e.target.value === "true" })}
-                    className={INPUT_CLASS}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[10.5px] font-semibold text-text-faint uppercase tracking-[.08em] mb-1">Date échéance</label>
+                    <input
+                      type="date"
+                      value={formData.due_date}
+                      onChange={(e) => setFormData({ ...formData, due_date: e.target.value })}
+                      className={INPUT_CLASS}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10.5px] font-semibold text-text-faint uppercase tracking-[.08em] mb-1">Obligatoire</label>
+                    <select
+                      value={formData.is_mandatory ? "true" : "false"}
+                      onChange={(e) => setFormData({ ...formData, is_mandatory: e.target.value === "true" })}
+                      className={INPUT_CLASS}
+                    >
+                      <option value="true">Oui</option>
+                      <option value="false">Non</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="flex justify-end gap-3 pt-2">
+                  <button onClick={resetForm} className="px-4 py-2 text-sm text-text-soft hover:text-text transition-colors cursor-pointer">
+                    Annuler
+                  </button>
+                  <button
+                    onClick={handleSaveCategory}
+                    className="px-5 py-2 rounded-lg text-sm font-medium bg-accent hover:opacity-90 text-white transition-opacity cursor-pointer"
                   >
-                    <option value="true">Oui</option>
-                    <option value="false">Non</option>
-                  </select>
+                    {editId ? "Enregistrer" : "Créer"}
+                  </button>
                 </div>
-              </div>
-              <div className="flex justify-end gap-3 pt-2">
-                <button onClick={resetForm} className="px-4 py-2 text-sm text-slate-400 hover:text-white transition-colors">
-                  Annuler
-                </button>
-                <button
-                  onClick={handleSaveCategory}
-                  className="px-5 py-2 rounded-lg text-sm font-medium bg-emerald-600 hover:bg-emerald-500 text-white transition-colors"
-                >
-                  {editId ? "Enregistrer" : "Créer"}
-                </button>
               </div>
             </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body
+        )}
     </div>
   );
 }

@@ -17,9 +17,13 @@ async function fetchPayments() {
 export default async function PaymentsPage() {
   const payments = await fetchPayments();
   return (
-    <div className="p-7 px-8">
-      <h1 className="text-2xl font-bold text-white mb-6">Paiements</h1>
-      <PaymentsClient initialPayments={JSON.parse(JSON.stringify(payments))} />
+    <div className="min-h-screen bg-paper text-text">
+      <div className="px-11 pt-9 pb-[22px]">
+        <h1 className="font-serif text-[26px] font-medium m-0">Paiements</h1>
+      </div>
+      <div className="px-11 pb-12">
+        <PaymentsClient initialPayments={JSON.parse(JSON.stringify(payments))} />
+      </div>
     </div>
   );
 }

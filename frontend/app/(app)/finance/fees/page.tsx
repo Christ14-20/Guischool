@@ -49,14 +49,18 @@ export default async function FeesPage() {
   ]);
 
   return (
-    <div className="p-7 px-8">
-      <h1 className="text-2xl font-bold text-white mb-6">Gestion des frais</h1>
-      <FeesClient
-        categories={JSON.parse(JSON.stringify(categories))}
-        studentFees={JSON.parse(JSON.stringify(studentFees))}
-        schoolYears={JSON.parse(JSON.stringify(schoolYears))}
-        role={role}
-      />
+    <div className="min-h-screen bg-paper text-text">
+      <div className="px-11 pt-9 pb-[22px]">
+        <h1 className="font-serif text-[26px] font-medium m-0">Gestion des frais</h1>
+      </div>
+      <div className="px-11 pb-12">
+        <FeesClient
+          categories={JSON.parse(JSON.stringify(categories))}
+          studentFees={JSON.parse(JSON.stringify(studentFees))}
+          schoolYears={JSON.parse(JSON.stringify(schoolYears))}
+          role={role}
+        />
+      </div>
     </div>
   );
 }

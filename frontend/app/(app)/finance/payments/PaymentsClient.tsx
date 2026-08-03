@@ -24,17 +24,17 @@ type Payment = {
 };
 
 const INPUT_CLASS =
-  "w-full bg-slate-900/60 border border-slate-700/60 rounded-lg px-3 py-2 text-sm text-slate-200 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500/60 transition-colors";
+  "w-full bg-paper-alt border border-line rounded-lg px-3 py-2 text-sm text-text placeholder-text-faint outline-none focus:border-accent-line transition-colors";
 const TABLE_CLASS = "w-full text-left border-collapse";
 const TH_CLASS =
-  "px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-400 border-b border-slate-800/50";
-const TD_CLASS = "px-4 py-3 text-sm text-slate-300 border-b border-slate-800/30";
+  "px-4 py-3 text-[10.5px] font-medium uppercase tracking-[.08em] text-text-faint border-b border-line";
+const TD_CLASS = "px-4 py-3 text-sm text-text-soft border-b border-line";
 
 const STATUS_BADGE: Record<string, string> = {
-  COMPLETED: "bg-emerald-900/30 text-emerald-400",
-  PENDING: "bg-amber-900/30 text-amber-400",
-  FAILED: "bg-red-900/40 text-red-400",
-  CANCELLED: "bg-slate-700/50 text-slate-400",
+  COMPLETED: "bg-ok/10 text-ok",
+  PENDING: "bg-warn/10 text-warn",
+  FAILED: "bg-danger/10 text-danger",
+  CANCELLED: "bg-mute/10 text-mute",
 };
 
 const METHOD_LABEL: Record<string, string> = {
@@ -221,41 +221,41 @@ export default function PaymentsClient({ initialPayments }: { initialPayments: P
   };
 
   return (
-    <div>
+    <div className="space-y-[22px]">
       {error && (
-        <div className="mb-4 px-4 py-3 rounded-lg bg-red-900/30 border border-red-700/50 text-red-300 text-sm">{error}</div>
+        <div className="px-4 py-3 rounded-lg bg-danger/10 border border-danger/20 text-danger text-sm">{error}</div>
       )}
       {success && (
-        <div className="mb-4 px-4 py-3 rounded-lg bg-emerald-900/30 border border-emerald-700/50 text-emerald-300 text-sm">{success}</div>
+        <div className="px-4 py-3 rounded-lg bg-ok/10 border border-ok/20 text-ok text-sm">{success}</div>
       )}
 
       {/* Tabs */}
-      <div className="flex gap-1 mb-6 p-1 rounded-xl bg-slate-900/60 border border-slate-800/40 w-fit">
+      <div className="flex gap-1 p-1 rounded-xl border border-line bg-card w-fit">
         <button onClick={() => setActiveTab("history")}
-          className={`px-5 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === "history" ? "bg-emerald-600/20 text-emerald-300 shadow-sm" : "text-slate-400 hover:text-slate-300"}`}>
+          className={`px-5 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${activeTab === "history" ? "bg-accent-soft text-accent" : "text-text-faint hover:text-text"}`}>
           Historique
         </button>
         <button onClick={() => setActiveTab("cash")}
-          className={`px-5 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === "cash" ? "bg-emerald-600/20 text-emerald-300 shadow-sm" : "text-slate-400 hover:text-slate-300"}`}>
+          className={`px-5 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${activeTab === "cash" ? "bg-accent-soft text-accent" : "text-text-faint hover:text-text"}`}>
           Encaissement espèces
         </button>
         <button onClick={() => setActiveTab("orangemoney")}
-          className={`px-5 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === "orangemoney" ? "bg-emerald-600/20 text-emerald-300 shadow-sm" : "text-slate-400 hover:text-slate-300"}`}>
+          className={`px-5 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${activeTab === "orangemoney" ? "bg-accent-soft text-accent" : "text-text-faint hover:text-text"}`}>
           Paiement Orange Money
         </button>
       </div>
 
       {activeTab === "history" && (
-        <div className="bg-slate-900/40 border border-slate-800/80 rounded-xl shadow-xl backdrop-blur-md overflow-hidden">
-          <div className="px-6 py-4 border-b border-slate-800/50">
+        <div className="border border-line bg-card rounded-xl shadow-[var(--shadow)]">
+          <div className="px-6 py-4 border-b border-line">
             <div className="flex flex-wrap gap-3 items-end">
               <div>
-                <label className="block text-xs font-medium text-slate-400 mb-1">Élève</label>
+                <label className="block text-[10.5px] font-semibold text-text-faint uppercase tracking-[.08em] mb-1">Élève</label>
                 <input value={filterStudent} onChange={(e) => setFilterStudent(e.target.value)}
                   className={`${INPUT_CLASS} w-48`} placeholder="ID élève" />
               </div>
               <div>
-                <label className="block text-xs font-medium text-slate-400 mb-1">Méthode</label>
+                <label className="block text-[10.5px] font-semibold text-text-faint uppercase tracking-[.08em] mb-1">Méthode</label>
                 <select value={filterMethod} onChange={(e) => setFilterMethod(e.target.value)}
                   className={`${INPUT_CLASS} w-36`}>
                   <option value="">Toutes</option>
@@ -264,7 +264,7 @@ export default function PaymentsClient({ initialPayments }: { initialPayments: P
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-medium text-slate-400 mb-1">Statut</label>
+                <label className="block text-[10.5px] font-semibold text-text-faint uppercase tracking-[.08em] mb-1">Statut</label>
                 <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}
                   className={`${INPUT_CLASS} w-36`}>
                   <option value="">Tous</option>
@@ -274,14 +274,14 @@ export default function PaymentsClient({ initialPayments }: { initialPayments: P
                 </select>
               </div>
               <button onClick={handleFilter}
-                className="px-4 py-2 rounded-lg text-sm font-medium bg-emerald-600 hover:bg-emerald-500 text-white transition-colors">
+                className="px-4 py-2 rounded-lg text-sm font-medium bg-accent hover:opacity-90 text-white transition-opacity cursor-pointer">
                 Filtrer
               </button>
             </div>
           </div>
           <table className={TABLE_CLASS}>
             <thead>
-              <tr className="border-b border-slate-800/50">
+              <tr>
                 <th className={TH_CLASS}>Reçu</th>
                 <th className={TH_CLASS}>Élève</th>
                 <th className={TH_CLASS}>Montant</th>
@@ -292,16 +292,16 @@ export default function PaymentsClient({ initialPayments }: { initialPayments: P
             </thead>
             <tbody>
               {payments.length === 0 ? (
-                <tr><td colSpan={6} className={`${TD_CLASS} text-center text-slate-500 py-8`}>Aucun paiement.</td></tr>
+                <tr><td colSpan={6} className={`${TD_CLASS} text-center text-text-faint py-8`}>Aucun paiement.</td></tr>
               ) : (
                 payments.map((p) => (
-                  <tr key={p.id} className="hover:bg-slate-900/35 transition-colors">
+                  <tr key={p.id} className="hover:bg-paper-alt transition-colors">
                     <td className={TD_CLASS}>{p.receipt_number || "-"}</td>
                     <td className={TD_CLASS}>{p.student_name}</td>
                     <td className={TD_CLASS}>{Number(p.amount).toLocaleString()} GNF</td>
                     <td className={TD_CLASS}>{METHOD_LABEL[p.method] || p.method}</td>
                     <td className={TD_CLASS}>
-                      <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${STATUS_BADGE[p.status] || "bg-slate-700/50 text-slate-300"}`}>
+                      <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${STATUS_BADGE[p.status] || "bg-mute/10 text-mute"}`}>
                         {p.status === "COMPLETED" ? "Complété" : p.status === "PENDING" ? "En attente" : p.status === "FAILED" ? "Échoué" : p.status}
                       </span>
                     </td>
@@ -315,25 +315,25 @@ export default function PaymentsClient({ initialPayments }: { initialPayments: P
       )}
 
       {activeTab === "cash" && (
-        <div className="max-w-lg mx-auto bg-slate-900/40 border border-slate-800/80 rounded-xl shadow-xl backdrop-blur-md p-6">
-          <h2 className="text-lg font-semibold text-white mb-4">Encaissement espèces</h2>
+        <div className="max-w-lg mx-auto border border-line bg-card rounded-xl shadow-[var(--shadow)] p-6">
+          <h2 className="font-serif text-lg font-medium mb-4">Encaissement espèces</h2>
           <div className="space-y-4">
             <div ref={cashSearchRef} className="relative">
-              <label className="block text-xs font-medium text-slate-400 mb-1">Élève *</label>
+              <label className="block text-[10.5px] font-semibold text-text-faint uppercase tracking-[.08em] mb-1">Élève *</label>
               {cashStudent ? (
-                <div className="flex items-center justify-between bg-slate-900/60 border border-slate-700/60 rounded-lg px-3 py-2">
-                  <span className="text-sm text-slate-200">{cashStudent.nom} {cashStudent.prenom} ({cashStudent.matricule})</span>
-                  <button onClick={() => { setCashStudent(null); setCashQuery(""); }} className="text-slate-500 hover:text-slate-300 text-xs">✕</button>
+                <div className="flex items-center justify-between bg-paper-alt border border-line rounded-lg px-3 py-2">
+                  <span className="text-sm">{cashStudent.nom} {cashStudent.prenom} ({cashStudent.matricule})</span>
+                  <button onClick={() => { setCashStudent(null); setCashQuery(""); }} className="text-text-faint hover:text-text text-xs cursor-pointer">✕</button>
                 </div>
               ) : (
                 <div>
                   <input value={cashQuery} onChange={(e) => handleCashSearch(e.target.value)}
                     className={INPUT_CLASS} placeholder="Rechercher par nom ou matricule..." />
                   {cashSearchOpen && cashResults.length > 0 && (
-                    <div className="absolute z-10 mt-1 w-full bg-slate-800 border border-slate-700 rounded-lg shadow-xl max-h-48 overflow-y-auto">
+                    <div className="absolute z-10 mt-1 w-full bg-card border border-line rounded-lg shadow-[var(--shadow)] max-h-48 overflow-y-auto">
                       {cashResults.map((s) => (
                         <button key={s.id} onClick={() => { setCashStudent(s); setCashSearchOpen(false); setCashQuery(`${s.nom} ${s.prenom}`); }}
-                          className="block w-full text-left px-3 py-2 text-sm text-slate-300 hover:bg-slate-700/50 transition-colors">
+                          className="block w-full text-left px-3 py-2 text-sm text-text-soft hover:bg-paper-alt transition-colors cursor-pointer">
                           {s.nom} {s.prenom} — {s.matricule}
                         </button>
                       ))}
@@ -343,17 +343,17 @@ export default function PaymentsClient({ initialPayments }: { initialPayments: P
               )}
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-400 mb-1">ID Frais (optionnel)</label>
+              <label className="block text-[10.5px] font-semibold text-text-faint uppercase tracking-[.08em] mb-1">ID Frais (optionnel)</label>
               <input value={cashFeeId} onChange={(e) => setCashFeeId(e.target.value)}
                 className={INPUT_CLASS} placeholder="UUID du frais à solder..." />
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-400 mb-1">Montant (GNF) *</label>
+              <label className="block text-[10.5px] font-semibold text-text-faint uppercase tracking-[.08em] mb-1">Montant (GNF) *</label>
               <input type="number" value={cashAmount} onChange={(e) => setCashAmount(e.target.value)}
                 className={INPUT_CLASS} placeholder="50000" />
             </div>
             <button onClick={handleCashSubmit} disabled={cashSubmitting}
-              className="w-full py-2.5 rounded-lg text-sm font-medium bg-emerald-600 hover:bg-emerald-500 text-white transition-colors disabled:opacity-50">
+              className="w-full py-2.5 rounded-lg text-sm font-medium bg-accent hover:opacity-90 text-white transition-opacity disabled:opacity-50 cursor-pointer">
               {cashSubmitting ? "Enregistrement..." : "Enregistrer le paiement"}
             </button>
           </div>
@@ -361,60 +361,60 @@ export default function PaymentsClient({ initialPayments }: { initialPayments: P
       )}
 
       {activeTab === "orangemoney" && (
-        <div className="max-w-lg mx-auto bg-slate-900/40 border border-slate-800/80 rounded-xl shadow-xl backdrop-blur-md p-6">
-          <h2 className="text-lg font-semibold text-white mb-4">Paiement Orange Money</h2>
+        <div className="max-w-lg mx-auto border border-line bg-card rounded-xl shadow-[var(--shadow)] p-6">
+          <h2 className="font-serif text-lg font-medium mb-4">Paiement Orange Money</h2>
 
           {omStatus === "polling" || omStatus === "loading" ? (
             <div className="text-center py-8">
-              <div className="inline-block w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin mb-4" />
+              <div className="inline-block w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin mb-4" />
               {omStatus === "loading" ? (
-                <p className="text-slate-300 text-sm">Demande de paiement en cours...</p>
+                <p className="text-text-soft text-sm">Demande de paiement en cours...</p>
               ) : (
                 <div>
-                  <p className="text-slate-300 text-sm mb-2">En attente de validation sur le téléphone</p>
-                  <p className="text-amber-400 text-xs">Le parent doit valider le paiement dans son application Orange Money</p>
+                  <p className="text-text-soft text-sm mb-2">En attente de validation sur le téléphone</p>
+                  <p className="text-xs" style={{ color: "var(--warn)" }}>Le parent doit valider le paiement dans son application Orange Money</p>
                   {omPollUrl && (
-                    <p className="text-slate-500 text-xs mt-2">Polling : <span className="text-emerald-400">{omPollUrl}</span></p>
+                    <p className="text-text-faint text-xs mt-2">Polling : <span className="text-accent">{omPollUrl}</span></p>
                   )}
                 </div>
               )}
             </div>
           ) : omStatus === "done" ? (
             <div className="text-center py-8">
-              <div className="text-emerald-400 text-4xl mb-2">✓</div>
-              <p className="text-emerald-300 text-sm font-medium">Paiement confirmé !</p>
+              <div className="text-ok text-4xl mb-2">✓</div>
+              <p className="text-ok text-sm font-medium">Paiement confirmé !</p>
               <button onClick={() => { setOmStatus("idle"); setOmStudent(null); setOmQuery(""); setOmAmount(""); setOmPhone(""); }}
-                className="mt-4 px-4 py-2 rounded-lg text-sm font-medium bg-emerald-600 hover:bg-emerald-500 text-white transition-colors">
+                className="mt-4 px-4 py-2 rounded-lg text-sm font-medium bg-accent hover:opacity-90 text-white transition-opacity cursor-pointer">
                 Nouveau paiement
               </button>
             </div>
           ) : omStatus === "failed" ? (
             <div className="text-center py-8">
-              <div className="text-red-400 text-4xl mb-2">✕</div>
-              <p className="text-red-300 text-sm font-medium mb-2">{omError || "Paiement échoué"}</p>
+              <div className="text-danger text-4xl mb-2">✕</div>
+              <p className="text-danger text-sm font-medium mb-2">{omError || "Paiement échoué"}</p>
               <button onClick={() => setOmStatus("idle")}
-                className="px-4 py-2 rounded-lg text-sm font-medium bg-slate-700 hover:bg-slate-600 text-white transition-colors">
+                className="px-4 py-2 rounded-lg text-sm font-medium border border-line text-text-soft hover:border-accent-line hover:text-text transition-colors cursor-pointer">
                 Réessayer
               </button>
             </div>
           ) : (
             <div className="space-y-4">
               <div ref={omSearchRef} className="relative">
-                <label className="block text-xs font-medium text-slate-400 mb-1">Élève *</label>
+                <label className="block text-[10.5px] font-semibold text-text-faint uppercase tracking-[.08em] mb-1">Élève *</label>
                 {omStudent ? (
-                  <div className="flex items-center justify-between bg-slate-900/60 border border-slate-700/60 rounded-lg px-3 py-2">
-                    <span className="text-sm text-slate-200">{omStudent.nom} {omStudent.prenom} ({omStudent.matricule})</span>
-                    <button onClick={() => { setOmStudent(null); setOmQuery(""); }} className="text-slate-500 hover:text-slate-300 text-xs">✕</button>
+                  <div className="flex items-center justify-between bg-paper-alt border border-line rounded-lg px-3 py-2">
+                    <span className="text-sm">{omStudent.nom} {omStudent.prenom} ({omStudent.matricule})</span>
+                    <button onClick={() => { setOmStudent(null); setOmQuery(""); }} className="text-text-faint hover:text-text text-xs cursor-pointer">✕</button>
                   </div>
                 ) : (
                   <div>
                     <input value={omQuery} onChange={(e) => handleOmSearch(e.target.value)}
                       className={INPUT_CLASS} placeholder="Rechercher par nom ou matricule..." />
                     {omSearchOpen && omResults.length > 0 && (
-                      <div className="absolute z-10 mt-1 w-full bg-slate-800 border border-slate-700 rounded-lg shadow-xl max-h-48 overflow-y-auto">
+                      <div className="absolute z-10 mt-1 w-full bg-card border border-line rounded-lg shadow-[var(--shadow)] max-h-48 overflow-y-auto">
                         {omResults.map((s) => (
                           <button key={s.id} onClick={() => { setOmStudent(s); setOmSearchOpen(false); setOmQuery(`${s.nom} ${s.prenom}`); }}
-                            className="block w-full text-left px-3 py-2 text-sm text-slate-300 hover:bg-slate-700/50 transition-colors">
+                            className="block w-full text-left px-3 py-2 text-sm text-text-soft hover:bg-paper-alt transition-colors cursor-pointer">
                             {s.nom} {s.prenom} — {s.matricule}
                           </button>
                         ))}
@@ -424,17 +424,17 @@ export default function PaymentsClient({ initialPayments }: { initialPayments: P
                 )}
               </div>
               <div>
-                <label className="block text-xs font-medium text-slate-400 mb-1">Montant (GNF) *</label>
+                <label className="block text-[10.5px] font-semibold text-text-faint uppercase tracking-[.08em] mb-1">Montant (GNF) *</label>
                 <input type="number" value={omAmount} onChange={(e) => setOmAmount(e.target.value)}
                   className={INPUT_CLASS} placeholder="50000" />
               </div>
               <div>
-                <label className="block text-xs font-medium text-slate-400 mb-1">Téléphone parent *</label>
+                <label className="block text-[10.5px] font-semibold text-text-faint uppercase tracking-[.08em] mb-1">Téléphone parent *</label>
                 <input value={omPhone} onChange={(e) => setOmPhone(e.target.value)}
                   className={INPUT_CLASS} placeholder="+224655112233" />
               </div>
               <button onClick={handleOmInitiate}
-                className="w-full py-2.5 rounded-lg text-sm font-medium bg-emerald-600 hover:bg-emerald-500 text-white transition-colors">
+                className="w-full py-2.5 rounded-lg text-sm font-medium bg-accent hover:opacity-90 text-white transition-opacity cursor-pointer">
                 Envoyer la demande
               </button>
             </div>

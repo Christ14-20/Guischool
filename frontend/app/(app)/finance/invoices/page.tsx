@@ -17,9 +17,13 @@ async function fetchInvoices() {
 export default async function InvoicesPage() {
   const invoices = await fetchInvoices();
   return (
-    <div className="p-7 px-8">
-      <h1 className="text-2xl font-bold text-white mb-6">Factures</h1>
-      <InvoicesClient initialInvoices={JSON.parse(JSON.stringify(invoices))} />
+    <div className="min-h-screen bg-paper text-text">
+      <div className="px-11 pt-9 pb-[22px]">
+        <h1 className="font-serif text-[26px] font-medium m-0">Factures</h1>
+      </div>
+      <div className="px-11 pb-12">
+        <InvoicesClient initialInvoices={JSON.parse(JSON.stringify(invoices))} />
+      </div>
     </div>
   );
 }

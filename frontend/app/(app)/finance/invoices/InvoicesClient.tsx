@@ -21,17 +21,17 @@ type Invoice = {
 };
 
 const INPUT_CLASS =
-  "w-full bg-slate-900/60 border border-slate-700/60 rounded-lg px-3 py-2 text-sm text-slate-200 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500/60 transition-colors";
+  "w-full bg-paper-alt border border-line rounded-lg px-3 py-2 text-sm text-text placeholder-text-faint outline-none focus:border-accent-line transition-colors";
 const TABLE_CLASS = "w-full text-left border-collapse";
 const TH_CLASS =
-  "px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-400 border-b border-slate-800/50";
-const TD_CLASS = "px-4 py-3 text-sm text-slate-300 border-b border-slate-800/30";
+  "px-4 py-3 text-[10.5px] font-medium uppercase tracking-[.08em] text-text-faint border-b border-line";
+const TD_CLASS = "px-4 py-3 text-sm text-text-soft border-b border-line";
 
 const STATUS_BADGE: Record<string, string> = {
-  PENDING: "bg-slate-700/50 text-slate-300",
-  PARTIAL: "bg-amber-900/30 text-amber-400",
-  PAID: "bg-emerald-900/30 text-emerald-400",
-  OVERDUE: "bg-red-900/40 text-red-400 ring-1 ring-red-500/30",
+  PENDING: "bg-mute/10 text-mute",
+  PARTIAL: "bg-warn/10 text-warn",
+  PAID: "bg-ok/10 text-ok",
+  OVERDUE: "bg-danger/10 text-danger ring-1 ring-danger/30",
 };
 
 export default function InvoicesClient({ initialInvoices }: { initialInvoices: Invoice[] }) {
@@ -119,20 +119,20 @@ export default function InvoicesClient({ initialInvoices }: { initialInvoices: I
   };
 
   return (
-    <div>
+    <div className="space-y-[22px]">
       {error && (
-        <div className="mb-4 px-4 py-3 rounded-lg bg-red-900/30 border border-red-700/50 text-red-300 text-sm">{error}</div>
+        <div className="px-4 py-3 rounded-lg bg-danger/10 border border-danger/20 text-danger text-sm">{error}</div>
       )}
       {success && (
-        <div className="mb-4 px-4 py-3 rounded-lg bg-emerald-900/30 border border-emerald-700/50 text-emerald-300 text-sm">{success}</div>
+        <div className="px-4 py-3 rounded-lg bg-ok/10 border border-ok/20 text-ok text-sm">{success}</div>
       )}
 
-      <div className="bg-slate-900/40 border border-slate-800/80 rounded-xl shadow-xl backdrop-blur-md overflow-hidden">
+      <div className="border border-line bg-card rounded-xl shadow-[var(--shadow)]">
         {/* Filters */}
-        <div className="px-6 py-4 border-b border-slate-800/50">
+        <div className="px-6 py-4 border-b border-line">
           <div className="flex flex-wrap gap-3 items-end">
             <div>
-              <label className="block text-xs font-medium text-slate-400 mb-1">Statut</label>
+              <label className="block text-[10.5px] font-semibold text-text-faint uppercase tracking-[.08em] mb-1">Statut</label>
               <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}
                 className={`${INPUT_CLASS} w-44`}>
                 <option value="">Tous</option>
@@ -143,7 +143,7 @@ export default function InvoicesClient({ initialInvoices }: { initialInvoices: I
               </select>
             </div>
             <button onClick={handleFilter}
-              className="px-4 py-2 rounded-lg text-sm font-medium bg-emerald-600 hover:bg-emerald-500 text-white transition-colors">
+              className="px-4 py-2 rounded-lg text-sm font-medium bg-accent hover:opacity-90 text-white transition-opacity cursor-pointer">
               Filtrer
             </button>
           </div>
@@ -151,7 +151,7 @@ export default function InvoicesClient({ initialInvoices }: { initialInvoices: I
 
         <table className={TABLE_CLASS}>
           <thead>
-            <tr className="border-b border-slate-800/50">
+            <tr>
               <th className={TH_CLASS}>Élève</th>
               <th className={TH_CLASS}>Année</th>
               <th className={TH_CLASS}>Dû</th>
@@ -164,46 +164,46 @@ export default function InvoicesClient({ initialInvoices }: { initialInvoices: I
           </thead>
           <tbody>
             {invoices.length === 0 ? (
-              <tr><td colSpan={8} className={`${TD_CLASS} text-center text-slate-500 py-8`}>Aucune facture.</td></tr>
+              <tr><td colSpan={8} className={`${TD_CLASS} text-center text-text-faint py-8`}>Aucune facture.</td></tr>
             ) : (
               invoices.map((inv) => {
                 const gs = genStatus[inv.id] || "idle";
                 return (
-                  <tr key={inv.id} className="hover:bg-slate-900/35 transition-colors">
+                  <tr key={inv.id} className="hover:bg-paper-alt transition-colors">
                     <td className={TD_CLASS}>{inv.student_name}</td>
                     <td className={TD_CLASS}>{inv.school_year_label}</td>
                     <td className={TD_CLASS}>{Number(inv.total_due).toLocaleString()} GNF</td>
                     <td className={TD_CLASS}>{Number(inv.total_paid).toLocaleString()} GNF</td>
-                    <td className={`${TD_CLASS} font-medium ${Number(inv.balance) > 0 ? "text-amber-400" : "text-emerald-400"}`}>
+                    <td className={`${TD_CLASS} font-medium`} style={{ color: Number(inv.balance) > 0 ? "var(--warn)" : "var(--ok)" }}>
                       {Number(inv.balance).toLocaleString()} GNF
                     </td>
                     <td className={TD_CLASS}>{inv.due_date ? new Date(inv.due_date).toLocaleDateString("fr-FR") : "-"}</td>
                     <td className={TD_CLASS}>
-                      <span className={`inline-block px-2.5 py-0.5 rounded text-xs font-semibold ${STATUS_BADGE[inv.status] || "bg-slate-700/50 text-slate-300"}`}>
+                      <span className={`inline-block px-2.5 py-0.5 rounded text-xs font-semibold ${STATUS_BADGE[inv.status] || "bg-mute/10 text-mute"}`}>
                         {statusLabel(inv.status)}
                       </span>
                     </td>
                     <td className={`${TD_CLASS} text-right`}>
                       {gs === "loading" || gs === "polling" ? (
-                        <span className="text-slate-400 text-xs">Génération...</span>
+                        <span className="text-text-faint text-xs">Génération...</span>
                       ) : gs === "done" || inv.pdf_url ? (
                         <a href={inv.pdf_url} target="_blank" rel="noopener noreferrer"
-                          className="text-emerald-400 hover:text-emerald-300 text-xs font-medium mr-2 transition-colors">
+                          className="text-accent hover:opacity-80 text-xs font-medium mr-2 transition-opacity">
                           Télécharger
                         </a>
                       ) : gs === "failed" ? (
                         <button onClick={() => handleGeneratePdf(inv.id)}
-                          className="text-red-400 hover:text-red-300 text-xs font-medium transition-colors">
+                          className="text-danger hover:opacity-80 text-xs font-medium transition-opacity cursor-pointer">
                           Réessayer
                         </button>
                       ) : (
                         <button onClick={() => handleGeneratePdf(inv.id)}
-                          className="text-emerald-400 hover:text-emerald-300 text-xs font-medium transition-colors">
+                          className="text-accent hover:opacity-80 text-xs font-medium transition-opacity cursor-pointer">
                           Générer PDF
                         </button>
                       )}
                       {inv.generated_at && (
-                        <span className="text-slate-600 text-xs ml-1">
+                        <span className="text-text-faint text-xs ml-1">
                           ({new Date(inv.generated_at).toLocaleDateString("fr-FR")})
                         </span>
                       )}
