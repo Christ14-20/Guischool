@@ -2,6 +2,7 @@
 "use client";
 
 import React, { useState, useTransition } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import {
   Loader2,
@@ -30,13 +31,13 @@ const DECISION_LABELS: Record<string, string> = {
 };
 
 const DECISION_STYLES: Record<string, string> = {
-  ADMIS: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
-  REDOUBLE: "bg-amber-500/10 text-amber-400 border-amber-500/20",
-  EXCLU: "bg-rose-500/10 text-rose-400 border-rose-500/20",
+  ADMIS: "var(--ok)",
+  REDOUBLE: "var(--warn)",
+  EXCLU: "var(--danger)",
 };
 
 const INPUT_CLASS =
-  "w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors";
+  "w-full bg-paper-alt border border-line rounded-lg px-3 py-2 text-sm text-text outline-none focus:border-accent-line transition-colors";
 
 export default function YearEndDecisionsClient({
   decisions: initialDecisions,
@@ -159,10 +160,10 @@ export default function YearEndDecisionsClient({
   return (
     <div className="space-y-6">
       {/* Filters */}
-      <div className="bg-slate-900/40 border border-slate-800/80 rounded-xl p-5 shadow-xl backdrop-blur-md">
+      <div className="border border-line bg-card rounded-xl p-5 shadow-[var(--shadow)]">
         <form method="get" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
           <div className="space-y-1.5">
-            <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider">Année scolaire</label>
+            <label className="block text-[10.5px] font-semibold text-text-faint uppercase tracking-[.08em]">Année scolaire</label>
             <select
               value={syId}
               onChange={(e) => setSyId(e.target.value)}
@@ -175,7 +176,7 @@ export default function YearEndDecisionsClient({
             </select>
           </div>
           <div className="space-y-1.5">
-            <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider">Élève</label>
+            <label className="block text-[10.5px] font-semibold text-text-faint uppercase tracking-[.08em]">Élève</label>
             <input
               type="text"
               value={search}
@@ -188,15 +189,16 @@ export default function YearEndDecisionsClient({
             <button
               type="button"
               onClick={openCreateModal}
-              className="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-medium rounded-xl shadow-lg shadow-indigo-600/25 transition-all cursor-pointer"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-accent hover:opacity-90 text-white font-medium transition-opacity cursor-pointer"
             >
               <Plus className="size-4" />
-              Nouvelle d&apos;écision
+              Nouvelle décision
             </button>
             <button
               type="button"
               onClick={openBulkModal}
-              className="inline-flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded-xl shadow-lg shadow-emerald-600/25 transition-all cursor-pointer"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-white font-medium transition-opacity cursor-pointer hover:opacity-90"
+              style={{ background: "var(--ok)" }}
             >
               <Users className="size-4" />
               Promotion groupée
@@ -206,50 +208,55 @@ export default function YearEndDecisionsClient({
       </div>
 
       {/* Decisions table */}
-      <div className="bg-slate-900/40 border border-slate-800/80 rounded-xl shadow-xl backdrop-blur-md overflow-hidden">
+      <div className="border border-line bg-card rounded-xl shadow-[var(--shadow)]">
         {filteredDecisions.length === 0 ? (
-          <div className="p-12 text-center text-slate-500 bg-slate-900/20 border border-slate-800/80 rounded-xl flex flex-col items-center gap-3">
-            <ClipboardCheck className="size-8 text-slate-600" />
+          <div className="p-12 text-center text-text-faint flex flex-col items-center gap-3">
+            <ClipboardCheck className="size-8 text-text-faint" />
             Aucune décision trouvée.
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="border-b border-slate-800/50 text-slate-400 text-xs font-semibold uppercase tracking-wider">
-                  <th className="px-6 py-4">Élève</th>
-                  <th className="px-6 py-4">Année scolaire</th>
-                  <th className="px-6 py-4">Décision</th>
-                  <th className="px-6 py-4">Classe d&apos;origine</th>
-                  <th className="px-6 py-4">Classe destination</th>
-                  <th className="px-6 py-4">Moyenne annuelle</th>
-                  <th className="px-6 py-4">Prise par</th>
-                  <th className="px-6 py-4">Date</th>
+                <tr>
+                  <th className="text-left text-[10.5px] tracking-[.08em] uppercase text-text-faint font-medium px-6 py-4 border-b border-line">Élève</th>
+                  <th className="text-left text-[10.5px] tracking-[.08em] uppercase text-text-faint font-medium px-6 py-4 border-b border-line">Année scolaire</th>
+                  <th className="text-left text-[10.5px] tracking-[.08em] uppercase text-text-faint font-medium px-6 py-4 border-b border-line">Décision</th>
+                  <th className="text-left text-[10.5px] tracking-[.08em] uppercase text-text-faint font-medium px-6 py-4 border-b border-line">Classe d&apos;origine</th>
+                  <th className="text-left text-[10.5px] tracking-[.08em] uppercase text-text-faint font-medium px-6 py-4 border-b border-line">Classe destination</th>
+                  <th className="text-left text-[10.5px] tracking-[.08em] uppercase text-text-faint font-medium px-6 py-4 border-b border-line">Moyenne annuelle</th>
+                  <th className="text-left text-[10.5px] tracking-[.08em] uppercase text-text-faint font-medium px-6 py-4 border-b border-line">Prise par</th>
+                  <th className="text-left text-[10.5px] tracking-[.08em] uppercase text-text-faint font-medium px-6 py-4 border-b border-line">Date</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/30 text-sm text-slate-300">
+              <tbody className="text-sm">
                 {filteredDecisions.map((d: any) => (
-                  <tr key={d.id} className="hover:bg-slate-900/35 transition-colors">
-                    <td className="px-6 py-4 font-medium text-white">
+                  <tr key={d.id} className="hover:bg-paper-alt transition-colors">
+                    <td className="px-6 py-4 border-b border-line last:border-b-0 font-medium">
                       {d.student_nom} {d.student_prenom}
                       <br />
-                      <span className="font-mono text-xs bg-slate-800/50 px-2 py-0.5 rounded text-slate-400">
+                      <span className="font-mono text-xs bg-paper-alt border border-line px-2 py-0.5 rounded text-text-soft">
                         {d.student_matricule}
                       </span>
                     </td>
-                    <td className="px-6 py-4">{d.school_year_label}</td>
-                    <td className="px-6 py-4">
+                    <td className="px-6 py-4 border-b border-line">{d.school_year_label}</td>
+                    <td className="px-6 py-4 border-b border-line">
                       <span
-                        className={`inline-flex items-center px-2.5 py-0.5 rounded-lg border text-xs font-medium ${DECISION_STYLES[d.decision]}`}
+                        className="inline-flex items-center gap-[7px] text-[12.5px]"
+                        style={{ color: DECISION_STYLES[d.decision] ?? "var(--mute)" }}
                       >
+                        <span
+                          className="size-[9px] rounded-full border-2"
+                          style={{ borderColor: DECISION_STYLES[d.decision] ?? "var(--mute)" }}
+                        />
                         {DECISION_LABELS[d.decision] ?? d.decision}
                       </span>
                     </td>
-                    <td className="px-6 py-4">{d.classe_origine_name}</td>
-                    <td className="px-6 py-4">{d.classe_destination_name ?? "—"}</td>
-                    <td className="px-6 py-4 font-mono">{d.moyenne_annuelle ?? "—"}</td>
-                    <td className="px-6 py-4 text-slate-400">{d.prise_par_name}</td>
-                    <td className="px-6 py-4 text-slate-400">{d.date_decision}</td>
+                    <td className="px-6 py-4 border-b border-line">{d.classe_origine_name}</td>
+                    <td className="px-6 py-4 border-b border-line">{d.classe_destination_name ?? "—"}</td>
+                    <td className="px-6 py-4 border-b border-line font-mono">{d.moyenne_annuelle ?? "—"}</td>
+                    <td className="px-6 py-4 border-b border-line text-text-soft">{d.prise_par_name}</td>
+                    <td className="px-6 py-4 border-b border-line text-text-soft">{d.date_decision}</td>
                   </tr>
                 ))}
               </tbody>
@@ -259,74 +266,139 @@ export default function YearEndDecisionsClient({
       </div>
 
       {/* Create decision modal */}
-      {modalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
-            <div className="p-6 space-y-6">
-              <div className="flex items-center justify-between">
-                <h2 className="text-xl font-bold text-white">Nouvelle d&apos;écision de fin d&apos;année</h2>
-                <button onClick={() => setModalOpen(false)} className="text-slate-400 hover:text-white cursor-pointer">
-                  <X className="size-5" />
-                </button>
-              </div>
-
-              {modalError && (
-                <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-lg text-rose-400 text-sm">
-                  {modalError}
-                </div>
-              )}
-
-              <div className="space-y-4">
-                <div className="space-y-1.5">
-                  <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider">Élève</label>
-                  <select
-                    value={form.student_id}
-                    onChange={(e) => setForm((p) => ({ ...p, student_id: e.target.value }))}
-                    className={INPUT_CLASS}
-                  >
-                    <option value="">Sélectionner...</option>
-                  </select>
+      {modalOpen &&
+        createPortal(
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+            <div className="bg-card border border-line rounded-2xl shadow-[var(--shadow)] w-full max-w-md max-h-[90vh] overflow-y-auto">
+              <div className="p-6 space-y-6">
+                <div className="flex items-center justify-between">
+                  <h2 className="font-serif text-xl font-medium">Nouvelle décision de fin d&apos;année</h2>
+                  <button onClick={() => setModalOpen(false)} className="text-text-faint hover:text-text cursor-pointer">
+                    <X className="size-5" />
+                  </button>
                 </div>
 
-                {canOverrideSchoolYear && (
-                  <div className="space-y-1.5">
-                    <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                      Année scolaire <span className="normal-case text-slate-500">(par défaut : année courante)</span>
-                    </label>
-                    <select
-                      value={form.school_year_id}
-                      onChange={(e) => setForm((p) => ({ ...p, school_year_id: e.target.value }))}
-                      className={INPUT_CLASS}
-                    >
-                      <option value="">Année courante (par défaut)</option>
-                      {schoolYears.map((sy: any) => (
-                        <option key={sy.id} value={sy.id}>{sy.label}</option>
-                      ))}
-                    </select>
+                {modalError && (
+                  <div className="p-3 rounded-lg text-sm bg-danger/10 border border-danger/20 text-danger">
+                    {modalError}
                   </div>
                 )}
 
-                <div className="space-y-1.5">
-                  <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider">Décision</label>
-                  <select
-                    value={form.decision}
-                    onChange={(e) => setForm((p) => ({ ...p, decision: e.target.value }))}
-                    className={INPUT_CLASS}
-                  >
-                    <option value="ADMIS">Admis</option>
-                    <option value="REDOUBLE">Redouble</option>
-                    <option value="EXCLU">Exclu</option>
-                  </select>
+                <div className="space-y-4">
+                  <div className="space-y-1.5">
+                    <label className="block text-[10.5px] font-semibold text-text-faint uppercase tracking-[.08em]">Élève</label>
+                    <select
+                      value={form.student_id}
+                      onChange={(e) => setForm((p) => ({ ...p, student_id: e.target.value }))}
+                      className={INPUT_CLASS}
+                    >
+                      <option value="">Sélectionner...</option>
+                    </select>
+                  </div>
+
+                  {canOverrideSchoolYear && (
+                    <div className="space-y-1.5">
+                      <label className="block text-[10.5px] font-semibold text-text-faint uppercase tracking-[.08em]">
+                        Année scolaire <span className="normal-case text-text-faint">(par défaut : année courante)</span>
+                      </label>
+                      <select
+                        value={form.school_year_id}
+                        onChange={(e) => setForm((p) => ({ ...p, school_year_id: e.target.value }))}
+                        className={INPUT_CLASS}
+                      >
+                        <option value="">Année courante (par défaut)</option>
+                        {schoolYears.map((sy: any) => (
+                          <option key={sy.id} value={sy.id}>{sy.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
+                  <div className="space-y-1.5">
+                    <label className="block text-[10.5px] font-semibold text-text-faint uppercase tracking-[.08em]">Décision</label>
+                    <select
+                      value={form.decision}
+                      onChange={(e) => setForm((p) => ({ ...p, decision: e.target.value }))}
+                      className={INPUT_CLASS}
+                    >
+                      <option value="ADMIS">Admis</option>
+                      <option value="REDOUBLE">Redouble</option>
+                      <option value="EXCLU">Exclu</option>
+                    </select>
+                  </div>
+
+                  {(form.decision === "ADMIS" || form.decision === "REDOUBLE") && (
+                    <div className="space-y-1.5">
+                      <label className="block text-[10.5px] font-semibold text-text-faint uppercase tracking-[.08em]">
+                        Classe de destination
+                      </label>
+                      <select
+                        value={form.classe_destination_id}
+                        onChange={(e) => setForm((p) => ({ ...p, classe_destination_id: e.target.value }))}
+                        className={INPUT_CLASS}
+                      >
+                        <option value="">Sélectionner...</option>
+                        {classes.map((c: any) => (
+                          <option key={c.id} value={c.id}>{c.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
+                  <div className="flex justify-end gap-3 pt-4 border-t border-line">
+                    <button
+                      onClick={() => setModalOpen(false)}
+                      className="px-4 py-2 rounded-lg border border-line text-text-soft text-sm font-medium hover:border-accent-line hover:text-text transition-colors"
+                    >
+                      Annuler
+                    </button>
+                    <button
+                      onClick={handleCreateDecision}
+                      disabled={modalLoading}
+                      className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-accent hover:opacity-90 text-white font-medium transition-opacity disabled:opacity-50 cursor-pointer"
+                    >
+                      {modalLoading ? <Loader2 className="size-4 animate-spin" /> : <Plus className="size-4" />}
+                      Créer la décision
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
+
+      {/* Bulk promotion modal */}
+      {bulkModalOpen &&
+        createPortal(
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+            <div className="bg-card border border-line rounded-2xl shadow-[var(--shadow)] w-full max-w-md max-h-[90vh] overflow-y-auto">
+              <div className="p-6 space-y-6">
+                <div className="flex items-center justify-between">
+                  <h2 className="font-serif text-xl font-medium">Promotion groupée</h2>
+                  <button onClick={() => setBulkModalOpen(false)} className="text-text-faint hover:text-text cursor-pointer">
+                    <X className="size-5" />
+                  </button>
                 </div>
 
-                {(form.decision === "ADMIS" || form.decision === "REDOUBLE") && (
+                {bulkError && (
+                  <div className="p-3 rounded-lg text-sm bg-danger/10 border border-danger/20 text-danger">
+                    {bulkError}
+                  </div>
+                )}
+
+                {bulkSuccess && (
+                  <div className="p-3 rounded-lg text-sm bg-ok/10 border border-ok/20 text-ok">
+                    {bulkSuccess}
+                  </div>
+                )}
+
+                <div className="space-y-4">
                   <div className="space-y-1.5">
-                    <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                      Classe de destination
-                    </label>
+                    <label className="block text-[10.5px] font-semibold text-text-faint uppercase tracking-[.08em]">Classe d&apos;origine</label>
                     <select
-                      value={form.classe_destination_id}
-                      onChange={(e) => setForm((p) => ({ ...p, classe_destination_id: e.target.value }))}
+                      value={bulkForm.classe_origine_id}
+                      onChange={(e) => setBulkForm((p) => ({ ...p, classe_origine_id: e.target.value }))}
                       className={INPUT_CLASS}
                     >
                       <option value="">Sélectionner...</option>
@@ -335,123 +407,63 @@ export default function YearEndDecisionsClient({
                       ))}
                     </select>
                   </div>
-                )}
 
-                <div className="flex justify-end gap-3 pt-4 border-t border-slate-800">
-                  <button
-                    onClick={() => setModalOpen(false)}
-                    className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-sm font-medium transition-colors"
-                  >
-                    Annuler
-                  </button>
-                  <button
-                    onClick={handleCreateDecision}
-                    disabled={modalLoading}
-                    className="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-medium rounded-xl shadow-lg shadow-indigo-600/25 transition-all disabled:opacity-50 cursor-pointer"
-                  >
-                    {modalLoading ? <Loader2 className="size-4 animate-spin" /> : <Plus className="size-4" />}
-                    Créer la décision
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+                  {canOverrideSchoolYear && (
+                    <div className="space-y-1.5">
+                      <label className="block text-[10.5px] font-semibold text-text-faint uppercase tracking-[.08em]">
+                        Année scolaire cible
+                      </label>
+                      <p className="text-xs text-text-faint">
+                        L&apos;année dont les décisions doivent être appliquées (par défaut : année courante) — pas l&apos;année d&apos;inscription des élèves promus.
+                      </p>
+                      <select
+                        value={bulkForm.school_year_cible_id}
+                        onChange={(e) => setBulkForm((p) => ({ ...p, school_year_cible_id: e.target.value }))}
+                        className={INPUT_CLASS}
+                      >
+                        <option value="">Année courante (par défaut)</option>
+                        {schoolYears.map((sy: any) => (
+                          <option key={sy.id} value={sy.id}>{sy.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
 
-      {/* Bulk promotion modal */}
-      {bulkModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
-            <div className="p-6 space-y-6">
-              <div className="flex items-center justify-between">
-                <h2 className="text-xl font-bold text-white">Promotion groupée</h2>
-                <button onClick={() => setBulkModalOpen(false)} className="text-slate-400 hover:text-white cursor-pointer">
-                  <X className="size-5" />
-                </button>
-              </div>
-
-              {bulkError && (
-                <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-lg text-rose-400 text-sm">
-                  {bulkError}
-                </div>
-              )}
-
-              {bulkSuccess && (
-                <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-lg text-emerald-400 text-sm">
-                  {bulkSuccess}
-                </div>
-              )}
-
-              <div className="space-y-4">
-                <div className="space-y-1.5">
-                  <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider">Classe d&apos;origine</label>
-                  <select
-                    value={bulkForm.classe_origine_id}
-                    onChange={(e) => setBulkForm((p) => ({ ...p, classe_origine_id: e.target.value }))}
-                    className={INPUT_CLASS}
-                  >
-                    <option value="">Sélectionner...</option>
-                    {classes.map((c: any) => (
-                      <option key={c.id} value={c.id}>{c.name}</option>
-                    ))}
-                  </select>
-                </div>
-
-                {canOverrideSchoolYear && (
                   <div className="space-y-1.5">
-                    <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                      Année scolaire cible
-                    </label>
-                    <p className="text-xs text-slate-500">
-                      L&apos;année dont les décisions doivent être appliquées (par défaut : année courante) — pas l&apos;année d&apos;inscription des élèves promus.
-                    </p>
+                    <label className="block text-[10.5px] font-semibold text-text-faint uppercase tracking-[.08em]">Filtrer par décision</label>
                     <select
-                      value={bulkForm.school_year_cible_id}
-                      onChange={(e) => setBulkForm((p) => ({ ...p, school_year_cible_id: e.target.value }))}
+                      value={bulkForm.decisions_filter}
+                      onChange={(e) => setBulkForm((p) => ({ ...p, decisions_filter: e.target.value }))}
                       className={INPUT_CLASS}
                     >
-                      <option value="">Année courante (par défaut)</option>
-                      {schoolYears.map((sy: any) => (
-                        <option key={sy.id} value={sy.id}>{sy.label}</option>
-                      ))}
+                      <option value="ADMIS">ADMIS uniquement</option>
+                      <option value="ADMIS_REDOUBLE">ADMIS + REDOUBLE</option>
                     </select>
                   </div>
-                )}
 
-                <div className="space-y-1.5">
-                  <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider">Filtrer par décision</label>
-                  <select
-                    value={bulkForm.decisions_filter}
-                    onChange={(e) => setBulkForm((p) => ({ ...p, decisions_filter: e.target.value }))}
-                    className={INPUT_CLASS}
-                  >
-                    <option value="ADMIS">ADMIS uniquement</option>
-                    <option value="ADMIS_REDOUBLE">ADMIS + REDOUBLE</option>
-                  </select>
-                </div>
-
-                <div className="flex justify-end gap-3 pt-4 border-t border-slate-800">
-                  <button
-                    onClick={() => setBulkModalOpen(false)}
-                    className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-sm font-medium transition-colors"
-                  >
-                    Annuler
-                  </button>
-                  <button
-                    onClick={handleBulkPromotion}
-                    disabled={bulkLoading}
-                    className="inline-flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded-xl shadow-lg shadow-emerald-600/25 transition-all disabled:opacity-50 cursor-pointer"
-                  >
-                    {bulkLoading ? <Loader2 className="size-4 animate-spin" /> : <CheckCircle2 className="size-4" />}
-                    Lancer la promotion
-                  </button>
+                  <div className="flex justify-end gap-3 pt-4 border-t border-line">
+                    <button
+                      onClick={() => setBulkModalOpen(false)}
+                      className="px-4 py-2 rounded-lg border border-line text-text-soft text-sm font-medium hover:border-accent-line hover:text-text transition-colors"
+                    >
+                      Annuler
+                    </button>
+                    <button
+                      onClick={handleBulkPromotion}
+                      disabled={bulkLoading}
+                      className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-white font-medium transition-opacity disabled:opacity-50 cursor-pointer hover:opacity-90"
+                      style={{ background: "var(--ok)" }}
+                    >
+                      {bulkLoading ? <Loader2 className="size-4 animate-spin" /> : <CheckCircle2 className="size-4" />}
+                      Lancer la promotion
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body
+        )}
     </div>
   );
 }

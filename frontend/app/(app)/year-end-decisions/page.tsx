@@ -38,28 +38,30 @@ export default async function YearEndDecisionsPage() {
   }
 
   return (
-    <div className="space-y-6 animate-fade-in p-7 px-8">
-      <div>
-        <h1 className="text-3xl font-extrabold text-white tracking-tight bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent">
-          D&apos;écisions de fin d&apos;année
+    <div className="min-h-screen bg-paper text-text">
+      <div className="px-11 pt-9 pb-[22px]">
+        <h1 className="font-serif text-[26px] font-medium m-0 mb-1.5">
+          Décisions de fin d&apos;année
         </h1>
-        <p className="text-slate-400 mt-1">
-          Gérer les d&apos;écisions individuelles et les promotions groupées.
+        <p className="m-0 text-text-soft text-[13.5px]">
+          Gérer les décisions individuelles et les promotions groupées.
         </p>
       </div>
 
-      {errorMsg && (
-        <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-xl text-destructive text-sm">
-          {errorMsg}
-        </div>
-      )}
+      <div className="px-11 pb-12 space-y-[22px]">
+        {errorMsg && (
+          <div className="p-4 rounded-xl text-sm bg-danger/10 border border-danger/20 text-danger">
+            {errorMsg}
+          </div>
+        )}
 
-      <YearEndDecisionsClient
-        decisions={decisionsData.results}
-        schoolYears={schoolYears}
-        classes={classes}
-        role={role}
-      />
+        <YearEndDecisionsClient
+          decisions={decisionsData.results}
+          schoolYears={schoolYears}
+          classes={classes}
+          role={role}
+        />
+      </div>
     </div>
   );
 }
