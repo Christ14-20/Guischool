@@ -21,7 +21,7 @@ export default function SetCurrentButton({ schoolYearId }: Props) {
     <button
       onClick={handleClick}
       disabled={isPending}
-      className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-lg bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 transition-colors disabled:opacity-50 cursor-pointer"
+      className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-lg border border-line text-text-soft hover:border-accent-line hover:text-accent transition-colors disabled:opacity-50 cursor-pointer"
     >
       {isPending ? (
         <Loader2 className="size-3 animate-spin" />
