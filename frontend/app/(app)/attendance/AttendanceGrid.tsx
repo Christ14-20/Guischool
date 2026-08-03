@@ -46,14 +46,14 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 const STATUS_STYLES: Record<string, string> = {
-  PRESENT: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
-  ABSENT: "bg-rose-500/10 text-rose-400 border-rose-500/20",
-  ABSENT_JUSTIFIE: "bg-amber-500/10 text-amber-400 border-amber-500/20",
-  RETARD: "bg-orange-500/10 text-orange-400 border-orange-500/20",
+  PRESENT: "var(--ok)",
+  ABSENT: "var(--danger)",
+  ABSENT_JUSTIFIE: "var(--warn)",
+  RETARD: "var(--info)",
 };
 
 const inputClass =
-  "w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors";
+  "w-full bg-paper-alt border border-line rounded-lg px-3 py-2 text-sm text-text outline-none focus:border-accent-line transition-colors";
 
 export default function AttendanceGrid({
   classeId,
@@ -66,8 +66,8 @@ export default function AttendanceGrid({
 
   if (students.length === 0) {
     return (
-      <div className="p-12 text-center text-slate-500 bg-slate-900/20 border border-slate-800/80 rounded-xl flex flex-col items-center gap-3">
-        <Users className="size-8 text-slate-600" />
+      <div className="p-12 text-center text-text-faint border border-line bg-card rounded-xl flex flex-col items-center gap-3">
+        <Users className="size-8 text-text-faint" />
         Aucun élève actif dans cette classe.
       </div>
     );
@@ -157,17 +157,17 @@ function EntryMode({
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-lg font-semibold text-white">
+        <h2 className="font-serif text-lg font-medium">
           {className} — {date}
         </h2>
         <div className="flex items-center gap-2">
-          <span className="text-xs text-slate-500">Marquer tous :</span>
+          <span className="text-xs text-text-faint">Marquer tous :</span>
           {STATUS_OPTIONS.map((o) => (
             <button
               key={o.value}
               type="button"
               onClick={() => setAll(o.value)}
-              className="px-2.5 py-1 text-xs rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors cursor-pointer"
+              className="px-2.5 py-1 text-xs rounded-lg border border-line text-text-soft hover:border-accent-line hover:text-text transition-colors cursor-pointer"
             >
               {o.label}
             </button>
@@ -175,31 +175,31 @@ function EntryMode({
         </div>
       </div>
 
-      <div className="bg-slate-900/40 border border-slate-800/80 rounded-xl shadow-xl backdrop-blur-md overflow-hidden">
+      <div className="border border-line bg-card rounded-xl shadow-[var(--shadow)]">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="border-b border-slate-800/50 text-slate-400 text-xs font-semibold uppercase tracking-wider">
-                <th className="px-6 py-4">Matricule</th>
-                <th className="px-6 py-4">Nom & Prénom</th>
-                <th className="px-6 py-4">Statut</th>
-                <th className="px-6 py-4">Minutes de retard</th>
+              <tr>
+                <th className="text-left text-[10.5px] tracking-[.08em] uppercase text-text-faint font-medium px-6 py-4 border-b border-line">Matricule</th>
+                <th className="text-left text-[10.5px] tracking-[.08em] uppercase text-text-faint font-medium px-6 py-4 border-b border-line">Nom & Prénom</th>
+                <th className="text-left text-[10.5px] tracking-[.08em] uppercase text-text-faint font-medium px-6 py-4 border-b border-line">Statut</th>
+                <th className="text-left text-[10.5px] tracking-[.08em] uppercase text-text-faint font-medium px-6 py-4 border-b border-line">Minutes de retard</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/30 text-sm text-slate-300">
+            <tbody className="text-sm">
               {students.map((s) => {
                 const row = rows[s.id];
                 return (
-                  <tr key={s.id} className="hover:bg-slate-900/35 transition-colors">
-                    <td className="px-6 py-4">
-                      <span className="font-mono text-xs bg-slate-800/50 px-2 py-0.5 rounded text-slate-400">
+                  <tr key={s.id} className="hover:bg-paper-alt transition-colors">
+                    <td className="px-6 py-4 border-b border-line last:border-b-0">
+                      <span className="font-mono text-xs bg-paper-alt border border-line px-2 py-0.5 rounded text-text-soft">
                         {s.matricule}
                       </span>
                     </td>
-                    <td className="px-6 py-4 font-medium text-white">
+                    <td className="px-6 py-4 border-b border-line font-medium">
                       {s.nom} {s.prenom}
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-6 py-4 border-b border-line">
                       <select
                         value={row.status}
                         onChange={(e) => setStatus(s.id, e.target.value)}
@@ -212,7 +212,7 @@ function EntryMode({
                         ))}
                       </select>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-6 py-4 border-b border-line">
                       {row.status === "RETARD" ? (
                         <input
                           type="number"
@@ -223,7 +223,7 @@ function EntryMode({
                           className={`${inputClass} w-24`}
                         />
                       ) : (
-                        <span className="text-slate-600">—</span>
+                        <span className="text-text-faint">—</span>
                       )}
                     </td>
                   </tr>
@@ -235,7 +235,7 @@ function EntryMode({
       </div>
 
       {error && (
-        <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-xl text-destructive text-sm">
+        <div className="p-4 rounded-xl text-sm bg-danger/10 border border-danger/20 text-danger">
           {error}
         </div>
       )}
@@ -244,7 +244,7 @@ function EntryMode({
         <button
           onClick={submit}
           disabled={isPending}
-          className="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-medium rounded-xl shadow-lg shadow-indigo-600/25 transition-all active:scale-[0.98] disabled:opacity-50 cursor-pointer"
+          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-accent hover:opacity-90 text-white font-medium transition-opacity disabled:opacity-50 cursor-pointer"
         >
           {isPending ? (
             <Loader2 className="size-4 animate-spin" />
@@ -277,25 +277,25 @@ function EditMode({
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-lg font-semibold text-white">
+        <h2 className="font-serif text-lg font-medium">
           {className} — {date}
         </h2>
-        <span className="text-xs text-slate-500">
+        <span className="text-xs text-text-faint">
           Présences déjà enregistrées — correction possible tant que non verrouillées.
         </span>
       </div>
 
-      <div className="bg-slate-900/40 border border-slate-800/80 rounded-xl shadow-xl backdrop-blur-md overflow-hidden">
+      <div className="border border-line bg-card rounded-xl shadow-[var(--shadow)]">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="border-b border-slate-800/50 text-slate-400 text-xs font-semibold uppercase tracking-wider">
-                <th className="px-6 py-4">Nom & Prénom</th>
-                <th className="px-6 py-4">Statut actuel</th>
-                <th className="px-6 py-4">Actions</th>
+              <tr>
+                <th className="text-left text-[10.5px] tracking-[.08em] uppercase text-text-faint font-medium px-6 py-4 border-b border-line">Nom & Prénom</th>
+                <th className="text-left text-[10.5px] tracking-[.08em] uppercase text-text-faint font-medium px-6 py-4 border-b border-line">Statut actuel</th>
+                <th className="text-left text-[10.5px] tracking-[.08em] uppercase text-text-faint font-medium px-6 py-4 border-b border-line">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/30 text-sm text-slate-300">
+            <tbody className="text-sm">
               {existing.map((record) => (
                 <EditRow
                   key={record.id}
@@ -350,22 +350,25 @@ function EditRow({
   };
 
   return (
-    <tr className="hover:bg-slate-900/35 transition-colors align-top">
-      <td className="px-6 py-4 font-medium text-white">
+    <tr className="hover:bg-paper-alt transition-colors align-top">
+      <td className="px-6 py-4 border-b border-line last:border-b-0 font-medium">
         {student ? `${student.nom} ${student.prenom}` : "—"}
       </td>
-      <td className="px-6 py-4">
+      <td className="px-6 py-4 border-b border-line">
         <span
-          className={`inline-flex items-center px-2.5 py-0.5 rounded-lg border text-xs font-medium ${
-            STATUS_STYLES[record.status] ?? ""
-          }`}
+          className="inline-flex items-center gap-[7px] text-[12.5px]"
+          style={{ color: STATUS_STYLES[record.status] ?? "var(--mute)" }}
         >
+          <span
+            className="size-[9px] rounded-full border-2"
+            style={{ borderColor: STATUS_STYLES[record.status] ?? "var(--mute)" }}
+          />
           {STATUS_LABELS[record.status] ?? record.status}
         </span>
       </td>
-      <td className="px-6 py-4">
+      <td className="px-6 py-4 border-b border-line">
         {record.is_locked ? (
-          <span className="inline-flex items-center gap-1.5 text-xs text-slate-500">
+          <span className="inline-flex items-center gap-1.5 text-xs text-text-faint">
             <Lock className="size-3.5" /> Verrouillé
           </span>
         ) : (
@@ -388,7 +391,7 @@ function EditRow({
               <button
                 onClick={save}
                 disabled={isPending || !dirty}
-                className="inline-flex items-center gap-1.5 px-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-medium rounded-xl disabled:opacity-40 cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-accent hover:opacity-90 text-white text-xs font-medium disabled:opacity-40 cursor-pointer transition-opacity"
               >
                 {isPending ? (
                   <Loader2 className="size-3.5 animate-spin" />
@@ -400,7 +403,8 @@ function EditRow({
               {(record.status === "ABSENT" || record.status === "RETARD") && (
                 <button
                   onClick={() => setShowJustify((v) => !v)}
-                  className="inline-flex items-center gap-1.5 px-3 py-2 bg-amber-600/10 hover:bg-amber-600/20 text-amber-400 text-xs font-medium rounded-xl cursor-pointer"
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium cursor-pointer"
+                  style={{ color: "var(--warn)", boxShadow: "inset 0 0 0 1px var(--warn)" }}
                 >
                   <ShieldCheck className="size-3.5" /> Justifier
                 </button>
@@ -418,7 +422,8 @@ function EditRow({
                 <button
                   onClick={justify}
                   disabled={isPending}
-                  className="inline-flex items-center gap-1.5 px-3 py-2 bg-amber-600 hover:bg-amber-500 text-white text-xs font-medium rounded-xl disabled:opacity-50 cursor-pointer"
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-white text-xs font-medium disabled:opacity-50 cursor-pointer transition-opacity hover:opacity-90"
+                  style={{ background: "var(--warn)" }}
                 >
                   {isPending && <Loader2 className="size-3.5 animate-spin" />}
                   Confirmer
@@ -426,7 +431,7 @@ function EditRow({
               </div>
             )}
 
-            {error && <p className="text-xs text-destructive">{error}</p>}
+            {error && <p className="text-xs text-danger">{error}</p>}
           </div>
         )}
       </td>

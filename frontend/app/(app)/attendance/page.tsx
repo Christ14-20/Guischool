@@ -50,83 +50,81 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
   const selectedClass = classes.find((c: any) => c.id === classeId);
 
   return (
-    <div className="space-y-8 animate-fade-in p-7 px-8">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-extrabold text-white tracking-tight bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent">
-            Présences
-          </h1>
-          <p className="text-slate-400 mt-1">
-            Saisie et suivi de l&apos;assiduité par classe et par jour.
-          </p>
-        </div>
+    <div className="min-h-screen bg-paper text-text">
+      <div className="px-11 pt-9 pb-[22px]">
+        <h1 className="font-serif text-[26px] font-medium m-0 mb-1.5">Présences</h1>
+        <p className="m-0 text-text-soft text-[13.5px]">
+          Saisie et suivi de l&apos;assiduité par classe et par jour.
+        </p>
       </div>
 
-      {errorMsg && (
-        <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-xl text-destructive text-sm">
-          {errorMsg}
-        </div>
-      )}
-
-      {/* Filtres classe + date */}
-      <div className="bg-slate-900/40 border border-slate-800/80 rounded-xl p-5 shadow-xl backdrop-blur-md">
-        <form
-          method="get"
-          className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end"
-        >
-          <div className="space-y-2">
-            <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider">
-              Classe
-            </label>
-            <select
-              name="classe_id"
-              defaultValue={classeId}
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors"
-            >
-              <option value="">Sélectionner...</option>
-              {classes.map((c: any) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
+      <div className="px-11 pb-12 space-y-[22px]">
+        {errorMsg && (
+          <div className="p-4 rounded-xl text-sm bg-danger/10 border border-danger/20 text-danger">
+            {errorMsg}
           </div>
+        )}
 
-          <div className="space-y-2">
-            <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider">
-              Date
-            </label>
-            <input
-              type="date"
-              name="date"
-              defaultValue={date}
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors [color-scheme:dark]"
-            />
-          </div>
-
-          <button
-            type="submit"
-            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-medium transition-colors"
+        {/* Filtres classe + date */}
+        <div className="border border-line bg-card rounded-xl p-5 shadow-[var(--shadow)]">
+          <form
+            method="get"
+            className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end"
           >
-            Charger la classe
-          </button>
-        </form>
-      </div>
+            <div className="space-y-2">
+              <label className="block text-[10.5px] font-semibold text-text-faint uppercase tracking-[.08em]">
+                Classe
+              </label>
+              <select
+                name="classe_id"
+                defaultValue={classeId}
+                className="w-full bg-paper-alt border border-line rounded-lg px-3 py-2 text-sm text-text outline-none focus:border-accent-line transition-colors"
+              >
+                <option value="">Sélectionner...</option>
+                {classes.map((c: any) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-      {classeId && date ? (
-        <AttendanceGrid
-          classeId={classeId}
-          className={selectedClass?.name ?? ""}
-          date={date}
-          students={students}
-          existing={existing}
-        />
-      ) : (
-        <div className="p-12 text-center text-slate-500 bg-slate-900/20 border border-slate-800/80 rounded-xl flex flex-col items-center gap-3">
-          <CalendarCheck className="size-8 text-slate-600" />
-          Sélectionnez une classe et une date pour saisir les présences.
+            <div className="space-y-2">
+              <label className="block text-[10.5px] font-semibold text-text-faint uppercase tracking-[.08em]">
+                Date
+              </label>
+              <input
+                type="date"
+                name="date"
+                defaultValue={date}
+                className="w-full bg-paper-alt border border-line rounded-lg px-3 py-2 text-sm text-text outline-none focus:border-accent-line transition-colors"
+              />
+            </div>
+
+            <button
+              type="submit"
+              className="rounded-lg bg-accent text-white text-sm font-semibold px-4 py-2 hover:opacity-90 transition-opacity"
+            >
+              Charger la classe
+            </button>
+          </form>
         </div>
-      )}
+
+        {classeId && date ? (
+          <AttendanceGrid
+            classeId={classeId}
+            className={selectedClass?.name ?? ""}
+            date={date}
+            students={students}
+            existing={existing}
+          />
+        ) : (
+          <div className="p-12 text-center text-text-faint border border-line bg-card rounded-xl flex flex-col items-center gap-3">
+            <CalendarCheck className="size-8 text-text-faint" />
+            Sélectionnez une classe et une date pour saisir les présences.
+          </div>
+        )}
+      </div>
     </div>
   );
 }
