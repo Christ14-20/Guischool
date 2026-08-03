@@ -78,15 +78,15 @@ const GRADE_LABELS: Record<string, string> = {
 const STATUT_EMPLOI_LABELS: Record<string, string> = {
   TITULAIRE: "Titulaire", CONTRACTUEL: "Contractuel", VACATAIRE: "Vacataire",
 };
-const STATUT_STYLES: Record<string, { bg: string; color: string; label: string }> = {
-  ACTIF: { bg: "rgba(16, 185, 129, 0.1)", color: "#10B981", label: "Actif" },
-  EN_CONGE: { bg: "rgba(14, 165, 233, 0.1)", color: "#0EA5E9", label: "En congé" },
-  SUSPENDU: { bg: "rgba(245, 158, 11, 0.1)", color: "#F59E0B", label: "Suspendu" },
-  PARTI: { bg: "rgba(100, 116, 139, 0.1)", color: "#94A3B8", label: "Parti" },
+const STATUT_STYLES: Record<string, { color: string; label: string }> = {
+  ACTIF: { color: "var(--ok)", label: "Actif" },
+  EN_CONGE: { color: "var(--info)", label: "En congé" },
+  SUSPENDU: { color: "var(--warn)", label: "Suspendu" },
+  PARTI: { color: "var(--mute)", label: "Parti" },
 };
 
 const inputClass =
-  "w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 transition-colors";
+  "w-full bg-paper-alt border border-line rounded-lg px-4 py-2.5 text-sm text-text placeholder-text-faint outline-none focus:border-accent-line transition-colors";
 
 export default function StaffDetailClient({ staff, subjects, permissionsCatalog }: Props) {
   const router = useRouter();
@@ -240,43 +240,46 @@ export default function StaffDetailClient({ staff, subjects, permissionsCatalog 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="bg-slate-900/40 border border-slate-800/80 rounded-xl p-6 shadow-xl backdrop-blur-md">
+      <div className="border border-line bg-card rounded-xl p-6 shadow-[var(--shadow)]">
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-4">
-            <div className="size-14 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-indigo-400 text-xl font-bold">
+            <div className="size-14 rounded-2xl bg-accent-soft text-accent flex items-center justify-center text-xl font-semibold">
               {staff.first_name?.[0]}{staff.last_name?.[0]}
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-white">
+              <h1 className="font-serif text-2xl font-medium">
                 {staff.first_name} {staff.last_name}
               </h1>
               <div className="flex items-center gap-3 mt-1">
-                <span className="text-sm text-slate-400">{staff.email}</span>
+                <span className="text-sm text-text-soft">{staff.email}</span>
                 <span
-                  className={`inline-flex items-center px-2.5 py-0.5 rounded-lg border text-xs font-medium ${
-                    staff.is_active
-                      ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
-                      : "bg-rose-500/10 text-rose-400 border-rose-500/20"
-                  }`}
+                  className="inline-flex items-center gap-[7px] text-[12.5px]"
+                  style={{ color: staff.is_active ? "var(--ok)" : "var(--danger)" }}
                 >
+                  <span
+                    className="size-[9px] rounded-full border-2"
+                    style={{ borderColor: staff.is_active ? "var(--ok)" : "var(--danger)" }}
+                  />
                   {staff.is_active ? "Actif" : "Inactif"}
                 </span>
                 <span
-                  className={`inline-flex items-center px-2.5 py-0.5 rounded-lg border text-xs font-medium ${
-                    staff.role?.name === "TEACHER"
-                      ? "bg-indigo-500/10 text-indigo-400 border-indigo-500/20"
-                      : "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
-                  }`}
+                  className="inline-flex items-center gap-[7px] text-[12.5px]"
+                  style={{ color: staff.role?.name === "TEACHER" ? "var(--accent)" : "var(--ok)" }}
                 >
+                  <span
+                    className="size-[9px] rounded-full border-2"
+                    style={{ borderColor: staff.role?.name === "TEACHER" ? "var(--accent)" : "var(--ok)" }}
+                  />
                   {ROLE_LABELS[staff.role?.name] ?? staff.role?.name}
                 </span>
                 {(() => {
                   const st = STATUT_STYLES[staff.statut] || STATUT_STYLES.ACTIF;
                   return (
                     <span
-                      className="inline-flex items-center px-2.5 py-0.5 rounded-lg border text-xs font-medium"
-                      style={{ background: st.bg, color: st.color, borderColor: st.color + "33" }}
+                      className="inline-flex items-center gap-[7px] text-[12.5px]"
+                      style={{ color: st.color }}
                     >
+                      <span className="size-[9px] rounded-full border-2" style={{ borderColor: st.color }} />
                       {st.label}
                     </span>
                   );
@@ -288,15 +291,15 @@ export default function StaffDetailClient({ staff, subjects, permissionsCatalog 
       </div>
 
       {/* Edit / Info Card */}
-      <div className="bg-slate-900/40 border border-slate-800/80 rounded-xl p-6 shadow-xl backdrop-blur-md space-y-4">
+      <div className="border border-line bg-card rounded-xl p-6 shadow-[var(--shadow)] space-y-4">
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider">
+          <h3 className="text-[10.5px] font-semibold text-text-faint uppercase tracking-[.08em]">
             Informations
           </h3>
           {!editing && (
             <button
               onClick={() => setEditing(true)}
-              className="inline-flex items-center gap-1.5 text-xs text-indigo-400 hover:text-indigo-300 cursor-pointer"
+              className="inline-flex items-center gap-1.5 text-xs text-accent hover:opacity-80 cursor-pointer"
             >
               <Pencil className="size-3.5" />
               Modifier
@@ -308,7 +311,7 @@ export default function StaffDetailClient({ staff, subjects, permissionsCatalog 
           <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1">
-                <label className="text-xs text-slate-500 uppercase tracking-wider">Prénom</label>
+                <label className="text-[10.5px] text-text-faint uppercase tracking-[.08em]">Prénom</label>
                 <input
                   value={firstName}
                   onChange={(e) => setFirstName(e.target.value)}
@@ -316,7 +319,7 @@ export default function StaffDetailClient({ staff, subjects, permissionsCatalog 
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-xs text-slate-500 uppercase tracking-wider">Nom</label>
+                <label className="text-[10.5px] text-text-faint uppercase tracking-[.08em]">Nom</label>
                 <input
                   value={lastName}
                   onChange={(e) => setLastName(e.target.value)}
@@ -324,7 +327,7 @@ export default function StaffDetailClient({ staff, subjects, permissionsCatalog 
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-xs text-slate-500 uppercase tracking-wider">Téléphone</label>
+                <label className="text-[10.5px] text-text-faint uppercase tracking-[.08em]">Téléphone</label>
                 <input
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
@@ -333,22 +336,22 @@ export default function StaffDetailClient({ staff, subjects, permissionsCatalog 
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-xs text-slate-500 uppercase tracking-wider">Email</label>
+                <label className="text-[10.5px] text-text-faint uppercase tracking-[.08em]">Email</label>
                 <input
                   value={staff.email}
                   disabled
                   className={`${inputClass} opacity-50 cursor-not-allowed`}
                 />
-                <p className="text-[10px] text-slate-600">Non modifiable</p>
+                <p className="text-[10px] text-text-faint">Non modifiable</p>
               </div>
             </div>
 
             {/* Informations RH (STAFF-V2-01) */}
-            <div className="pt-2 border-t border-slate-800/60">
-              <p className="text-xs text-slate-500 uppercase tracking-wider mb-3">Informations RH</p>
+            <div className="pt-2 border-t border-line">
+              <p className="text-[10.5px] text-text-faint uppercase tracking-[.08em] mb-3">Informations RH</p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <label className="text-xs text-slate-500 uppercase tracking-wider">Date de naissance</label>
+                  <label className="text-[10.5px] text-text-faint uppercase tracking-[.08em]">Date de naissance</label>
                   <input
                     type="date"
                     value={dateNaissance}
@@ -357,7 +360,7 @@ export default function StaffDetailClient({ staff, subjects, permissionsCatalog 
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs text-slate-500 uppercase tracking-wider">Sexe</label>
+                  <label className="text-[10.5px] text-text-faint uppercase tracking-[.08em]">Sexe</label>
                   <select value={sexe} onChange={(e) => setSexe(e.target.value)} className={inputClass}>
                     <option value="">Non renseigné</option>
                     <option value="M">Masculin</option>
@@ -365,7 +368,7 @@ export default function StaffDetailClient({ staff, subjects, permissionsCatalog 
                   </select>
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs text-slate-500 uppercase tracking-wider">Date d&apos;embauche</label>
+                  <label className="text-[10.5px] text-text-faint uppercase tracking-[.08em]">Date d&apos;embauche</label>
                   <input
                     type="date"
                     value={dateEmbauche}
@@ -374,7 +377,7 @@ export default function StaffDetailClient({ staff, subjects, permissionsCatalog 
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs text-slate-500 uppercase tracking-wider">Type de contrat</label>
+                  <label className="text-[10.5px] text-text-faint uppercase tracking-[.08em]">Type de contrat</label>
                   <select value={typeContrat} onChange={(e) => setTypeContrat(e.target.value)} className={inputClass}>
                     <option value="">Non renseigné</option>
                     <option value="CDI">CDI</option>
@@ -384,7 +387,7 @@ export default function StaffDetailClient({ staff, subjects, permissionsCatalog 
                   </select>
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs text-slate-500 uppercase tracking-wider">Numéro CNSS</label>
+                  <label className="text-[10.5px] text-text-faint uppercase tracking-[.08em]">Numéro CNSS</label>
                   <input
                     value={numeroCnss}
                     onChange={(e) => setNumeroCnss(e.target.value)}
@@ -393,7 +396,7 @@ export default function StaffDetailClient({ staff, subjects, permissionsCatalog 
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs text-slate-500 uppercase tracking-wider">Statut RH</label>
+                  <label className="text-[10.5px] text-text-faint uppercase tracking-[.08em]">Statut RH</label>
                   <select value={statut} onChange={(e) => setStatut(e.target.value)} className={inputClass}>
                     <option value="ACTIF">Actif</option>
                     <option value="EN_CONGE">En congé</option>
@@ -402,7 +405,7 @@ export default function StaffDetailClient({ staff, subjects, permissionsCatalog 
                   </select>
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs text-slate-500 uppercase tracking-wider">Type de compte de paie</label>
+                  <label className="text-[10.5px] text-text-faint uppercase tracking-[.08em]">Type de compte de paie</label>
                   <select
                     value={typeComptePaie}
                     onChange={(e) => setTypeComptePaie(e.target.value)}
@@ -415,7 +418,7 @@ export default function StaffDetailClient({ staff, subjects, permissionsCatalog 
                   </select>
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs text-slate-500 uppercase tracking-wider">Numéro de compte / téléphone de paie</label>
+                  <label className="text-[10.5px] text-text-faint uppercase tracking-[.08em]">Numéro de compte / téléphone de paie</label>
                   <input
                     value={numeroComptePaie}
                     onChange={(e) => setNumeroComptePaie(e.target.value)}
@@ -424,18 +427,18 @@ export default function StaffDetailClient({ staff, subjects, permissionsCatalog 
                   />
                 </div>
               </div>
-              <p className="text-[10px] text-slate-600 mt-2">
+              <p className="text-[10px] text-text-faint mt-2">
                 Le statut RH n&apos;a aucun effet sur l&apos;accès au compte — utilisez Désactiver/Réactiver ci-dessous pour ça.
               </p>
             </div>
 
             {/* Spécificités enseignant (STAFF-V2-04, TEACHER only) */}
             {staff.role?.name === "TEACHER" && (
-              <div className="pt-2 border-t border-slate-800/60 space-y-3">
-                <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Spécificités enseignant</p>
+              <div className="pt-2 border-t border-line space-y-3">
+                <p className="text-[10.5px] text-text-faint uppercase tracking-[.08em] mb-1">Spécificités enseignant</p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-1">
-                    <label className="text-xs text-slate-500 uppercase tracking-wider">Grade</label>
+                    <label className="text-[10.5px] text-text-faint uppercase tracking-[.08em]">Grade</label>
                     <select value={grade} onChange={(e) => setGrade(e.target.value)} className={inputClass}>
                       <option value="">Non renseigné</option>
                       <option value="INSTITUTEUR_ADJOINT">Instituteur adjoint</option>
@@ -446,7 +449,7 @@ export default function StaffDetailClient({ staff, subjects, permissionsCatalog 
                     </select>
                   </div>
                   <div className="space-y-1">
-                    <label className="text-xs text-slate-500 uppercase tracking-wider">Statut d&apos;emploi</label>
+                    <label className="text-[10.5px] text-text-faint uppercase tracking-[.08em]">Statut d&apos;emploi</label>
                     <select value={statutEmploi} onChange={(e) => setStatutEmploi(e.target.value)} className={inputClass}>
                       <option value="">Non renseigné</option>
                       <option value="TITULAIRE">Titulaire</option>
@@ -455,7 +458,7 @@ export default function StaffDetailClient({ staff, subjects, permissionsCatalog 
                     </select>
                   </div>
                   <div className="space-y-1">
-                    <label className="text-xs text-slate-500 uppercase tracking-wider">Accès valide à partir du</label>
+                    <label className="text-[10.5px] text-text-faint uppercase tracking-[.08em]">Accès valide à partir du</label>
                     <input
                       type="date"
                       value={accessStartDate}
@@ -464,7 +467,7 @@ export default function StaffDetailClient({ staff, subjects, permissionsCatalog 
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="text-xs text-slate-500 uppercase tracking-wider">Accès valide jusqu&apos;au</label>
+                    <label className="text-[10.5px] text-text-faint uppercase tracking-[.08em]">Accès valide jusqu&apos;au</label>
                     <input
                       type="date"
                       value={accessEndDate}
@@ -473,7 +476,7 @@ export default function StaffDetailClient({ staff, subjects, permissionsCatalog 
                     />
                   </div>
                 </div>
-                <p className="text-[10px] text-slate-600">
+                <p className="text-[10px] text-text-faint">
                   Laissez les dates d&apos;accès vides pour un compte permanent. En dehors de cette période, le compte
                   ne peut plus se connecter (compte enseignant invité/remplaçant).
                 </p>
@@ -483,7 +486,7 @@ export default function StaffDetailClient({ staff, subjects, permissionsCatalog 
             {/* Subjects editable (TEACHER) */}
             {staff.role?.name === "TEACHER" && subjects.length > 0 && (
               <div className="space-y-2">
-                <label className="text-xs text-slate-500 uppercase tracking-wider">Matières enseignées</label>
+                <label className="text-[10.5px] text-text-faint uppercase tracking-[.08em]">Matières enseignées</label>
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
                   {subjects.map((s) => {
                     const isSelected = selectedSubjects.includes(s.code);
@@ -492,17 +495,17 @@ export default function StaffDetailClient({ staff, subjects, permissionsCatalog 
                         key={s.id}
                         type="button"
                         onClick={() => toggleSubject(s.code)}
-                        className={`flex items-center gap-2 px-3 py-2 rounded-xl text-sm border transition-colors cursor-pointer ${
+                        className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm border transition-colors cursor-pointer ${
                           isSelected
-                            ? "bg-indigo-500/10 border-indigo-500/40 text-indigo-300"
-                            : "bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-600"
+                            ? "bg-accent-soft border-accent-line text-accent"
+                            : "bg-paper-alt border-line text-text-faint hover:border-accent-line"
                         }`}
                       >
                         <span
                           className={`size-3.5 rounded border flex items-center justify-center transition-colors ${
                             isSelected
-                              ? "bg-indigo-500 border-indigo-500"
-                              : "border-slate-600"
+                              ? "bg-accent border-accent"
+                              : "border-line"
                           }`}
                         >
                           {isSelected && <Check className="size-3 text-white" />}
@@ -516,14 +519,14 @@ export default function StaffDetailClient({ staff, subjects, permissionsCatalog 
             )}
 
             {editError && (
-              <p className="text-xs text-destructive">{editError}</p>
+              <p className="text-xs text-danger">{editError}</p>
             )}
 
             <div className="flex items-center gap-2">
               <button
                 onClick={handleSave}
                 disabled={isPending}
-                className="inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-medium transition-colors disabled:opacity-50 cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-accent hover:opacity-90 text-white text-xs font-medium transition-opacity disabled:opacity-50 cursor-pointer"
               >
                 {isPending ? <Loader2 className="size-3.5 animate-spin" /> : <Check className="size-3.5" />}
                 Enregistrer
@@ -549,7 +552,7 @@ export default function StaffDetailClient({ staff, subjects, permissionsCatalog 
                   setAccessEndDate(staff.access_end_date || "");
                   setEditError(null);
                 }}
-                className="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-medium transition-colors cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-line text-text-soft hover:border-accent-line hover:text-text text-xs font-medium transition-colors cursor-pointer"
               >
                 <X className="size-3.5" />
                 Annuler
@@ -559,36 +562,36 @@ export default function StaffDetailClient({ staff, subjects, permissionsCatalog 
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
             <div>
-              <span className="text-xs text-slate-500 block uppercase tracking-wider">
+              <span className="text-[10.5px] text-text-faint block uppercase tracking-[.08em]">
                 <User className="size-3.5 inline mr-1" />
                 Prénom
               </span>
-              <span className="text-white font-medium">{staff.first_name || "—"}</span>
+              <span className="font-medium">{staff.first_name || "—"}</span>
             </div>
             <div>
-              <span className="text-xs text-slate-500 block uppercase tracking-wider">
+              <span className="text-[10.5px] text-text-faint block uppercase tracking-[.08em]">
                 <User className="size-3.5 inline mr-1" />
                 Nom
               </span>
-              <span className="text-white font-medium">{staff.last_name || "—"}</span>
+              <span className="font-medium">{staff.last_name || "—"}</span>
             </div>
             <div>
-              <span className="text-xs text-slate-500 block uppercase tracking-wider">
+              <span className="text-[10.5px] text-text-faint block uppercase tracking-[.08em]">
                 <Mail className="size-3.5 inline mr-1" />
                 Email
               </span>
-              <span className="text-white font-medium">{staff.email}</span>
+              <span className="font-medium">{staff.email}</span>
             </div>
             <div>
-              <span className="text-xs text-slate-500 block uppercase tracking-wider">
+              <span className="text-[10.5px] text-text-faint block uppercase tracking-[.08em]">
                 <Phone className="size-3.5 inline mr-1" />
                 Téléphone
               </span>
-              <span className="text-white font-medium">{staff.phone || "—"}</span>
+              <span className="font-medium">{staff.phone || "—"}</span>
             </div>
             {staff.role?.name === "TEACHER" && (staff.subjects_taught ?? []).length > 0 && (
               <div className="md:col-span-2">
-                <span className="text-xs text-slate-500 block uppercase tracking-wider">
+                <span className="text-[10.5px] text-text-faint block uppercase tracking-[.08em]">
                   <BookOpen className="size-3.5 inline mr-1" />
                   Matières enseignées
                 </span>
@@ -596,7 +599,7 @@ export default function StaffDetailClient({ staff, subjects, permissionsCatalog 
                   {(staff.subjects_taught ?? []).map((code: string) => (
                     <span
                       key={code}
-                      className="inline-flex items-center px-2 py-0.5 rounded-lg border text-xs font-medium bg-indigo-500/10 text-indigo-400 border-indigo-500/20"
+                      className="inline-flex items-center px-2 py-0.5 rounded-lg text-xs font-medium bg-accent-soft text-accent"
                     >
                       {code}
                     </span>
@@ -608,20 +611,20 @@ export default function StaffDetailClient({ staff, subjects, permissionsCatalog 
               <>
                 {staff.grade && (
                   <div>
-                    <span className="text-xs text-slate-500 block uppercase tracking-wider">Grade</span>
-                    <span className="text-white font-medium">{GRADE_LABELS[staff.grade] ?? staff.grade}</span>
+                    <span className="text-[10.5px] text-text-faint block uppercase tracking-[.08em]">Grade</span>
+                    <span className="font-medium">{GRADE_LABELS[staff.grade] ?? staff.grade}</span>
                   </div>
                 )}
                 {staff.statut_emploi && (
                   <div>
-                    <span className="text-xs text-slate-500 block uppercase tracking-wider">Statut d&apos;emploi</span>
-                    <span className="text-white font-medium">{STATUT_EMPLOI_LABELS[staff.statut_emploi] ?? staff.statut_emploi}</span>
+                    <span className="text-[10.5px] text-text-faint block uppercase tracking-[.08em]">Statut d&apos;emploi</span>
+                    <span className="font-medium">{STATUT_EMPLOI_LABELS[staff.statut_emploi] ?? staff.statut_emploi}</span>
                   </div>
                 )}
                 {(staff.access_start_date || staff.access_end_date) && (
                   <div className="md:col-span-2">
-                    <span className="text-xs text-slate-500 block uppercase tracking-wider">Fenêtre d&apos;accès</span>
-                    <span className="text-white font-medium">
+                    <span className="text-[10.5px] text-text-faint block uppercase tracking-[.08em]">Fenêtre d&apos;accès</span>
+                    <span className="font-medium">
                       {staff.access_start_date || "—"} → {staff.access_end_date || "—"}
                     </span>
                   </div>
@@ -629,46 +632,46 @@ export default function StaffDetailClient({ staff, subjects, permissionsCatalog 
               </>
             )}
             <div>
-              <span className="text-xs text-slate-500 block uppercase tracking-wider">Rôle</span>
-              <span className="text-white font-medium">
+              <span className="text-[10.5px] text-text-faint block uppercase tracking-[.08em]">Rôle</span>
+              <span className="font-medium">
                 {ROLE_LABELS[staff.role?.name] ?? staff.role?.name ?? "—"}
               </span>
             </div>
             <div>
-              <span className="text-xs text-slate-500 block uppercase tracking-wider">
+              <span className="text-[10.5px] text-text-faint block uppercase tracking-[.08em]">
                 <Cake className="size-3.5 inline mr-1" />
                 Date de naissance
               </span>
-              <span className="text-white font-medium">{staff.date_naissance || "—"}</span>
+              <span className="font-medium">{staff.date_naissance || "—"}</span>
             </div>
             <div>
-              <span className="text-xs text-slate-500 block uppercase tracking-wider">Sexe</span>
-              <span className="text-white font-medium">{SEXE_LABELS[staff.sexe] || "—"}</span>
+              <span className="text-[10.5px] text-text-faint block uppercase tracking-[.08em]">Sexe</span>
+              <span className="font-medium">{SEXE_LABELS[staff.sexe] || "—"}</span>
             </div>
             <div>
-              <span className="text-xs text-slate-500 block uppercase tracking-wider">
+              <span className="text-[10.5px] text-text-faint block uppercase tracking-[.08em]">
                 <Briefcase className="size-3.5 inline mr-1" />
                 Date d&apos;embauche
               </span>
-              <span className="text-white font-medium">{staff.date_embauche || "—"}</span>
+              <span className="font-medium">{staff.date_embauche || "—"}</span>
             </div>
             <div>
-              <span className="text-xs text-slate-500 block uppercase tracking-wider">Type de contrat</span>
-              <span className="text-white font-medium">{CONTRAT_LABELS[staff.type_contrat] || "—"}</span>
+              <span className="text-[10.5px] text-text-faint block uppercase tracking-[.08em]">Type de contrat</span>
+              <span className="font-medium">{CONTRAT_LABELS[staff.type_contrat] || "—"}</span>
             </div>
             <div>
-              <span className="text-xs text-slate-500 block uppercase tracking-wider">
+              <span className="text-[10.5px] text-text-faint block uppercase tracking-[.08em]">
                 <IdCard className="size-3.5 inline mr-1" />
                 Numéro CNSS
               </span>
-              <span className="text-white font-medium">{staff.numero_cnss || "—"}</span>
+              <span className="font-medium">{staff.numero_cnss || "—"}</span>
             </div>
             <div>
-              <span className="text-xs text-slate-500 block uppercase tracking-wider">
+              <span className="text-[10.5px] text-text-faint block uppercase tracking-[.08em]">
                 <Landmark className="size-3.5 inline mr-1" />
                 Compte de paie
               </span>
-              <span className="text-white font-medium">
+              <span className="font-medium">
                 {staff.type_compte_paie
                   ? `${COMPTE_PAIE_LABELS[staff.type_compte_paie]}${staff.numero_compte_paie ? " — " + staff.numero_compte_paie : ""}`
                   : "—"}
@@ -679,13 +682,13 @@ export default function StaffDetailClient({ staff, subjects, permissionsCatalog 
       </div>
 
       {/* Permissions individuelles / rôles composites (STAFF-V2-03) */}
-      <div className="bg-slate-900/40 border border-slate-800/80 rounded-xl p-6 shadow-xl backdrop-blur-md space-y-4">
+      <div className="border border-line bg-card rounded-xl p-6 shadow-[var(--shadow)] space-y-4">
         <div className="flex items-center justify-between gap-4">
           <div>
-            <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider">
+            <h3 className="text-[10.5px] font-semibold text-text-faint uppercase tracking-[.08em]">
               Permissions individuelles
             </h3>
-            <p className="text-xs text-slate-600 mt-1">
+            <p className="text-xs text-text-faint mt-1">
               Ajoutées au-delà du rôle {ROLE_LABELS[staff.role?.name] ?? staff.role?.name} — simule un rôle composite sans en créer un nouveau.
             </p>
           </div>
@@ -696,7 +699,7 @@ export default function StaffDetailClient({ staff, subjects, permissionsCatalog 
                 setSelectedPermissions(staff.custom_permissions ?? []);
                 setEditingPermissions(true);
               }}
-              className="inline-flex items-center gap-1.5 text-xs text-indigo-400 hover:text-indigo-300 cursor-pointer shrink-0"
+              className="inline-flex items-center gap-1.5 text-xs text-accent hover:opacity-80 cursor-pointer shrink-0"
             >
               <Pencil className="size-3.5" />
               Modifier
@@ -705,12 +708,12 @@ export default function StaffDetailClient({ staff, subjects, permissionsCatalog 
         </div>
 
         {permissionsCatalog.length === 0 ? (
-          <p className="text-xs text-slate-600">Catalogue des permissions indisponible.</p>
+          <p className="text-xs text-text-faint">Catalogue des permissions indisponible.</p>
         ) : editingPermissions ? (
           <div className="space-y-4">
             {Object.entries(permissionsByModule).map(([module, perms]) => (
               <div key={module}>
-                <p className="text-xs text-slate-500 uppercase tracking-wider mb-2">{module}</p>
+                <p className="text-[10.5px] text-text-faint uppercase tracking-[.08em] mb-2">{module}</p>
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
                   {perms.map((p) => {
                     const roleGranted = rolePermissionSet.has(p.codename);
@@ -722,25 +725,25 @@ export default function StaffDetailClient({ staff, subjects, permissionsCatalog 
                         disabled={roleGranted}
                         onClick={() => togglePermission(p.codename)}
                         title={roleGranted ? "Déjà inclus via le rôle" : p.name}
-                        className={`flex items-center gap-2 px-3 py-2 rounded-xl text-sm border transition-colors ${
+                        className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm border transition-colors ${
                           roleGranted
-                            ? "bg-slate-900 border-slate-800/60 text-slate-600 cursor-not-allowed"
+                            ? "bg-paper-alt border-line text-text-faint opacity-60 cursor-not-allowed"
                             : isSelected
-                            ? "bg-indigo-500/10 border-indigo-500/40 text-indigo-300 cursor-pointer"
-                            : "bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-600 cursor-pointer"
+                            ? "bg-accent-soft border-accent-line text-accent cursor-pointer"
+                            : "bg-paper-alt border-line text-text-faint hover:border-accent-line cursor-pointer"
                         }`}
                       >
                         <span
                           className={`size-3.5 rounded border flex items-center justify-center transition-colors shrink-0 ${
                             roleGranted
-                              ? "bg-slate-800 border-slate-700"
+                              ? "bg-paper-alt border-line"
                               : isSelected
-                              ? "bg-indigo-500 border-indigo-500"
-                              : "border-slate-600"
+                              ? "bg-accent border-accent"
+                              : "border-line"
                           }`}
                         >
                           {roleGranted ? (
-                            <Lock className="size-2.5 text-slate-500" />
+                            <Lock className="size-2.5 text-text-faint" />
                           ) : (
                             isSelected && <Check className="size-3 text-white" />
                           )}
@@ -753,13 +756,13 @@ export default function StaffDetailClient({ staff, subjects, permissionsCatalog 
               </div>
             ))}
 
-            {permError && <p className="text-xs text-destructive">{permError}</p>}
+            {permError && <p className="text-xs text-danger">{permError}</p>}
 
             <div className="flex items-center gap-2">
               <button
                 onClick={handleSavePermissions}
                 disabled={isPending}
-                className="inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-medium transition-colors disabled:opacity-50 cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-accent hover:opacity-90 text-white text-xs font-medium transition-opacity disabled:opacity-50 cursor-pointer"
               >
                 {isPending ? <Loader2 className="size-3.5 animate-spin" /> : <Check className="size-3.5" />}
                 Enregistrer
@@ -770,7 +773,7 @@ export default function StaffDetailClient({ staff, subjects, permissionsCatalog 
                   setSelectedPermissions(staff.custom_permissions ?? []);
                   setPermError(null);
                 }}
-                className="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-medium transition-colors cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-line text-text-soft hover:border-accent-line hover:text-text text-xs font-medium transition-colors cursor-pointer"
               >
                 <X className="size-3.5" />
                 Annuler
@@ -778,13 +781,13 @@ export default function StaffDetailClient({ staff, subjects, permissionsCatalog 
             </div>
           </div>
         ) : (staff.custom_permissions ?? []).length === 0 ? (
-          <p className="text-xs text-slate-600">Aucune permission individuelle — rôle de base uniquement.</p>
+          <p className="text-xs text-text-faint">Aucune permission individuelle — rôle de base uniquement.</p>
         ) : (
           <div className="flex flex-wrap gap-1.5">
             {(staff.custom_permissions ?? []).map((code: string) => (
               <span
                 key={code}
-                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg border text-xs font-medium bg-indigo-500/10 text-indigo-400 border-indigo-500/20"
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-xs font-medium bg-accent-soft text-accent"
               >
                 <KeyRound className="size-3" />
                 {code}
@@ -795,13 +798,13 @@ export default function StaffDetailClient({ staff, subjects, permissionsCatalog 
       </div>
 
       {/* Actions */}
-      <div className="bg-slate-900/40 border border-slate-800/80 rounded-xl p-6 shadow-xl backdrop-blur-md space-y-4">
-        <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider">
+      <div className="border border-line bg-card rounded-xl p-6 shadow-[var(--shadow)] space-y-4">
+        <h3 className="text-[10.5px] font-semibold text-text-faint uppercase tracking-[.08em]">
           Actions
         </h3>
 
         {actionError && (
-          <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-xl text-destructive text-xs">
+          <div className="p-3 rounded-lg text-xs bg-danger/10 border border-danger/20 text-danger">
             {actionError}
           </div>
         )}
@@ -814,7 +817,8 @@ export default function StaffDetailClient({ staff, subjects, permissionsCatalog 
                 setShowDisableModal(true);
               }}
               disabled={isPending}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-amber-600/10 hover:bg-amber-600/20 text-amber-400 text-sm font-medium rounded-xl transition-all disabled:opacity-50 cursor-pointer"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 cursor-pointer"
+              style={{ color: "var(--warn)", boxShadow: "inset 0 0 0 1px var(--warn)" }}
             >
               {isPending ? <Loader2 className="size-4 animate-spin" /> : <ShieldAlert className="size-4" />}
               Désactiver
@@ -823,7 +827,8 @@ export default function StaffDetailClient({ staff, subjects, permissionsCatalog 
             <button
               onClick={handleEnable}
               disabled={isPending}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600/10 hover:bg-emerald-600/20 text-emerald-400 text-sm font-medium rounded-xl transition-all disabled:opacity-50 cursor-pointer"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 cursor-pointer"
+              style={{ color: "var(--ok)", boxShadow: "inset 0 0 0 1px var(--ok)" }}
             >
               {isPending ? <Loader2 className="size-4 animate-spin" /> : <PlayCircle className="size-4" />}
               Réactiver
@@ -836,7 +841,8 @@ export default function StaffDetailClient({ staff, subjects, permissionsCatalog 
               setShowChangeRoleModal(true);
             }}
             disabled={isPending}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600/10 hover:bg-indigo-600/20 text-indigo-400 text-sm font-medium rounded-xl transition-all disabled:opacity-50 cursor-pointer"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-accent text-sm font-medium transition-colors disabled:opacity-50 cursor-pointer"
+            style={{ boxShadow: "inset 0 0 0 1px var(--accent-line)" }}
           >
             <Repeat className="size-4" />
             Changer de rôle
@@ -845,11 +851,11 @@ export default function StaffDetailClient({ staff, subjects, permissionsCatalog 
 
         {/* Disable Confirmation Modal */}
         {showDisableModal && createPortal(
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm animate-fade-in">
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 w-full max-w-md shadow-2xl space-y-4">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+            <div className="bg-card border border-line rounded-2xl p-6 w-full max-w-md shadow-[var(--shadow)] space-y-4">
               <div>
-                <h3 className="text-lg font-bold text-white">Désactiver le compte</h3>
-                <p className="text-slate-400 text-sm mt-1">
+                <h3 className="font-serif text-lg font-medium">Désactiver le compte</h3>
+                <p className="text-text-soft text-sm mt-1">
                   Voulez-vous vraiment désactiver le compte de{" "}
                   <strong>{staff.first_name} {staff.last_name}</strong> ?
                   Cette personne ne pourra plus se connecter.
@@ -860,14 +866,15 @@ export default function StaffDetailClient({ staff, subjects, permissionsCatalog 
                 <button
                   type="button"
                   onClick={() => setShowDisableModal(false)}
-                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium rounded-xl text-sm transition-colors cursor-pointer"
+                  className="px-4 py-2 rounded-lg border border-line text-text-soft font-medium text-sm hover:border-accent-line hover:text-text transition-colors cursor-pointer"
                 >
                   Annuler
                 </button>
                 <button
                   onClick={handleDisable}
                   disabled={isPending}
-                  className="px-4 py-2 bg-amber-600 hover:bg-amber-500 disabled:bg-amber-600/50 text-white font-medium rounded-xl text-sm transition-colors flex items-center gap-1.5 cursor-pointer"
+                  className="px-4 py-2 rounded-lg text-white font-medium text-sm transition-opacity disabled:opacity-50 flex items-center gap-1.5 cursor-pointer hover:opacity-90"
+                  style={{ background: "var(--warn)" }}
                 >
                   {isPending && <Loader2 className="size-4 animate-spin" />}
                   Confirmer la désactivation
@@ -880,11 +887,11 @@ export default function StaffDetailClient({ staff, subjects, permissionsCatalog 
 
         {/* Change Role Modal (STAFF-V2-02) */}
         {showChangeRoleModal && createPortal(
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm animate-fade-in">
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 w-full max-w-md shadow-2xl space-y-4">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+            <div className="bg-card border border-line rounded-2xl p-6 w-full max-w-md shadow-[var(--shadow)] space-y-4">
               <div>
-                <h3 className="text-lg font-bold text-white">Changer de rôle</h3>
-                <p className="text-slate-400 text-sm mt-1">
+                <h3 className="font-serif text-lg font-medium">Changer de rôle</h3>
+                <p className="text-text-soft text-sm mt-1">
                   Rôle actuel : <strong>{ROLE_LABELS[staff.role?.name] ?? staff.role?.name}</strong>.
                   {staff.role?.name === "TEACHER" && (staff.subjects_taught ?? []).length > 0 && (
                     <> Les matières enseignées seront réinitialisées si le nouveau rôle n&apos;est pas Enseignant.</>
@@ -893,13 +900,13 @@ export default function StaffDetailClient({ staff, subjects, permissionsCatalog 
               </div>
 
               {changeRoleError && (
-                <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-xl text-destructive text-xs">
+                <div className="p-3 rounded-lg text-xs bg-danger/10 border border-danger/20 text-danger">
                   {changeRoleError}
                 </div>
               )}
 
               <div className="space-y-1">
-                <label className="text-xs text-slate-500 uppercase tracking-wider">Nouveau rôle</label>
+                <label className="text-[10.5px] text-text-faint uppercase tracking-[.08em]">Nouveau rôle</label>
                 <select value={newRole} onChange={(e) => setNewRole(e.target.value)} className={inputClass}>
                   {CHANGE_ROLE_OPTIONS.filter((r) => r !== staff.role?.name).map((r) => (
                     <option key={r} value={r}>{ROLE_LABELS[r]}</option>
@@ -911,14 +918,14 @@ export default function StaffDetailClient({ staff, subjects, permissionsCatalog 
                 <button
                   type="button"
                   onClick={() => setShowChangeRoleModal(false)}
-                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium rounded-xl text-sm transition-colors cursor-pointer"
+                  className="px-4 py-2 rounded-lg border border-line text-text-soft font-medium text-sm hover:border-accent-line hover:text-text transition-colors cursor-pointer"
                 >
                   Annuler
                 </button>
                 <button
                   onClick={handleChangeRole}
                   disabled={isPending}
-                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:bg-indigo-600/50 text-white font-medium rounded-xl text-sm transition-colors flex items-center gap-1.5 cursor-pointer"
+                  className="px-4 py-2 rounded-lg bg-accent hover:opacity-90 disabled:opacity-50 text-white font-medium text-sm transition-opacity flex items-center gap-1.5 cursor-pointer"
                 >
                   {isPending && <Loader2 className="size-4 animate-spin" />}
                   Confirmer

@@ -18,8 +18,10 @@ export default async function NewStaffPage() {
   }
 
   return (
-    <div className="p-7 px-8">
-      <CreateStaffForm subjects={subjects} />
+    <div className="min-h-screen bg-paper text-text">
+      <div className="px-11 pt-9 pb-12">
+        <CreateStaffForm subjects={subjects} />
+      </div>
     </div>
   );
 }
