@@ -61,101 +61,92 @@ export default async function ClassesPage({ searchParams }: ClassesPageProps) {
   }
 
   return (
-    <div className="space-y-8 animate-fade-in p-7 px-8">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div className="min-h-screen bg-paper text-text">
+      <div className="flex items-start justify-between px-11 pt-9 pb-[22px]">
         <div>
-          <h1 className="text-3xl font-extrabold text-white tracking-tight bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent">
-            Classes
-          </h1>
-          <p className="text-slate-400 mt-1">
-            Gérez les classes et leurs matières
-          </p>
+          <h1 className="font-serif text-[26px] font-medium m-0 mb-1.5">Classes</h1>
+          <p className="m-0 text-text-soft text-[13.5px]">Gérez les classes et leurs matières</p>
         </div>
-        <div className="flex items-center gap-3">
-          <ClassSheet
-            schoolYears={schoolYears}
-            levels={levels}
-            teachers={teachers}
-            role={role}
-          />
-        </div>
+        <ClassSheet schoolYears={schoolYears} levels={levels} teachers={teachers} role={role} />
       </div>
 
-      {errorMsg && (
-        <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-xl text-destructive text-sm">
-          {errorMsg}
-        </div>
-      )}
-
-      {/* Level filter */}
-      <div className="bg-slate-900/40 border border-slate-800/80 rounded-xl p-4 shadow-xl backdrop-blur-md">
-        <form method="get" className="flex items-center gap-4">
-          <LevelFilterSelect levels={levels} defaultValue={levelFilter} />
-          {levelFilter && (
-            <Link
-              href="/pedagogy/classes"
-              className="px-3 py-2 bg-slate-950 border border-slate-800 hover:bg-slate-900 text-slate-400 hover:text-white rounded-xl text-sm font-medium transition-colors"
-            >
-              Réinitialiser
-            </Link>
-          )}
-        </form>
-      </div>
-
-      {/* Classes by level */}
-      {Object.keys(groupedByLevel).length === 0 && !errorMsg && (
-        <div className="p-10 text-center text-slate-500 bg-slate-900/20 border border-slate-800/80 rounded-xl">
-          Aucune classe trouvée.
-        </div>
-      )}
-
-      {Object.entries(groupedByLevel).map(([levelName, clsList]) => (
-        <div key={levelName} className="space-y-3">
-          <h2 className="text-lg font-bold text-white flex items-center gap-2">
-            <GraduationCap className="size-5 text-indigo-400" />
-            {levelName}
-            <span className="text-sm font-normal text-slate-500">
-              ({clsList.length} classe{clsList.length > 1 ? "s" : ""})
-            </span>
-          </h2>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {clsList.map((cls: any) => (
-              <Link
-                key={cls.id}
-                href={`/pedagogy/classes/${cls.id}`}
-                className="bg-slate-900/40 border border-slate-800/80 rounded-xl p-5 shadow-xl backdrop-blur-md space-y-3 hover:border-indigo-500/50 transition-all hover:shadow-indigo-500/5 group"
-              >
-                <div className="flex items-start justify-between">
-                  <div>
-                    <h3 className="font-semibold text-white group-hover:text-indigo-300 transition-colors">
-                      {cls.name}
-                    </h3>
-                    <p className="text-xs text-slate-500 mt-0.5">
-                      {cls.level?.name || "Niveau non défini"}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-1.5 text-xs text-slate-500">
-                    <DoorOpen className="size-3.5" />
-                    {cls.room || "—"}
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-4 text-xs text-slate-400 border-t border-slate-800/50 pt-3">
-                  <span className="inline-flex items-center gap-1">
-                    <Users className="size-3.5" />
-                    {cls.current_headcount ?? 0}/{cls.capacity ?? 60}
-                  </span>
-                  {cls.main_teacher && (
-                    <span className="text-slate-500">
-                      {cls.main_teacher.first_name} {cls.main_teacher.last_name}
-                    </span>
-                  )}
-                </div>
-              </Link>
-            ))}
+      <div className="px-11 pb-12 space-y-[22px]">
+        {errorMsg && (
+          <div className="p-4 rounded-xl text-sm bg-danger/10 border border-danger/20 text-danger">
+            {errorMsg}
           </div>
+        )}
+
+        {/* Level filter */}
+        <div className="border border-line bg-card rounded-xl p-4 shadow-[var(--shadow)]">
+          <form method="get" className="flex items-center gap-4">
+            <LevelFilterSelect levels={levels} defaultValue={levelFilter} />
+            {levelFilter && (
+              <Link
+                href="/pedagogy/classes"
+                className="px-3 py-2 rounded-lg border border-line text-text-soft hover:border-accent-line hover:text-text text-sm font-medium transition-colors"
+              >
+                Réinitialiser
+              </Link>
+            )}
+          </form>
         </div>
-      ))}
+
+        {/* Classes by level */}
+        {Object.keys(groupedByLevel).length === 0 && !errorMsg && (
+          <div className="p-10 text-center text-text-faint border border-line bg-card rounded-xl">
+            Aucune classe trouvée.
+          </div>
+        )}
+
+        {Object.entries(groupedByLevel).map(([levelName, clsList]) => (
+          <div key={levelName} className="space-y-3">
+            <h2 className="font-serif text-[16.5px] font-medium flex items-center gap-2">
+              <GraduationCap className="size-5 text-accent" />
+              {levelName}
+              <span className="text-sm font-sans font-normal text-text-faint">
+                ({clsList.length} classe{clsList.length > 1 ? "s" : ""})
+              </span>
+            </h2>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {clsList.map((cls: any) => (
+                <Link
+                  key={cls.id}
+                  href={`/pedagogy/classes/${cls.id}`}
+                  className="border border-line bg-card rounded-xl p-5 shadow-[var(--shadow)] space-y-3 hover:border-accent-line transition-colors group"
+                >
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <h3 className="font-semibold text-[14.5px] group-hover:text-accent transition-colors">
+                        {cls.name}
+                      </h3>
+                      <p className="text-xs text-text-faint mt-0.5">
+                        {cls.level?.name || "Niveau non défini"}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-xs text-text-faint">
+                      <DoorOpen className="size-3.5" />
+                      {cls.room || "—"}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-4 text-xs text-text-soft border-t border-line pt-3">
+                    <span className="inline-flex items-center gap-1">
+                      <Users className="size-3.5" />
+                      {cls.current_headcount ?? 0}/{cls.capacity ?? 60}
+                    </span>
+                    {cls.main_teacher && (
+                      <span className="text-text-faint">
+                        {cls.main_teacher.first_name} {cls.main_teacher.last_name}
+                      </span>
+                    )}
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

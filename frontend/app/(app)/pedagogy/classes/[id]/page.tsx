@@ -50,148 +50,147 @@ export default async function ClassDetailPage(props: { params: Promise<{ id: str
   );
 
   return (
-    <div className="space-y-8 animate-fade-in p-7 px-8">
-      {/* Back link */}
-      <Link
-        href="/pedagogy/classes"
-        className="inline-flex items-center gap-2 text-sm text-slate-400 hover:text-white transition-colors"
-      >
-        <ArrowLeft className="size-4" />
-        Retour aux classes
-      </Link>
+    <div className="min-h-screen bg-paper text-text">
+      <div className="px-11 pt-9 pb-12">
+        <Link
+          href="/pedagogy/classes"
+          className="inline-flex items-center gap-1.5 text-[13px] text-text-soft hover:text-accent transition-colors no-underline mb-[18px]"
+        >
+          <ArrowLeft className="size-3.5" />
+          Retour aux classes
+        </Link>
 
-      {errorMsg && (
-        <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-xl text-destructive text-sm">
-          {errorMsg}
-        </div>
-      )}
+        {errorMsg && (
+          <div className="p-4 rounded-xl text-sm bg-danger/10 border border-danger/20 text-danger">
+            {errorMsg}
+          </div>
+        )}
 
-      {classObj && (
-        <>
-          {/* Class info header */}
-          <div className="bg-slate-900/40 border border-slate-800/80 rounded-xl p-6 shadow-xl backdrop-blur-md">
-            <div className="flex items-start justify-between">
+        {classObj && (
+          <>
+            {/* Class info header */}
+            <div className="border border-line bg-card rounded-xl p-6 shadow-[var(--shadow)] mb-[22px]">
               <div className="flex items-center gap-4">
-                <div className="size-14 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-indigo-400">
+                <div className="size-14 rounded-2xl bg-accent-soft text-accent flex items-center justify-center">
                   <GraduationCap className="size-7" />
                 </div>
                 <div>
-                  <h1 className="text-2xl font-bold text-white">{classObj.name}</h1>
-                  <p className="text-sm text-slate-400 mt-1">
+                  <h1 className="font-serif text-2xl font-medium">{classObj.name}</h1>
+                  <p className="text-sm text-text-soft mt-1">
                     {classObj.level?.name || "Niveau non défini"}
                   </p>
                 </div>
               </div>
-            </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6 pt-6 border-t border-slate-800/50">
-              <div className="space-y-1">
-                <span className="text-xs text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
-                  <Users className="size-3.5" /> Effectif
-                </span>
-                <p className="text-sm font-semibold text-white">
-                  {classObj.current_headcount ?? 0} / {classObj.capacity ?? 60}
-                </p>
-              </div>
-              <div className="space-y-1">
-                <span className="text-xs text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
-                  <DoorOpen className="size-3.5" /> Salle
-                </span>
-                <p className="text-sm font-semibold text-white">{classObj.room || "—"}</p>
-              </div>
-              <div className="space-y-1">
-                <span className="text-xs text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
-                  <BookOpen className="size-3.5" /> Matières
-                </span>
-                <p className="text-sm font-semibold text-white">{subjects.length}</p>
-              </div>
-              {classObj.main_teacher && (
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6 pt-6 border-t border-line">
                 <div className="space-y-1">
-                  <span className="text-xs text-slate-500 uppercase tracking-wider">Professeur principal</span>
-                  <p className="text-sm font-semibold text-white">
-                    {classObj.main_teacher.first_name} {classObj.main_teacher.last_name}
+                  <span className="text-[10.5px] tracking-[.08em] uppercase text-text-faint flex items-center gap-1.5">
+                    <Users className="size-3.5" /> Effectif
+                  </span>
+                  <p className="text-sm font-semibold">
+                    {classObj.current_headcount ?? 0} / {classObj.capacity ?? 60}
                   </p>
                 </div>
+                <div className="space-y-1">
+                  <span className="text-[10.5px] tracking-[.08em] uppercase text-text-faint flex items-center gap-1.5">
+                    <DoorOpen className="size-3.5" /> Salle
+                  </span>
+                  <p className="text-sm font-semibold">{classObj.room || "—"}</p>
+                </div>
+                <div className="space-y-1">
+                  <span className="text-[10.5px] tracking-[.08em] uppercase text-text-faint flex items-center gap-1.5">
+                    <BookOpen className="size-3.5" /> Matières
+                  </span>
+                  <p className="text-sm font-semibold">{subjects.length}</p>
+                </div>
+                {classObj.main_teacher && (
+                  <div className="space-y-1">
+                    <span className="text-[10.5px] tracking-[.08em] uppercase text-text-faint">Professeur principal</span>
+                    <p className="text-sm font-semibold">
+                      {classObj.main_teacher.first_name} {classObj.main_teacher.last_name}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Subjects section */}
+            <div className="border border-line bg-card rounded-xl shadow-[var(--shadow)]">
+              <div className="px-6 py-4 border-b border-line flex items-center justify-between">
+                <h2 className="font-serif text-lg font-medium flex items-center gap-2">
+                  <BookOpen className="size-5 text-accent" />
+                  Matières enseignées
+                </h2>
+                <span className="text-xs text-text-soft border border-line px-2.5 py-1 rounded-full">
+                  {subjects.length} matière{subjects.length > 1 ? "s" : ""}
+                </span>
+              </div>
+
+              {subjects.length === 0 && (
+                <div className="p-10 text-center text-text-faint">
+                  Aucune matière assignée à cette classe.
+                </div>
               )}
-            </div>
-          </div>
 
-          {/* Subjects section */}
-          <div className="bg-slate-900/40 border border-slate-800/80 rounded-xl shadow-xl backdrop-blur-md">
-            <div className="px-6 py-4 border-b border-slate-800/50 flex items-center justify-between">
-              <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                <BookOpen className="size-5 text-indigo-400" />
-                Matières enseignées
-              </h2>
-              <span className="text-xs text-slate-500 bg-slate-800/50 px-2.5 py-1 rounded-full">
-                {subjects.length} matière{subjects.length > 1 ? "s" : ""}
-              </span>
-            </div>
-
-            {subjects.length === 0 && (
-              <div className="p-10 text-center text-slate-500">
-                Aucune matière assignée à cette classe.
-              </div>
-            )}
-
-            {subjects.length > 0 && (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="border-b border-slate-800/50 text-slate-400 text-xs font-semibold uppercase tracking-wider">
-                      <th className="px-6 py-4">Matière</th>
-                      <th className="px-6 py-4">Code</th>
-                      <th className="px-6 py-4 text-center">Coefficient</th>
-                      <th className="px-6 py-4 text-center">H. hebdo.</th>
-                      <th className="px-6 py-4">Enseignant</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-800/30 text-sm text-slate-300">
-                    {subjects.map((cs: any) => (
-                      <tr key={cs.id} className="hover:bg-slate-900/35 transition-colors">
-                        <td className="px-6 py-4 font-medium text-white">
-                          {cs.subject?.name || "—"}
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className="font-mono text-xs bg-slate-800/50 px-2 py-0.5 rounded text-slate-400">
-                            {cs.subject?.code || "—"}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 text-center">
-                          <span className="inline-flex items-center gap-1">
-                            <Hash className="size-3 text-slate-500" />
-                            {cs.coefficient}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 text-center">
-                          <span className="inline-flex items-center gap-1">
-                            <Clock className="size-3 text-slate-500" />
-                            {cs.weekly_hours}h
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 text-slate-400">
-                          {cs.teacher
-                            ? `${cs.teacher.first_name} ${cs.teacher.last_name}`
-                            : "—"}
-                        </td>
+              {subjects.length > 0 && (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr>
+                        <th className="text-left text-[10.5px] tracking-[.08em] uppercase text-text-faint font-medium px-6 py-4 border-b border-line">Matière</th>
+                        <th className="text-left text-[10.5px] tracking-[.08em] uppercase text-text-faint font-medium px-6 py-4 border-b border-line">Code</th>
+                        <th className="text-center text-[10.5px] tracking-[.08em] uppercase text-text-faint font-medium px-6 py-4 border-b border-line">Coefficient</th>
+                        <th className="text-center text-[10.5px] tracking-[.08em] uppercase text-text-faint font-medium px-6 py-4 border-b border-line">H. hebdo.</th>
+                        <th className="text-left text-[10.5px] tracking-[.08em] uppercase text-text-faint font-medium px-6 py-4 border-b border-line">Enseignant</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
+                    </thead>
+                    <tbody className="text-sm">
+                      {subjects.map((cs: any) => (
+                        <tr key={cs.id} className="hover:bg-paper-alt transition-colors">
+                          <td className="px-6 py-4 border-b border-line last:border-b-0 font-medium">
+                            {cs.subject?.name || "—"}
+                          </td>
+                          <td className="px-6 py-4 border-b border-line">
+                            <span className="font-mono text-xs bg-paper-alt border border-line px-2 py-0.5 rounded text-text-soft">
+                              {cs.subject?.code || "—"}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 border-b border-line text-center">
+                            <span className="inline-flex items-center gap-1">
+                              <Hash className="size-3 text-text-faint" />
+                              {cs.coefficient}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 border-b border-line text-center">
+                            <span className="inline-flex items-center gap-1">
+                              <Clock className="size-3 text-text-faint" />
+                              {cs.weekly_hours}h
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 border-b border-line text-text-soft">
+                            {cs.teacher
+                              ? `${cs.teacher.first_name} ${cs.teacher.last_name}`
+                              : "—"}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
 
-            {/* Add subject form */}
-            <div className="px-6 py-4 border-t border-slate-800/50 bg-slate-900/20">
-              <AddSubjectForm
-                classId={id}
-                subjects={unassignedSubjects}
-                teachers={teachers}
-              />
+              {/* Add subject form */}
+              <div className="px-6 py-4 border-t border-line bg-paper-alt rounded-b-xl">
+                <AddSubjectForm
+                  classId={id}
+                  subjects={unassignedSubjects}
+                  teachers={teachers}
+                />
+              </div>
             </div>
-          </div>
-        </>
-      )}
+          </>
+        )}
+      </div>
     </div>
   );
 }

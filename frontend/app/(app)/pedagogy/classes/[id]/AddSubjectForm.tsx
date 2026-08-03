@@ -35,18 +35,18 @@ export default function AddSubjectForm({ classId, subjects, teachers }: Props) {
 
   return (
     <div>
-      <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
-        <Plus className="size-4 text-indigo-400" />
+      <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
+        <Plus className="size-4 text-accent" />
         Ajouter une matière
       </h3>
 
       <form onSubmit={handleSubmit} className="flex flex-wrap items-end gap-3">
         <div className="space-y-1">
-          <label className="block text-xs text-slate-500 uppercase tracking-wider">Matière</label>
+          <label className="block text-[10.5px] tracking-[.08em] uppercase text-text-faint">Matière</label>
           <select
             name="subject_id"
             required
-            className="bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors"
+            className="bg-card border border-line rounded-lg px-3 py-2 text-sm text-text outline-none focus:border-accent-line transition-colors"
           >
             <option value="">Choisir...</option>
             {subjects.map((s) => (
@@ -58,7 +58,7 @@ export default function AddSubjectForm({ classId, subjects, teachers }: Props) {
         </div>
 
         <div className="space-y-1">
-          <label className="block text-xs text-slate-500 uppercase tracking-wider">Coeff.</label>
+          <label className="block text-[10.5px] tracking-[.08em] uppercase text-text-faint">Coeff.</label>
           <input
             type="number"
             name="coefficient"
@@ -66,27 +66,27 @@ export default function AddSubjectForm({ classId, subjects, teachers }: Props) {
             defaultValue={1}
             min={0.1}
             max={99.9}
-            className="w-20 bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors"
+            className="w-20 bg-card border border-line rounded-lg px-3 py-2 text-sm text-text outline-none focus:border-accent-line transition-colors"
           />
         </div>
 
         <div className="space-y-1">
-          <label className="block text-xs text-slate-500 uppercase tracking-wider">H/sem.</label>
+          <label className="block text-[10.5px] tracking-[.08em] uppercase text-text-faint">H/sem.</label>
           <input
             type="number"
             name="weekly_hours"
             step="0.5"
             defaultValue={0}
             min={0}
-            className="w-20 bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors"
+            className="w-20 bg-card border border-line rounded-lg px-3 py-2 text-sm text-text outline-none focus:border-accent-line transition-colors"
           />
         </div>
 
         <div className="space-y-1">
-          <label className="block text-xs text-slate-500 uppercase tracking-wider">Enseignant</label>
+          <label className="block text-[10.5px] tracking-[.08em] uppercase text-text-faint">Enseignant</label>
           <select
             name="teacher_id"
-            className="bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors"
+            className="bg-card border border-line rounded-lg px-3 py-2 text-sm text-text outline-none focus:border-accent-line transition-colors"
           >
             <option value="">Aucun</option>
             {teachers.map((t) => (
@@ -100,14 +100,14 @@ export default function AddSubjectForm({ classId, subjects, teachers }: Props) {
         <button
           type="submit"
           disabled={isPending}
-          className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-medium rounded-lg text-sm transition-colors disabled:opacity-50 cursor-pointer inline-flex items-center gap-2"
+          className="px-4 py-2 rounded-lg bg-accent text-white font-medium text-sm hover:opacity-90 transition-opacity disabled:opacity-50 cursor-pointer inline-flex items-center gap-2"
         >
           {isPending ? <Loader2 className="size-4 animate-spin" /> : <Plus className="size-4" />}
           Ajouter
         </button>
 
-        {error && <span className="text-xs text-destructive">{error}</span>}
-        {success && <span className="text-xs text-emerald-400">Matière ajoutée ✓</span>}
+        {error && <span className="text-xs text-danger">{error}</span>}
+        {success && <span className="text-xs" style={{ color: "var(--ok)" }}>Matière ajoutée ✓</span>}
       </form>
     </div>
   );
