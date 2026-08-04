@@ -16,12 +16,14 @@ import {
   GraduationCap,
 } from "lucide-react";
 import { getBackendClient } from "@/lib/api/client";
+import { PERMISSIONS, hasAnyPermission } from "@/lib/permissions";
 
 interface Props {
   studentId: string;
+  permissions?: string[];
 }
 
-export default function StudentGradesTab({ studentId }: Props) {
+export default function StudentGradesTab({ studentId, permissions }: Props) {
   const router = useRouter();
   const [, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -31,8 +33,14 @@ export default function StudentGradesTab({ studentId }: Props) {
   const [moyenneData, setMoyenneData] = useState<any>(null);
   const [loadingMoyenne, setLoadingMoyenne] = useState(false);
 
-  // Role-based permission
-  const [canDecide, setCanDecide] = useState(false);
+  // Permission réelle (notes:validate ou eleves:update), passée en prop
+  // depuis le composant serveur parent — ne PAS refaire d'appel réseau ici
+  // (un composant client ne peut pas appeler auth()/getBackendClient(), qui
+  // dépendent de next/headers côté serveur uniquement ; bug trouvé en marge).
+  const canDecide = hasAnyPermission(permissions, [
+    PERMISSIONS.NOTES_VALIDATE,
+    PERMISSIONS.ELEVES_UPDATE,
+  ]);
 
   // Bulletin async state
   const [bulletinStatus, setBulletinStatus] = useState<
@@ -66,13 +74,6 @@ export default function StudentGradesTab({ studentId }: Props) {
         const classesData = clsResp.data?.data?.results ?? clsResp.data?.data ?? [];
         setSchoolYears(schoolYearsData);
         setClasses(classesData);
-
-        // Check if user is DIRECTOR or STUDENT_STUDIES for decision permission
-        const authResp = await client.get("/auth/permissions/me/");
-        const perms = authResp.data?.data?.permissions ?? [];
-        setCanDecide(
-          perms.includes("notes:validate") || perms.includes("eleves:update")
-        );
 
         const currentSy = schoolYearsData.find((sy: any) => sy.is_current) || schoolYearsData[0];
         if (!currentSy) return;

@@ -12,7 +12,7 @@ import { enrollStudentAction } from "../actions";
 interface Props {
   classes: { id: string; name: string; school_year?: string }[];
   schoolYears: { id: string; label: string; status?: string }[];
-  role?: string;
+  canOverrideSchoolYear?: boolean;
 }
 
 const schema = z.object({
@@ -46,8 +46,7 @@ type FormValues = z.infer<typeof schema>;
 const inputClass =
   "w-full bg-paper-alt border border-line rounded-lg px-4 py-2.5 text-sm text-text placeholder-text-faint outline-none focus:border-accent-line transition-colors";
 
-export default function EnrollStudentForm({ classes, schoolYears, role }: Props) {
-  const canOverrideSchoolYear = role === "DIRECTOR";
+export default function EnrollStudentForm({ classes, schoolYears, canOverrideSchoolYear }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [serverError, setServerError] = useState<string | null>(null);

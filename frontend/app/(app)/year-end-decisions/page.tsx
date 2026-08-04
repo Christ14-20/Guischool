@@ -3,12 +3,19 @@ import React from "react";
 import { auth } from "@/auth";
 import { getBackendClient } from "@/lib/api/client";
 import YearEndDecisionsClient from "./YearEndDecisionsClient";
+import AccessDenied from "@/components/AccessDenied";
+import { PERMISSIONS, hasPermission } from "@/lib/permissions";
 
 export const dynamic = "force-dynamic";
 
 export default async function YearEndDecisionsPage() {
   const session = await auth();
-  const role = (session as any)?.user?.role;
+  const permissions: string[] = (session as any)?.user?.permissions ?? [];
+  if (!hasPermission(permissions, PERMISSIONS.NOTES_READ)) {
+    return <AccessDenied message="Vous n'avez pas la permission de consulter les décisions de fin d'année." />;
+  }
+  const canManageDecisions = hasPermission(permissions, PERMISSIONS.NOTES_VALIDATE);
+  const canOverrideSchoolYear = hasPermission(permissions, PERMISSIONS.SCHOOLYEAR_OVERRIDE);
 
   const client = await getBackendClient();
 
@@ -59,7 +66,8 @@ export default async function YearEndDecisionsPage() {
           decisions={decisionsData.results}
           schoolYears={schoolYears}
           classes={classes}
-          role={role}
+          canManageDecisions={canManageDecisions}
+          canOverrideSchoolYear={canOverrideSchoolYear}
         />
       </div>
     </div>

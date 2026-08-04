@@ -34,7 +34,7 @@ const STATUS_BADGE: Record<string, string> = {
   OVERDUE: "bg-danger/10 text-danger ring-1 ring-danger/30",
 };
 
-export default function InvoicesClient({ initialInvoices }: { initialInvoices: Invoice[] }) {
+export default function InvoicesClient({ initialInvoices, canGeneratePdf }: { initialInvoices: Invoice[]; canGeneratePdf?: boolean }) {
   const [invoices, setInvoices] = useState<Invoice[]>(initialInvoices);
   const [filterStatus, setFilterStatus] = useState("");
   const [error, setError] = useState("");
@@ -192,15 +192,19 @@ export default function InvoicesClient({ initialInvoices }: { initialInvoices: I
                           Télécharger
                         </a>
                       ) : gs === "failed" ? (
-                        <button onClick={() => handleGeneratePdf(inv.id)}
-                          className="text-danger hover:opacity-80 text-xs font-medium transition-opacity cursor-pointer">
-                          Réessayer
-                        </button>
+                        canGeneratePdf && (
+                          <button onClick={() => handleGeneratePdf(inv.id)}
+                            className="text-danger hover:opacity-80 text-xs font-medium transition-opacity cursor-pointer">
+                            Réessayer
+                          </button>
+                        )
                       ) : (
-                        <button onClick={() => handleGeneratePdf(inv.id)}
-                          className="text-accent hover:opacity-80 text-xs font-medium transition-opacity cursor-pointer">
-                          Générer PDF
-                        </button>
+                        canGeneratePdf && (
+                          <button onClick={() => handleGeneratePdf(inv.id)}
+                            className="text-accent hover:opacity-80 text-xs font-medium transition-opacity cursor-pointer">
+                            Générer PDF
+                          </button>
+                        )
                       )}
                       {inv.generated_at && (
                         <span className="text-text-faint text-xs ml-1">

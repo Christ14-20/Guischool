@@ -3,6 +3,8 @@ import React from "react";
 import { getBackendClient } from "@/lib/api/client";
 import { auth } from "@/auth";
 import GradeEntryClient from "./GradeEntryClient";
+import AccessDenied from "@/components/AccessDenied";
+import { PERMISSIONS, hasAnyPermission } from "@/lib/permissions";
 
 export const dynamic = "force-dynamic";
 
@@ -10,6 +12,18 @@ export default async function GradesPage() {
   const session = await auth();
   const user = (session as any)?.user;
   const role = user?.role;
+  const permissions: string[] = user?.permissions ?? [];
+
+  if (
+    !hasAnyPermission(permissions, [
+      PERMISSIONS.NOTES_READ,
+      PERMISSIONS.NOTES_CREATE_EVALUATION,
+      PERMISSIONS.NOTES_LOCK,
+      PERMISSIONS.NOTES_VALIDATE,
+    ])
+  ) {
+    return <AccessDenied message="Vous n'avez pas la permission de consulter les notes." />;
+  }
 
   let schoolYears: any[] = [];
   let classes: any[] = [];
@@ -70,6 +84,7 @@ export default async function GradesPage() {
           classSubjects={classSubjects}
           role={role}
           userId={user?.id}
+          permissions={permissions}
         />
       </div>
     </div>

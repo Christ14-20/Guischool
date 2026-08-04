@@ -25,6 +25,7 @@ import {
   archiveStudentAction,
   reinscriptionAction,
 } from "../actions";
+import { PERMISSIONS, hasPermission, hasAnyPermission } from "@/lib/permissions";
 
 interface Props {
   student: any;
@@ -33,15 +34,15 @@ interface Props {
   attendances?: any[];
   invoices?: any[];
   payments?: any[];
-  role?: string;
+  permissions?: string[];
 }
 
 const ALL_TABS = [
-  { key: "profil", label: "Profil", icon: User, roles: null },
-  { key: "presences", label: "Présences", icon: CalendarCheck, roles: null },
-  { key: "notes", label: "Notes", icon: BookOpen, roles: null },
-  { key: "finances", label: "Finances", icon: Wallet, roles: ["DIRECTOR", "ACCOUNTANT", "STUDENT_STUDIES"] },
-  { key: "historique", label: "Historique", icon: History, roles: null },
+  { key: "profil", label: "Profil", icon: User, permissions: null },
+  { key: "presences", label: "Présences", icon: CalendarCheck, permissions: null },
+  { key: "notes", label: "Notes", icon: BookOpen, permissions: null },
+  { key: "finances", label: "Finances", icon: Wallet, permissions: [PERMISSIONS.FINANCE_READ] },
+  { key: "historique", label: "Historique", icon: History, permissions: null },
 ];
 
 const inputClass =
@@ -54,11 +55,11 @@ export default function StudentTabs({
   attendances = [],
   invoices = [],
   payments = [],
-  role,
+  permissions,
 }: Props) {
   const router = useRouter();
   const [tab, setTab] = useState("profil");
-  const TABS = ALL_TABS.filter((t) => !t.roles || (role && t.roles.includes(role)));
+  const TABS = ALL_TABS.filter((t) => !t.permissions || hasAnyPermission(permissions, t.permissions));
 
   return (
     <div className="space-y-6">
@@ -110,12 +111,12 @@ export default function StudentTabs({
           student={student}
           classes={classes}
           schoolYears={schoolYears}
-          role={role}
+          permissions={permissions}
           onChanged={() => router.refresh()}
         />
       )}
       {tab === "presences" && <PresencesTab attendances={attendances} />}
-      {tab === "notes" && <StudentGradesTab studentId={student.id} />}
+      {tab === "notes" && <StudentGradesTab studentId={student.id} permissions={permissions} />}
       {tab === "finances" && <StudentFinancesTab invoices={invoices} payments={payments} />}
       {tab === "historique" && <HistoriqueTab enrollments={student.enrollments ?? []} />}
     </div>
@@ -218,15 +219,17 @@ function ProfilTab({
   student,
   classes,
   schoolYears,
-  role,
+  permissions,
   onChanged,
 }: {
   student: any;
   classes: { id: string; name: string }[];
   schoolYears: { id: string; label: string }[];
-  role?: string;
+  permissions?: string[];
   onChanged: () => void;
 }) {
+  const canUpdate = hasPermission(permissions, PERMISSIONS.ELEVES_UPDATE);
+  const canOverrideSchoolYear = hasPermission(permissions, PERMISSIONS.SCHOOLYEAR_OVERRIDE);
   const [isPending, startTransition] = useTransition();
   const [editing, setEditing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -257,7 +260,7 @@ function ProfilTab({
             <h3 className="text-[10.5px] font-semibold text-text-faint uppercase tracking-[.08em]">
               Identité
             </h3>
-            {!editing && (
+            {canUpdate && !editing && (
               <button
                 onClick={() => setEditing(true)}
                 className="text-xs text-accent hover:opacity-80 cursor-pointer"
@@ -340,50 +343,52 @@ function ProfilTab({
       </div>
 
       {/* Actions */}
-      <div className="border border-line bg-card rounded-xl p-6 shadow-[var(--shadow)] space-y-4">
-        <h3 className="text-[10.5px] font-semibold text-text-faint uppercase tracking-[.08em]">
-          Actions
-        </h3>
-        <div className="flex flex-wrap gap-3">
-          <button
-            onClick={() => setShowReinscription((v) => !v)}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-line text-text-soft hover:border-accent-line hover:text-text text-sm font-medium transition-colors cursor-pointer"
-          >
-            <RefreshCw className="size-4" /> Réinscrire
-          </button>
-          {student.statut !== "ARCHIVE" && (
+      {canUpdate && (
+        <div className="border border-line bg-card rounded-xl p-6 shadow-[var(--shadow)] space-y-4">
+          <h3 className="text-[10.5px] font-semibold text-text-faint uppercase tracking-[.08em]">
+            Actions
+          </h3>
+          <div className="flex flex-wrap gap-3">
             <button
-              onClick={() => setShowArchive((v) => !v)}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-danger text-sm font-medium transition-colors cursor-pointer"
-              style={{ boxShadow: "inset 0 0 0 1px var(--danger)" }}
+              onClick={() => setShowReinscription((v) => !v)}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-line text-text-soft hover:border-accent-line hover:text-text text-sm font-medium transition-colors cursor-pointer"
             >
-              <Archive className="size-4" /> Archiver
+              <RefreshCw className="size-4" /> Réinscrire
             </button>
+            {student.statut !== "ARCHIVE" && (
+              <button
+                onClick={() => setShowArchive((v) => !v)}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-danger text-sm font-medium transition-colors cursor-pointer"
+                style={{ boxShadow: "inset 0 0 0 1px var(--danger)" }}
+              >
+                <Archive className="size-4" /> Archiver
+              </button>
+            )}
+          </div>
+
+          {showReinscription && (
+            <ReinscriptionForm
+              studentId={student.id}
+              classes={classes}
+              schoolYears={schoolYears}
+              canOverrideSchoolYear={canOverrideSchoolYear}
+              onDone={() => {
+                setShowReinscription(false);
+                onChanged();
+              }}
+            />
+          )}
+          {showArchive && (
+            <ArchiveForm
+              studentId={student.id}
+              onDone={() => {
+                setShowArchive(false);
+                onChanged();
+              }}
+            />
           )}
         </div>
-
-        {showReinscription && (
-          <ReinscriptionForm
-            studentId={student.id}
-            classes={classes}
-            schoolYears={schoolYears}
-            canOverrideSchoolYear={role === "DIRECTOR"}
-            onDone={() => {
-              setShowReinscription(false);
-              onChanged();
-            }}
-          />
-        )}
-        {showArchive && (
-          <ArchiveForm
-            studentId={student.id}
-            onDone={() => {
-              setShowArchive(false);
-              onChanged();
-            }}
-          />
-        )}
-      </div>
+      )}
     </div>
   );
 }

@@ -1,10 +1,12 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React from "react";
 import Link from "next/link";
+import { auth } from "@/auth";
 import { getBackendClient } from "@/lib/api/client";
 import { CalendarDays, CheckCircle2, ChevronRight } from "lucide-react";
 import CreateSchoolYearModal from "./CreateSchoolYearModal";
 import SetCurrentButton from "./SetCurrentButton";
+import { PERMISSIONS, hasPermission } from "@/lib/permissions";
 
 export const dynamic = "force-dynamic";
 
@@ -15,6 +17,11 @@ const STATUS_STYLES: Record<string, { color: string; label: string }> = {
 };
 
 export default async function SchoolYearsPage() {
+  const session = await auth();
+  const permissions: string[] = (session as any)?.user?.permissions ?? [];
+  const canCreate = hasPermission(permissions, PERMISSIONS.SCHOOLYEAR_CREATE);
+  const canSetCurrent = hasPermission(permissions, PERMISSIONS.SCHOOLYEAR_UPDATE);
+
   let schoolYears: any[] = [];
   let errorMsg: string | null = null;
 
@@ -35,7 +42,7 @@ export default async function SchoolYearsPage() {
           <h1 className="font-serif text-[26px] font-medium m-0 mb-1.5">Années scolaires</h1>
           <p className="m-0 text-text-soft text-[13.5px]">Gérez les années scolaires et leurs périodes</p>
         </div>
-        <CreateSchoolYearModal />
+        {canCreate && <CreateSchoolYearModal />}
       </div>
 
       <div className="px-11 pb-12 space-y-[22px]">
@@ -94,7 +101,7 @@ export default async function SchoolYearsPage() {
                     {seal.label}
                   </span>
 
-                  {!sy.is_current && sy.status !== "CLOSED" && (
+                  {canSetCurrent && !sy.is_current && sy.status !== "CLOSED" && (
                     <SetCurrentButton schoolYearId={sy.id} />
                   )}
                 </div>

@@ -5,12 +5,18 @@ import { ArrowLeft } from "lucide-react";
 import { auth } from "@/auth";
 import { getBackendClient } from "@/lib/api/client";
 import EnrollStudentForm from "./EnrollStudentForm";
+import AccessDenied from "@/components/AccessDenied";
+import { PERMISSIONS, hasPermission } from "@/lib/permissions";
 
 export const dynamic = "force-dynamic";
 
 export default async function NewStudentPage() {
   const session = await auth();
-  const role = (session as any)?.user?.role;
+  const permissions: string[] = (session as any)?.user?.permissions ?? [];
+  if (!hasPermission(permissions, PERMISSIONS.ELEVES_CREATE)) {
+    return <AccessDenied message="Vous n'avez pas la permission d'inscrire un élève." />;
+  }
+  const canOverrideSchoolYear = hasPermission(permissions, PERMISSIONS.SCHOOLYEAR_OVERRIDE);
 
   let classes: any[] = [];
   let schoolYears: any[] = [];
@@ -49,7 +55,7 @@ export default async function NewStudentPage() {
           </div>
         )}
 
-        <EnrollStudentForm classes={classes} schoolYears={schoolYears} role={role} />
+        <EnrollStudentForm classes={classes} schoolYears={schoolYears} canOverrideSchoolYear={canOverrideSchoolYear} />
       </div>
     </div>
   );

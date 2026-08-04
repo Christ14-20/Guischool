@@ -23,6 +23,27 @@ function decodeExp(accessToken: string): number {
   return payload.exp * 1000;
 }
 
+/**
+ * Récupère l'ensemble effectif de permissions (rôle + custom_permissions)
+ * de l'utilisateur courant. Source de vérité : GET /auth/permissions/me/
+ * (cf. backend/apps/authentication/views.py::PermissionsMeView).
+ * N'échoue jamais bruyamment — un tableau vide dégrade gracieusement vers
+ * "aucune permission visible" plutôt que de casser la connexion.
+ */
+async function fetchPermissions(accessToken: string): Promise<string[]> {
+  try {
+    const response = await fetch(`${DJANGO_API_URL}/auth/permissions/me/`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    const body = await response.json();
+    if (!response.ok || body?.status !== "success") return [];
+    return body.data?.permissions ?? [];
+  } catch (error) {
+    console.error("Erreur lors du chargement des permissions :", error);
+    return [];
+  }
+}
+
 async function refreshAccessToken(token: JWTToken): Promise<JWTToken> {
   try {
     const response = await fetch(`${DJANGO_API_URL}/auth/refresh/`, {
@@ -38,10 +59,20 @@ async function refreshAccessToken(token: JWTToken): Promise<JWTToken> {
 
     const { access_token } = body.data;
 
+    // Rafraîchi en même temps que le token : les permissions restent à jour
+    // au pire toutes les JWT_ACCESS_TOKEN_LIFETIME_MINUTES (15 min par
+    // défaut) — même caractéristique de fraîcheur que `role`, déjà acceptée
+    // ailleurs dans le projet (cf. StaffViewSet.change_role côté backend).
+    const permissions = await fetchPermissions(access_token);
+
     return {
       ...token,
       accessToken: access_token,
       expiresAt: decodeExp(access_token),
+      user: {
+        ...token.user,
+        permissions,
+      },
     };
   } catch (error) {
     console.error("Erreur lors du rafraîchissement du token :", error);
@@ -83,6 +114,7 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
           }
 
           const { access_token, refresh_token, user } = body.data;
+          const permissions = await fetchPermissions(access_token);
 
           // On renvoie un objet combiné qui sera stocké dans le JWT callback
           return {
@@ -90,6 +122,7 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
             email: user.email,
             name: `${user.first_name} ${user.last_name}`,
             role: user.role,
+            permissions,
             mustChangePassword: user.must_change_password,
             tenant: user.tenant,
             accessToken: access_token,
@@ -116,6 +149,7 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
             email: u.email,
             name: u.name,
             role: u.role,
+            permissions: u.permissions ?? [],
             mustChangePassword: u.mustChangePassword,
             tenant: u.tenant,
           },

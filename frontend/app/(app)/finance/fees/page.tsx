@@ -2,6 +2,8 @@
 import { auth } from "@/auth";
 import { getBackendClient } from "@/lib/api/client";
 import FeesClient from "./FeesClient";
+import AccessDenied from "@/components/AccessDenied";
+import { PERMISSIONS, hasPermission } from "@/lib/permissions";
 
 export const dynamic = "force-dynamic";
 
@@ -40,7 +42,13 @@ async function fetchSchoolYears() {
 
 export default async function FeesPage() {
   const session = await auth();
-  const role = (session as any)?.user?.role;
+  const permissions: string[] = (session as any)?.user?.permissions ?? [];
+  if (!hasPermission(permissions, PERMISSIONS.FINANCE_READ)) {
+    return <AccessDenied message="Vous n'avez pas la permission de consulter les frais." />;
+  }
+  const canCreate = hasPermission(permissions, PERMISSIONS.FINANCE_CREATE);
+  const canUpdate = hasPermission(permissions, PERMISSIONS.FINANCE_UPDATE);
+  const canOverrideSchoolYear = hasPermission(permissions, PERMISSIONS.SCHOOLYEAR_OVERRIDE);
 
   const [categories, studentFees, schoolYears] = await Promise.all([
     fetchFeeCategories(),
@@ -58,7 +66,9 @@ export default async function FeesPage() {
           categories={JSON.parse(JSON.stringify(categories))}
           studentFees={JSON.parse(JSON.stringify(studentFees))}
           schoolYears={JSON.parse(JSON.stringify(schoolYears))}
-          role={role}
+          canCreate={canCreate}
+          canUpdate={canUpdate}
+          canOverrideSchoolYear={canOverrideSchoolYear}
         />
       </div>
     </div>

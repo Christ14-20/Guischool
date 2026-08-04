@@ -6,6 +6,7 @@ import { getBackendClient } from "@/lib/api/client";
 import { GraduationCap, Users, DoorOpen } from "lucide-react";
 import ClassSheet from "./ClassSheet";
 import LevelFilterSelect from "./LevelFilterSelect";
+import { PERMISSIONS, hasPermission } from "@/lib/permissions";
 
 export const dynamic = "force-dynamic";
 
@@ -19,7 +20,9 @@ export default async function ClassesPage({ searchParams }: ClassesPageProps) {
   const params = await searchParams;
   const levelFilter = params.level_id || "";
   const session = await auth();
-  const role = (session as any)?.user?.role;
+  const permissions: string[] = (session as any)?.user?.permissions ?? [];
+  const canCreateClass = hasPermission(permissions, PERMISSIONS.SCHOOLYEAR_CREATE);
+  const canOverrideSchoolYear = hasPermission(permissions, PERMISSIONS.SCHOOLYEAR_OVERRIDE);
 
   let classes: any[] = [];
   let levels: any[] = [];
@@ -67,7 +70,14 @@ export default async function ClassesPage({ searchParams }: ClassesPageProps) {
           <h1 className="font-serif text-[26px] font-medium m-0 mb-1.5">Classes</h1>
           <p className="m-0 text-text-soft text-[13.5px]">Gérez les classes et leurs matières</p>
         </div>
-        <ClassSheet schoolYears={schoolYears} levels={levels} teachers={teachers} role={role} />
+        {canCreateClass && (
+          <ClassSheet
+            schoolYears={schoolYears}
+            levels={levels}
+            teachers={teachers}
+            canOverrideSchoolYear={canOverrideSchoolYear}
+          />
+        )}
       </div>
 
       <div className="px-11 pb-12 space-y-[22px]">

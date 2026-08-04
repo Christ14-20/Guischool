@@ -1,8 +1,11 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React from "react";
 import Link from "next/link";
+import { auth } from "@/auth";
 import { getBackendClient } from "@/lib/api/client";
 import { Plus, Search, SlidersHorizontal, UserCog, Users, GraduationCap, BookOpen, Landmark, Clock, Percent } from "lucide-react";
+import AccessDenied from "@/components/AccessDenied";
+import { PERMISSIONS, hasPermission } from "@/lib/permissions";
 
 export const dynamic = "force-dynamic";
 
@@ -38,6 +41,13 @@ interface DashboardData {
 }
 
 export default async function StaffPage({ searchParams }: StaffPageProps) {
+  const session = await auth();
+  const permissions: string[] = (session as any)?.user?.permissions ?? [];
+  if (!hasPermission(permissions, PERMISSIONS.STAFF_READ)) {
+    return <AccessDenied message="Vous n'avez pas la permission de consulter le personnel." />;
+  }
+  const canCreate = hasPermission(permissions, PERMISSIONS.STAFF_CREATE);
+
   const params = await searchParams;
   const search = params.search || "";
   const roleFilter = params.role || "";
@@ -94,13 +104,15 @@ export default async function StaffPage({ searchParams }: StaffPageProps) {
             {staffData.count} membre{staffData.count > 1 ? "s" : ""} du personnel
           </p>
         </div>
-        <Link
-          href="/staff/new"
-          className="inline-flex items-center gap-1.5 rounded-lg bg-accent text-white text-[13px] font-semibold px-4 py-2.5 hover:opacity-90 transition-opacity"
-        >
-          <Plus className="size-4" />
-          Nouveau membre du personnel
-        </Link>
+        {canCreate && (
+          <Link
+            href="/staff/new"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-accent text-white text-[13px] font-semibold px-4 py-2.5 hover:opacity-90 transition-opacity"
+          >
+            <Plus className="size-4" />
+            Nouveau membre du personnel
+          </Link>
+        )}
       </div>
 
       <div className="px-11 pb-12 space-y-[22px]">

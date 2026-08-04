@@ -5,6 +5,8 @@ import { ArrowLeft } from "lucide-react";
 import { auth } from "@/auth";
 import { getBackendClient } from "@/lib/api/client";
 import StudentTabs from "./StudentTabs";
+import AccessDenied from "@/components/AccessDenied";
+import { PERMISSIONS, hasPermission } from "@/lib/permissions";
 
 export const dynamic = "force-dynamic";
 
@@ -14,7 +16,10 @@ export default async function StudentDetailPage(props: {
   const { id } = await props.params;
 
   const session = await auth();
-  const role = (session as any)?.user?.role;
+  const permissions: string[] = (session as any)?.user?.permissions ?? [];
+  if (!hasPermission(permissions, PERMISSIONS.ELEVES_READ)) {
+    return <AccessDenied message="Vous n'avez pas la permission de consulter cette fiche élève." />;
+  }
 
   let student: any = null;
   let classes: any[] = [];
@@ -98,7 +103,7 @@ export default async function StudentDetailPage(props: {
             attendances={attendances}
             invoices={invoices}
             payments={payments}
-            role={role}
+            permissions={permissions}
           />
         )}
       </div>

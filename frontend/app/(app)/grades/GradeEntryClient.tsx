@@ -23,6 +23,7 @@ import {
   lockEvaluationAction,
   validateGradeAction,
 } from "./actions";
+import { PERMISSIONS, hasPermission } from "@/lib/permissions";
 
 interface Props {
   schoolYears: any[];
@@ -31,6 +32,7 @@ interface Props {
   classSubjects: any[];
   role: string;
   userId: string;
+  permissions?: string[];
 }
 
 const INPUT_CLASS =
@@ -48,6 +50,7 @@ export default function GradeEntryClient({
   classSubjects,
   role,
   userId,
+  permissions,
 }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -55,8 +58,9 @@ export default function GradeEntryClient({
   const [warnings, setWarnings] = useState<any[]>([]);
   const [periods, setPeriods] = useState<any[]>([]);
 
-  const canLock = role === "DIRECTOR" || role === "STUDENT_STUDIES";
-  const canValidate = role === "DIRECTOR";
+  const canCreateEvaluation = hasPermission(permissions, PERMISSIONS.NOTES_CREATE_EVALUATION);
+  const canLock = hasPermission(permissions, PERMISSIONS.NOTES_LOCK);
+  const canValidate = hasPermission(permissions, PERMISSIONS.NOTES_VALIDATE);
 
   const [syId, setSyId] = useState("");
   const [classId, setClassId] = useState("");
@@ -394,7 +398,13 @@ export default function GradeEntryClient({
       )}
 
       {/* Evaluation creation form */}
-      {showCreateForm && !selectedEval && (
+      {showCreateForm && !selectedEval && !canCreateEvaluation && (
+        <div className="p-12 text-center text-text-faint border border-line bg-card rounded-xl flex flex-col items-center gap-3">
+          <FileSpreadsheet className="size-8 text-text-faint" />
+          Aucune évaluation trouvée pour cette combinaison. Vous n&apos;avez pas la permission d&apos;en créer une.
+        </div>
+      )}
+      {showCreateForm && !selectedEval && canCreateEvaluation && (
         <div className="border border-line bg-card rounded-xl p-5 shadow-[var(--shadow)] space-y-4">
           <div className="flex items-center gap-2 font-medium">
             <FileSpreadsheet className="size-5 text-accent" />
@@ -521,7 +531,7 @@ export default function GradeEntryClient({
                             {s.nom} {s.prenom}
                           </td>
                           <td className="px-6 py-4 border-b border-line">
-                            {evalIsLocked ? (
+                            {evalIsLocked || !canCreateEvaluation ? (
                               <span className="font-mono text-sm">
                                 {grade?.score ?? (grade?.is_absent ? "—" : "—")}
                               </span>
@@ -549,7 +559,7 @@ export default function GradeEntryClient({
                             )}
                           </td>
                           <td className="px-6 py-4 border-b border-line">
-                            {evalIsLocked ? (
+                            {evalIsLocked || !canCreateEvaluation ? (
                               <span>{grade?.is_absent ? "Absent" : "—"}</span>
                             ) : (
                               <label className="flex items-center gap-2 cursor-pointer">
@@ -605,7 +615,7 @@ export default function GradeEntryClient({
           )}
 
           {/* Action buttons */}
-          {!evalIsLocked && students.length > 0 && (
+          {!evalIsLocked && students.length > 0 && (canLock || canCreateEvaluation) && (
             <div className="flex flex-wrap items-center justify-end gap-3">
               {canLock && (
                 <button
@@ -618,14 +628,16 @@ export default function GradeEntryClient({
                   Verrouiller
                 </button>
               )}
-              <button
-                onClick={handleBulkSave}
-                disabled={isPending}
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-accent hover:opacity-90 text-white font-medium transition-opacity disabled:opacity-50 cursor-pointer"
-              >
-                {isPending ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
-                Enregistrer
-              </button>
+              {canCreateEvaluation && (
+                <button
+                  onClick={handleBulkSave}
+                  disabled={isPending}
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-accent hover:opacity-90 text-white font-medium transition-opacity disabled:opacity-50 cursor-pointer"
+                >
+                  {isPending ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
+                  Enregistrer
+                </button>
+              )}
             </div>
           )}
 

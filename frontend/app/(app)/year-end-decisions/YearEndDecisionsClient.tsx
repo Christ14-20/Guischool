@@ -21,7 +21,8 @@ interface Props {
   decisions: any[];
   schoolYears: any[];
   classes: any[];
-  role?: string;
+  canManageDecisions?: boolean;
+  canOverrideSchoolYear?: boolean;
 }
 
 const DECISION_LABELS: Record<string, string> = {
@@ -43,9 +44,9 @@ export default function YearEndDecisionsClient({
   decisions: initialDecisions,
   schoolYears,
   classes,
-  role,
+  canManageDecisions,
+  canOverrideSchoolYear,
 }: Props) {
-  const canOverrideSchoolYear = role === "DIRECTOR";
   const router = useRouter();
   const [, startTransition] = useTransition();
 
@@ -185,25 +186,27 @@ export default function YearEndDecisionsClient({
               className={INPUT_CLASS}
             />
           </div>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={openCreateModal}
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-accent hover:opacity-90 text-white font-medium transition-opacity cursor-pointer"
-            >
-              <Plus className="size-4" />
-              Nouvelle décision
-            </button>
-            <button
-              type="button"
-              onClick={openBulkModal}
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-white font-medium transition-opacity cursor-pointer hover:opacity-90"
-              style={{ background: "var(--ok)" }}
-            >
-              <Users className="size-4" />
-              Promotion groupée
-            </button>
-          </div>
+          {canManageDecisions && (
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={openCreateModal}
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-accent hover:opacity-90 text-white font-medium transition-opacity cursor-pointer"
+              >
+                <Plus className="size-4" />
+                Nouvelle décision
+              </button>
+              <button
+                type="button"
+                onClick={openBulkModal}
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-white font-medium transition-opacity cursor-pointer hover:opacity-90"
+                style={{ background: "var(--ok)" }}
+              >
+                <Users className="size-4" />
+                Promotion groupée
+              </button>
+            </div>
+          )}
         </form>
       </div>
 

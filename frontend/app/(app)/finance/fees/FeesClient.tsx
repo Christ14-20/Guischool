@@ -54,17 +54,17 @@ export default function FeesClient({
   categories: initialCategories,
   studentFees: initialStudentFees,
   schoolYears,
-  role,
+  canCreate,
+  canUpdate,
+  canOverrideSchoolYear,
 }: {
   categories: FeeCategory[];
   studentFees: StudentFee[];
   schoolYears: SchoolYear[];
-  role?: string;
+  canCreate?: boolean;
+  canUpdate?: boolean;
+  canOverrideSchoolYear?: boolean;
 }) {
-  // SCHOOLYEAR-V2-02 (décision PO 2026-07-30) : verrouillé pour non-DIRECTOR
-  // à la création ET à la modification (réattribution d'année désynchronise
-  // potentiellement des factures déjà calculées).
-  const canOverrideSchoolYear = role === "DIRECTOR";
   const [categories, setCategories] = useState<FeeCategory[]>(initialCategories);
   const [studentFees, setStudentFees] = useState<StudentFee[]>(initialStudentFees);
   const [activeTab, setActiveTab] = useState<"categories" | "assign">("categories");
@@ -266,12 +266,14 @@ export default function FeesClient({
           {/* Header */}
           <div className="flex items-center justify-between px-6 py-4 border-b border-line">
             <h2 className="font-serif text-lg font-medium">Catégories de frais</h2>
-            <button
-              onClick={() => { resetForm(); setFormOpen(true); }}
-              className="px-4 py-2 rounded-lg text-sm font-medium bg-accent hover:opacity-90 text-white transition-opacity cursor-pointer"
-            >
-              + Nouvelle catégorie
-            </button>
+            {canCreate && (
+              <button
+                onClick={() => { resetForm(); setFormOpen(true); }}
+                className="px-4 py-2 rounded-lg text-sm font-medium bg-accent hover:opacity-90 text-white transition-opacity cursor-pointer"
+              >
+                + Nouvelle catégorie
+              </button>
+            )}
           </div>
 
           {/* Table */}
@@ -283,7 +285,7 @@ export default function FeesClient({
                 <th className={TH_CLASS}>Montant</th>
                 <th className={TH_CLASS}>Échéance</th>
                 <th className={TH_CLASS}>Oblig.</th>
-                <th className={`${TH_CLASS} text-right`}>Actions</th>
+                {canUpdate && <th className={`${TH_CLASS} text-right`}>Actions</th>}
               </tr>
             </thead>
             <tbody>
@@ -301,20 +303,22 @@ export default function FeesClient({
                     <td className={TD_CLASS}>{Number(cat.amount).toLocaleString()} GNF</td>
                     <td className={TD_CLASS}>{cat.due_date ? new Date(cat.due_date).toLocaleDateString("fr-FR") : "-"}</td>
                     <td className={TD_CLASS}>{cat.is_mandatory ? "Oui" : "Non"}</td>
-                    <td className={`${TD_CLASS} text-right`}>
-                      <button
-                        onClick={() => openEdit(cat)}
-                        className="text-accent hover:opacity-80 text-xs font-medium mr-3 transition-opacity cursor-pointer"
-                      >
-                        Modifier
-                      </button>
-                      <button
-                        onClick={() => handleDeleteCategory(cat.id)}
-                        className="text-danger hover:opacity-80 text-xs font-medium transition-opacity cursor-pointer"
-                      >
-                        Supprimer
-                      </button>
-                    </td>
+                    {canUpdate && (
+                      <td className={`${TD_CLASS} text-right`}>
+                        <button
+                          onClick={() => openEdit(cat)}
+                          className="text-accent hover:opacity-80 text-xs font-medium mr-3 transition-opacity cursor-pointer"
+                        >
+                          Modifier
+                        </button>
+                        <button
+                          onClick={() => handleDeleteCategory(cat.id)}
+                          className="text-danger hover:opacity-80 text-xs font-medium transition-opacity cursor-pointer"
+                        >
+                          Supprimer
+                        </button>
+                      </td>
+                    )}
                   </tr>
                 ))
               )}
@@ -324,8 +328,9 @@ export default function FeesClient({
       )}
 
       {activeTab === "assign" && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className={`grid grid-cols-1 gap-6 ${canCreate ? "lg:grid-cols-2" : ""}`}>
           {/* Assign form */}
+          {canCreate && (
           <div className="border border-line bg-card rounded-xl shadow-[var(--shadow)] p-6">
             <h2 className="font-serif text-lg font-medium mb-4">Assigner un frais</h2>
             <div className="space-y-4">
@@ -422,6 +427,7 @@ export default function FeesClient({
               </button>
             </div>
           </div>
+          )}
 
           {/* Recent assignments */}
           <div className="border border-line bg-card rounded-xl shadow-[var(--shadow)]">

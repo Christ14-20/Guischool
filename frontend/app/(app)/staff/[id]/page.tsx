@@ -2,8 +2,11 @@
 import React from "react";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
+import { auth } from "@/auth";
 import { getBackendClient } from "@/lib/api/client";
 import StaffDetailClient from "./StaffDetailClient";
+import AccessDenied from "@/components/AccessDenied";
+import { PERMISSIONS, hasPermission } from "@/lib/permissions";
 
 export const dynamic = "force-dynamic";
 
@@ -11,6 +14,12 @@ export default async function StaffDetailPage(props: {
   params: Promise<{ id: string }>;
 }) {
   const { id } = await props.params;
+
+  const session = await auth();
+  const permissions: string[] = (session as any)?.user?.permissions ?? [];
+  if (!hasPermission(permissions, PERMISSIONS.STAFF_READ)) {
+    return <AccessDenied message="Vous n'avez pas la permission de consulter cette fiche personnel." />;
+  }
 
   let staff: any = null;
   let subjects: { id: string; code: string; name: string }[] = [];
@@ -62,7 +71,12 @@ export default async function StaffDetailPage(props: {
         )}
 
         {staff && (
-          <StaffDetailClient staff={staff} subjects={subjects} permissionsCatalog={permissionsCatalog} />
+          <StaffDetailClient
+            staff={staff}
+            subjects={subjects}
+            permissionsCatalog={permissionsCatalog}
+            viewerPermissions={permissions}
+          />
         )}
       </div>
     </div>

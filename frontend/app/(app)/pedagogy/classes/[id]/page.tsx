@@ -1,14 +1,20 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React from "react";
 import Link from "next/link";
+import { auth } from "@/auth";
 import { getBackendClient } from "@/lib/api/client";
 import { ArrowLeft, BookOpen, Clock, Hash, GraduationCap, Users, DoorOpen } from "lucide-react";
 import AddSubjectForm from "./AddSubjectForm";
+import { PERMISSIONS, hasPermission } from "@/lib/permissions";
 
 export const dynamic = "force-dynamic";
 
 export default async function ClassDetailPage(props: { params: Promise<{ id: string }> }) {
   const { id } = await props.params;
+
+  const session = await auth();
+  const permissions: string[] = (session as any)?.user?.permissions ?? [];
+  const canAddSubject = hasPermission(permissions, PERMISSIONS.SCHOOLYEAR_CREATE);
 
   let classObj: any = null;
   let subjects: any[] = [];
@@ -180,13 +186,15 @@ export default async function ClassDetailPage(props: { params: Promise<{ id: str
               )}
 
               {/* Add subject form */}
-              <div className="px-6 py-4 border-t border-line bg-paper-alt rounded-b-xl">
-                <AddSubjectForm
-                  classId={id}
-                  subjects={unassignedSubjects}
-                  teachers={teachers}
-                />
-              </div>
+              {canAddSubject && (
+                <div className="px-6 py-4 border-t border-line bg-paper-alt rounded-b-xl">
+                  <AddSubjectForm
+                    classId={id}
+                    subjects={unassignedSubjects}
+                    teachers={teachers}
+                  />
+                </div>
+              )}
             </div>
           </>
         )}

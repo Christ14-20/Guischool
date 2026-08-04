@@ -42,7 +42,7 @@ const METHOD_LABEL: Record<string, string> = {
   ORANGE_MONEY: "Orange Money",
 };
 
-export default function PaymentsClient({ initialPayments }: { initialPayments: Payment[] }) {
+export default function PaymentsClient({ initialPayments, canCreate }: { initialPayments: Payment[]; canCreate?: boolean }) {
   const [payments, setPayments] = useState<Payment[]>(initialPayments);
   const [activeTab, setActiveTab] = useState<"history" | "cash" | "orangemoney">("history");
   const [error, setError] = useState("");
@@ -235,14 +235,18 @@ export default function PaymentsClient({ initialPayments }: { initialPayments: P
           className={`px-5 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${activeTab === "history" ? "bg-accent-soft text-accent" : "text-text-faint hover:text-text"}`}>
           Historique
         </button>
-        <button onClick={() => setActiveTab("cash")}
-          className={`px-5 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${activeTab === "cash" ? "bg-accent-soft text-accent" : "text-text-faint hover:text-text"}`}>
-          Encaissement espèces
-        </button>
-        <button onClick={() => setActiveTab("orangemoney")}
-          className={`px-5 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${activeTab === "orangemoney" ? "bg-accent-soft text-accent" : "text-text-faint hover:text-text"}`}>
-          Paiement Orange Money
-        </button>
+        {canCreate && (
+          <>
+            <button onClick={() => setActiveTab("cash")}
+              className={`px-5 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${activeTab === "cash" ? "bg-accent-soft text-accent" : "text-text-faint hover:text-text"}`}>
+              Encaissement espèces
+            </button>
+            <button onClick={() => setActiveTab("orangemoney")}
+              className={`px-5 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${activeTab === "orangemoney" ? "bg-accent-soft text-accent" : "text-text-faint hover:text-text"}`}>
+              Paiement Orange Money
+            </button>
+          </>
+        )}
       </div>
 
       {activeTab === "history" && (

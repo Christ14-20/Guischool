@@ -30,6 +30,7 @@ import {
   changeRoleStaffAction,
   updateCustomPermissionsAction,
 } from "../actions";
+import { PERMISSIONS, hasPermission } from "@/lib/permissions";
 
 interface Subject {
   id: string;
@@ -47,6 +48,7 @@ interface Props {
   staff: any;
   subjects: Subject[];
   permissionsCatalog: PermissionCatalogItem[];
+  viewerPermissions?: string[];
 }
 
 // STAFF-V2-02 : ACCOUNTANT ajouté — absent jusqu'ici bien que déjà créable
@@ -88,7 +90,9 @@ const STATUT_STYLES: Record<string, { color: string; label: string }> = {
 const inputClass =
   "w-full bg-paper-alt border border-line rounded-lg px-4 py-2.5 text-sm text-text placeholder-text-faint outline-none focus:border-accent-line transition-colors";
 
-export default function StaffDetailClient({ staff, subjects, permissionsCatalog }: Props) {
+export default function StaffDetailClient({ staff, subjects, permissionsCatalog, viewerPermissions }: Props) {
+  const canUpdate = hasPermission(viewerPermissions, PERMISSIONS.STAFF_UPDATE);
+  const canDisable = hasPermission(viewerPermissions, PERMISSIONS.STAFF_DISABLE);
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
@@ -296,7 +300,7 @@ export default function StaffDetailClient({ staff, subjects, permissionsCatalog 
           <h3 className="text-[10.5px] font-semibold text-text-faint uppercase tracking-[.08em]">
             Informations
           </h3>
-          {!editing && (
+          {canUpdate && !editing && (
             <button
               onClick={() => setEditing(true)}
               className="inline-flex items-center gap-1.5 text-xs text-accent hover:opacity-80 cursor-pointer"
@@ -692,7 +696,7 @@ export default function StaffDetailClient({ staff, subjects, permissionsCatalog 
               Ajoutées au-delà du rôle {ROLE_LABELS[staff.role?.name] ?? staff.role?.name} — simule un rôle composite sans en créer un nouveau.
             </p>
           </div>
-          {!editingPermissions && permissionsCatalog.length > 0 && (
+          {canUpdate && !editingPermissions && permissionsCatalog.length > 0 && (
             <button
               onClick={() => {
                 setPermError(null);
@@ -798,6 +802,7 @@ export default function StaffDetailClient({ staff, subjects, permissionsCatalog 
       </div>
 
       {/* Actions */}
+      {(canDisable || canUpdate) && (
       <div className="border border-line bg-card rounded-xl p-6 shadow-[var(--shadow)] space-y-4">
         <h3 className="text-[10.5px] font-semibold text-text-faint uppercase tracking-[.08em]">
           Actions
@@ -810,7 +815,7 @@ export default function StaffDetailClient({ staff, subjects, permissionsCatalog 
         )}
 
         <div className="flex flex-wrap gap-3">
-          {staff.is_active ? (
+          {canDisable && (staff.is_active ? (
             <button
               onClick={() => {
                 setActionError(null);
@@ -833,20 +838,22 @@ export default function StaffDetailClient({ staff, subjects, permissionsCatalog 
               {isPending ? <Loader2 className="size-4 animate-spin" /> : <PlayCircle className="size-4" />}
               Réactiver
             </button>
+          ))}
+          {canUpdate && (
+            <button
+              onClick={() => {
+                setChangeRoleError(null);
+                setNewRole(CHANGE_ROLE_OPTIONS.find((r) => r !== staff.role?.name) || CHANGE_ROLE_OPTIONS[0]);
+                setShowChangeRoleModal(true);
+              }}
+              disabled={isPending}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-accent text-sm font-medium transition-colors disabled:opacity-50 cursor-pointer"
+              style={{ boxShadow: "inset 0 0 0 1px var(--accent-line)" }}
+            >
+              <Repeat className="size-4" />
+              Changer de rôle
+            </button>
           )}
-          <button
-            onClick={() => {
-              setChangeRoleError(null);
-              setNewRole(CHANGE_ROLE_OPTIONS.find((r) => r !== staff.role?.name) || CHANGE_ROLE_OPTIONS[0]);
-              setShowChangeRoleModal(true);
-            }}
-            disabled={isPending}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-accent text-sm font-medium transition-colors disabled:opacity-50 cursor-pointer"
-            style={{ boxShadow: "inset 0 0 0 1px var(--accent-line)" }}
-          >
-            <Repeat className="size-4" />
-            Changer de rôle
-          </button>
         </div>
 
         {/* Disable Confirmation Modal */}
@@ -936,6 +943,7 @@ export default function StaffDetailClient({ staff, subjects, permissionsCatalog 
           document.body
         )}
       </div>
+      )}
     </div>
   );
 }

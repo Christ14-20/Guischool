@@ -1,8 +1,10 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React from "react";
+import { auth } from "@/auth";
 import { getBackendClient } from "@/lib/api/client";
 import { CalendarCheck } from "lucide-react";
 import AttendanceGrid from "./AttendanceGrid";
+import { PERMISSIONS, hasPermission } from "@/lib/permissions";
 
 export const dynamic = "force-dynamic";
 
@@ -15,6 +17,11 @@ function todayIso(): string {
 }
 
 export default async function AttendancePage({ searchParams }: AttendancePageProps) {
+  const session = await auth();
+  const permissions: string[] = (session as any)?.user?.permissions ?? [];
+  const canTakeAttendance = hasPermission(permissions, PERMISSIONS.ATTENDANCE_CREATE);
+  const canJustify = hasPermission(permissions, PERMISSIONS.ATTENDANCE_JUSTIFY);
+
   const params = await searchParams;
   const classeId = params.classe_id || "";
   const date = params.date || todayIso();
@@ -117,6 +124,8 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
             date={date}
             students={students}
             existing={existing}
+            canTakeAttendance={canTakeAttendance}
+            canJustify={canJustify}
           />
         ) : (
           <div className="p-12 text-center text-text-faint border border-line bg-card rounded-xl flex flex-col items-center gap-3">

@@ -1,13 +1,19 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React from "react";
 import Link from "next/link";
+import { auth } from "@/auth";
 import { getBackendClient } from "@/lib/api/client";
 import { BookOpen, Hash, CheckCircle, XCircle, ArrowLeft } from "lucide-react";
 import CreateSubjectModal from "./CreateSubjectModal";
+import { PERMISSIONS, hasPermission } from "@/lib/permissions";
 
 export const dynamic = "force-dynamic";
 
 export default async function SubjectsPage() {
+  const session = await auth();
+  const permissions: string[] = (session as any)?.user?.permissions ?? [];
+  const canCreate = hasPermission(permissions, PERMISSIONS.SCHOOLYEAR_CREATE);
+
   let subjects: any[] = [];
   let errorMsg: string | null = null;
 
@@ -37,7 +43,7 @@ export default async function SubjectsPage() {
               Gérez les matières enseignées dans l&apos;établissement
             </p>
           </div>
-          <CreateSubjectModal />
+          {canCreate && <CreateSubjectModal />}
         </div>
       </div>
 

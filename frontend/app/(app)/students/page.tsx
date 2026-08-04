@@ -1,10 +1,13 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React from "react";
 import Link from "next/link";
+import { auth } from "@/auth";
 import { getBackendClient } from "@/lib/api/client";
 import { Plus, Search, SlidersHorizontal, Users } from "lucide-react";
 import ExportCsvButton from "./ExportCsvButton";
 import StatutBadge from "./StatutBadge";
+import AccessDenied from "@/components/AccessDenied";
+import { PERMISSIONS, hasPermission } from "@/lib/permissions";
 
 export const dynamic = "force-dynamic";
 
@@ -27,6 +30,13 @@ const STATUTS = [
 ];
 
 export default async function StudentsPage({ searchParams }: StudentsPageProps) {
+  const session = await auth();
+  const permissions: string[] = (session as any)?.user?.permissions ?? [];
+  if (!hasPermission(permissions, PERMISSIONS.ELEVES_READ)) {
+    return <AccessDenied message="Vous n'avez pas la permission de consulter les élèves." />;
+  }
+  const canCreate = hasPermission(permissions, PERMISSIONS.ELEVES_CREATE);
+
   const params = await searchParams;
   const search = params.search || "";
   const classeId = params.classe_id || "";
@@ -97,13 +107,15 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
           <ExportCsvButton
             query={{ search, classe_id: classeId, statut, school_year_id: schoolYearId }}
           />
-          <Link
-            href="/students/new"
-            className="inline-flex items-center gap-1.5 rounded-lg bg-accent text-white text-[13px] font-semibold px-4 py-2.5 hover:opacity-90 transition-opacity"
-          >
-            <Plus className="size-4" />
-            Nouvel élève
-          </Link>
+          {canCreate && (
+            <Link
+              href="/students/new"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-accent text-white text-[13px] font-semibold px-4 py-2.5 hover:opacity-90 transition-opacity"
+            >
+              <Plus className="size-4" />
+              Nouvel élève
+            </Link>
+          )}
         </div>
       </div>
 

@@ -20,6 +20,7 @@ export default async function TenantAppLayout({
 }) {
   const session = await auth();
   const role = (session as any)?.user?.role;
+  const permissions: string[] = (session as any)?.user?.permissions ?? [];
   const userName = (session as any)?.user?.name || "Directeur";
 
   return (
@@ -38,7 +39,7 @@ export default async function TenantAppLayout({
           </div>
         </div>
 
-        <SidebarNav role={role} />
+        <SidebarNav permissions={permissions} />
 
         <div className="border-t border-sidebar-line px-[18px] py-4 flex items-center gap-2.5">
           <div className="size-[30px] rounded-full bg-[#2A2836] text-[#D8D5E6] flex items-center justify-center text-xs font-semibold shrink-0">

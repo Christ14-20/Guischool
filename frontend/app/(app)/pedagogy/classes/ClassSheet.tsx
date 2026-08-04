@@ -9,11 +9,10 @@ interface Props {
   schoolYears: { id: string; label: string }[];
   levels: { id: string; name: string; cycle: string }[];
   teachers: { id: string; first_name: string; last_name: string }[];
-  role?: string;
+  canOverrideSchoolYear?: boolean;
 }
 
-export default function ClassSheet({ schoolYears, levels, teachers, role }: Props) {
-  const canOverrideSchoolYear = role === "DIRECTOR";
+export default function ClassSheet({ schoolYears, levels, teachers, canOverrideSchoolYear }: Props) {
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);

@@ -30,6 +30,8 @@ interface Props {
   date: string;
   students: Student[];
   existing: AttendanceRecord[];
+  canTakeAttendance?: boolean;
+  canJustify?: boolean;
 }
 
 const STATUS_OPTIONS = [
@@ -61,6 +63,8 @@ export default function AttendanceGrid({
   date,
   students,
   existing,
+  canTakeAttendance,
+  canJustify,
 }: Props) {
   const hasExisting = existing.length > 0;
 
@@ -73,14 +77,29 @@ export default function AttendanceGrid({
     );
   }
 
-  return hasExisting ? (
-    <EditMode
-      className={className}
-      date={date}
-      students={students}
-      existing={existing}
-    />
-  ) : (
+  if (hasExisting) {
+    return (
+      <EditMode
+        className={className}
+        date={date}
+        students={students}
+        existing={existing}
+        canTakeAttendance={canTakeAttendance}
+        canJustify={canJustify}
+      />
+    );
+  }
+
+  if (!canTakeAttendance) {
+    return (
+      <div className="p-12 text-center text-text-faint border border-line bg-card rounded-xl flex flex-col items-center gap-3">
+        <Users className="size-8 text-text-faint" />
+        Aucune présence enregistrée pour cette classe à cette date. Vous n&apos;avez pas la permission de saisir les présences.
+      </div>
+    );
+  }
+
+  return (
     <EntryMode
       classeId={classeId}
       className={className}
@@ -263,11 +282,15 @@ function EditMode({
   date,
   students,
   existing,
+  canTakeAttendance,
+  canJustify,
 }: {
   className: string;
   date: string;
   students: Student[];
   existing: AttendanceRecord[];
+  canTakeAttendance?: boolean;
+  canJustify?: boolean;
 }) {
   const studentsById = useMemo(
     () => Object.fromEntries(students.map((s) => [s.id, s])),
@@ -301,6 +324,8 @@ function EditMode({
                   key={record.id}
                   record={record}
                   student={studentsById[record.student_id]}
+                  canTakeAttendance={canTakeAttendance}
+                  canJustify={canJustify}
                 />
               ))}
             </tbody>
@@ -314,9 +339,13 @@ function EditMode({
 function EditRow({
   record,
   student,
+  canTakeAttendance,
+  canJustify,
 }: {
   record: AttendanceRecord;
   student?: Student;
+  canTakeAttendance?: boolean;
+  canJustify?: boolean;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -371,36 +400,42 @@ function EditRow({
           <span className="inline-flex items-center gap-1.5 text-xs text-text-faint">
             <Lock className="size-3.5" /> Verrouillé
           </span>
+        ) : !canTakeAttendance && !canJustify ? (
+          <span className="text-text-faint text-xs">—</span>
         ) : (
           <div className="space-y-2">
             <div className="flex flex-wrap items-center gap-2">
-              <select
-                value={status}
-                onChange={(e) => setStatus(e.target.value)}
-                className={`${inputClass} w-40`}
-              >
-                {STATUS_OPTIONS.map((o) => (
-                  <option key={o.value} value={o.value}>
-                    {o.label}
-                  </option>
-                ))}
-                {record.status === "ABSENT_JUSTIFIE" && (
-                  <option value="ABSENT_JUSTIFIE">Absent justifié</option>
-                )}
-              </select>
-              <button
-                onClick={save}
-                disabled={isPending || !dirty}
-                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-accent hover:opacity-90 text-white text-xs font-medium disabled:opacity-40 cursor-pointer transition-opacity"
-              >
-                {isPending ? (
-                  <Loader2 className="size-3.5 animate-spin" />
-                ) : (
-                  <Check className="size-3.5" />
-                )}
-                Enregistrer
-              </button>
-              {(record.status === "ABSENT" || record.status === "RETARD") && (
+              {canTakeAttendance && (
+                <>
+                  <select
+                    value={status}
+                    onChange={(e) => setStatus(e.target.value)}
+                    className={`${inputClass} w-40`}
+                  >
+                    {STATUS_OPTIONS.map((o) => (
+                      <option key={o.value} value={o.value}>
+                        {o.label}
+                      </option>
+                    ))}
+                    {record.status === "ABSENT_JUSTIFIE" && (
+                      <option value="ABSENT_JUSTIFIE">Absent justifié</option>
+                    )}
+                  </select>
+                  <button
+                    onClick={save}
+                    disabled={isPending || !dirty}
+                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-accent hover:opacity-90 text-white text-xs font-medium disabled:opacity-40 cursor-pointer transition-opacity"
+                  >
+                    {isPending ? (
+                      <Loader2 className="size-3.5 animate-spin" />
+                    ) : (
+                      <Check className="size-3.5" />
+                    )}
+                    Enregistrer
+                  </button>
+                </>
+              )}
+              {canJustify && (record.status === "ABSENT" || record.status === "RETARD") && (
                 <button
                   onClick={() => setShowJustify((v) => !v)}
                   className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium cursor-pointer"

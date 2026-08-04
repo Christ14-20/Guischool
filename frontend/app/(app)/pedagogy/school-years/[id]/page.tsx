@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React from "react";
 import Link from "next/link";
+import { auth } from "@/auth";
 import { getBackendClient } from "@/lib/api/client";
 import {
   ArrowLeft,
@@ -12,6 +13,7 @@ import {
 } from "lucide-react";
 import CreatePeriodModal from "./CreatePeriodModal";
 import ClosePeriodButton from "./ClosePeriodButton";
+import { PERMISSIONS, hasPermission } from "@/lib/permissions";
 
 export const dynamic = "force-dynamic";
 
@@ -25,6 +27,10 @@ export default async function SchoolYearDetailPage(props: {
   params: Promise<{ id: string }>;
 }) {
   const { id } = await props.params;
+
+  const session = await auth();
+  const permissions: string[] = (session as any)?.user?.permissions ?? [];
+  const canManagePeriods = hasPermission(permissions, PERMISSIONS.PERIOD_CREATE);
 
   let sy: any = null;
   let errorMsg: string | null = null;
@@ -124,7 +130,7 @@ export default async function SchoolYearDetailPage(props: {
                   <CalendarDays className="size-5 text-accent" />
                   Périodes
                 </h2>
-                <CreatePeriodModal schoolYearId={id} />
+                {canManagePeriods && <CreatePeriodModal schoolYearId={id} />}
               </div>
 
               {(sy.periods?.length ?? 0) === 0 && (
@@ -186,7 +192,7 @@ export default async function SchoolYearDetailPage(props: {
                               )}
                             </td>
                             <td className="px-6 py-4 border-b border-line text-right">
-                              {!p.is_closed && (
+                              {canManagePeriods && !p.is_closed && (
                                 <ClosePeriodButton periodId={p.id} schoolYearId={id} />
                               )}
                             </td>
