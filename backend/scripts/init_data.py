@@ -105,6 +105,11 @@ ROLE_PERMISSIONS = {
     "ACCOUNTANT": [
         "finance:read", "finance:create", "finance:update",
         "communication:send",
+        # eleves:read : sans ça, GET /students/?search= (utilisé pour
+        # rechercher l'élève à qui assigner un frais ou pour qui
+        # enregistrer un paiement) renvoie 403 — un ACCOUNTANT ne pouvait
+        # physiquement pas utiliser ces deux écrans malgré finance:create.
+        "eleves:read",
     ],
     "PARENT": [
         "notes:read",
