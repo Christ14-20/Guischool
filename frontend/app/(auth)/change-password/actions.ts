@@ -3,6 +3,7 @@
 
 import { getBackendClient } from "@/lib/api/client";
 import { revalidatePath } from "next/cache";
+import { unstable_update } from "@/auth";
 
 export async function changePasswordAction(formData: FormData) {
   try {
@@ -24,6 +25,14 @@ export async function changePasswordAction(formData: FormData) {
       new_password: newPassword,
       new_password_confirm: newPasswordConfirm,
     });
+
+    // Le mot de passe est changé côté Django (must_change_password=False
+    // en base), mais le JWT NextAuth en session le sait encore mustChangePassword=true
+    // tant qu'on ne le lui dit pas explicitement — le token n'est sinon
+    // recalculé qu'au prochain refresh (~15 min) ou à la reconnexion. Sans
+    // ça, le garde `authorized` (auth.config.ts) renverrait l'utilisateur
+    // en boucle vers /change-password dès la navigation suivante.
+    await unstable_update({ user: { mustChangePassword: false } as any });
 
     revalidatePath("/dashboard");
     revalidatePath("/");

@@ -38,9 +38,20 @@ TenantMiddleware :
 
 MustChangePasswordMiddleware :
   Bloque toute requête (403) pour un utilisateur avec must_change_password=True,
-  sauf pour les endpoints whitelistés (/auth/change-password/, /auth/logout/).
-  Placé APRÈS TenantMiddleware dans la chaîne MIDDLEWARE.
+  sauf pour les endpoints whitelistés (/auth/change-password/, /auth/logout/,
+  /auth/permissions/me/). Placé APRÈS TenantMiddleware dans la chaîne MIDDLEWARE.
   Les SUPER_ADMIN sont exemptés (leurs comptes ne sont pas créés avec un MDP temporaire).
+
+  CORRECTIF (RBAC front, découvert en marge) : /auth/permissions/me/ n'était
+  pas whitelisté. Le frontend appelle cet endpoint dès le login (avant même
+  d'afficher l'écran de changement de mot de passe obligatoire) pour peupler
+  permissions[] dans la session NextAuth ; le 403 renvoyé ici était avalé
+  silencieusement côté front en `permissions: []`, qui restait figé jusqu'au
+  prochain refresh de token — un nouveau membre du staff ne voyait donc pas
+  le bon RBAC tant qu'il ne s'était pas déconnecté/reconnecté après son
+  premier changement de mot de passe. L'endpoint est en lecture seule et ne
+  débloque aucune capacité (tous les endpoints métier restent bloqués tant
+  que must_change_password=True), le whitelister est donc sûr.
 """
 
 from django.http import JsonResponse
@@ -49,7 +60,11 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 
 
-CHANGE_PASSWORD_PATHS = ("/auth/change-password/", "/auth/logout/")
+CHANGE_PASSWORD_PATHS = (
+    "/auth/change-password/",
+    "/auth/logout/",
+    "/auth/permissions/me/",
+)
 
 
 class TenantMiddleware:

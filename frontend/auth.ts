@@ -83,7 +83,7 @@ async function refreshAccessToken(token: JWTToken): Promise<JWTToken> {
   }
 }
 
-export const { auth, signIn, signOut, handlers } = NextAuth({
+export const { auth, signIn, signOut, handlers, unstable_update } = NextAuth({
   ...authConfig,
   providers: [
     CredentialsProvider({
@@ -136,7 +136,29 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
     }),
   ],
   callbacks: {
-    async jwt({ token, user, account }) {
+    // authConfig.callbacks.authorized doit être conservé ici : ce bloc
+    // écrasait auparavant ...authConfig avec { jwt, session } au lieu de
+    // fusionner, ce qui supprimait silencieusement le callback `authorized`
+    // (garde mustChangePassword, protection /superadmin, redirection
+    // /login) — le middleware retombait alors sur le comportement par
+    // défaut de NextAuth (authentifié = autorisé, sans aucune des règles
+    // métier ci-dessus).
+    ...authConfig.callbacks,
+    async jwt({ token, user, account, trigger, session }) {
+      // Mise à jour explicite déclenchée par unstable_update() (ex :
+      // après un changement de mot de passe réussi) — cf.
+      // app/(auth)/change-password/actions.ts. `session` contient ici le
+      // payload passé à unstable_update().
+      if (trigger === "update" && session) {
+        const patch = (session as any).user ?? session;
+        return {
+          ...token,
+          user: { ...(token.user as any), ...patch },
+          mustChangePassword:
+            patch.mustChangePassword ?? (token as any).mustChangePassword,
+        };
+      }
+
       // Initialisation (au moment de la connexion)
       if (user && account) {
         const u = user as any;

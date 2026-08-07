@@ -432,11 +432,18 @@ class TestMustChangePassword:
         assert response.status_code == 403
         assert response.json()["message"] == "Vous devez changer votre mot de passe."
 
-    def test_permissions_me_blocked(self, api_client, user_must_change):
-        """Tout endpoint hors whitelist est bloqué."""
+    def test_permissions_me_allowed_when_must_change_password(self, api_client, user_must_change):
+        """GET /auth/permissions/me/ est accessible malgré must_change_password.
+
+        Whitelisté (RBAC front) : le frontend appelle cet endpoint dès le
+        login, avant même l'écran de changement de mot de passe obligatoire,
+        pour peupler permissions[] dans la session. L'endpoint est en
+        lecture seule et ne débloque aucune capacité — tous les endpoints
+        métier restent bloqués tant que must_change_password=True.
+        """
         self._auth(api_client)
         response = api_client.get(reverse("auth-permissions-me"))
-        assert response.status_code == 403
+        assert response.status_code == 200
 
     def test_logout_allowed_when_must_change_password(self, api_client, user_must_change):
         """POST /auth/logout/ est accessible malgré must_change_password."""
