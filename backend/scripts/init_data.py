@@ -86,6 +86,7 @@ ROLE_PERMISSIONS = {
         "notes:create:evaluation", "notes:read", "notes:lock", "notes:validate",
         "pedagogy:update:schoolyear", "pedagogy:close:schoolyear",
         "pedagogy:override:schoolyear",
+        "roles:read", "roles:create", "roles:update", "roles:delete",
     ],
     "STUDENT_STUDIES": [
         "authentication:read:teachers",

@@ -8,8 +8,7 @@ from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from .models import User, StaffProfile, Permission
-from .services.staff_service import ALLOWED_CREATE_ROLES
+from .models import User, StaffProfile, Permission, Role
 
 #: Réutilisé par StaffViewSet.partial_update pour router les champs validés
 #: vers StaffProfile plutôt que User.
@@ -243,6 +242,7 @@ class RoleNestedSerializer(serializers.Serializer):
     individuelles, celles déjà couvertes par le rôle (custom_permissions
     ne doit contenir que l'ajout réel, pas de la redondance).
     """
+    id = serializers.UUIDField()
     name = serializers.CharField()
     label = serializers.CharField()
     permissions = serializers.SlugRelatedField(
@@ -312,7 +312,7 @@ class StaffCreateSerializer(serializers.Serializer):
     email = serializers.EmailField()
     first_name = serializers.CharField(max_length=150)
     last_name = serializers.CharField(max_length=150)
-    role = serializers.ChoiceField(choices=ALLOWED_CREATE_ROLES)
+    role = serializers.UUIDField()
     phone = serializers.CharField(max_length=20, required=False, allow_blank=True, default="")
     subjects_taught = serializers.ListField(
         child=serializers.CharField(max_length=20),
@@ -406,11 +406,14 @@ class StaffChangeRoleSerializer(serializers.Serializer):
     """
     Serializer pour PATCH /auth/staff/{id}/change-role/ — STAFF-V2-02.
 
-    Mêmes rôles cibles autorisés qu'à la création (ALLOWED_CREATE_ROLES) —
-    jamais DIRECTOR (réservé au Super Admin via TENANT-03 ; StaffViewSet
-    n'expose de toute façon jamais les comptes DIRECTOR/SUPER_ADMIN).
+    Mêmes rôles cibles autorisés qu'à la création (role_service
+    .assignable_roles_queryset) — jamais DIRECTOR (réservé au Super Admin
+    via TENANT-03 ; StaffViewSet n'expose de toute façon jamais les comptes
+    DIRECTOR/SUPER_ADMIN). `role` est l'id (UUID) du rôle cible — un nom
+    seul ne suffit plus à identifier un rôle depuis ROLES-V2-01 (plusieurs
+    rôles CUSTOM d'un même tenant partagent name="CUSTOM").
     """
-    role = serializers.ChoiceField(choices=ALLOWED_CREATE_ROLES)
+    role = serializers.UUIDField()
 
 
 class PermissionSerializer(serializers.ModelSerializer):
@@ -419,6 +422,59 @@ class PermissionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Permission
         fields = ["codename", "name", "module"]
+
+
+class RoleSerializer(serializers.ModelSerializer):
+    """
+    Serializer pour GET /auth/roles/ (liste + détail) — ROLES-V2-01.
+
+    `is_base` (dérivé, jamais stocké) : name != "CUSTOM" — un rôle de base
+    ne peut pas être renommé/supprimé, seul son `permissions` est
+    modifiable (cf. docstring Role). `staff_count` sert le frontend pour
+    autoriser/interdire la suppression d'un rôle CUSTOM.
+    """
+    permissions = serializers.SlugRelatedField(
+        many=True, slug_field="codename", read_only=True
+    )
+    is_base = serializers.SerializerMethodField()
+    staff_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Role
+        fields = [
+            "id", "name", "label", "description",
+            "permissions", "is_base", "staff_count",
+        ]
+
+    def get_is_base(self, obj):
+        return obj.name != "CUSTOM"
+
+    def get_staff_count(self, obj):
+        return obj.users.count()
+
+
+class RoleCreateSerializer(serializers.Serializer):
+    """Serializer pour POST /auth/roles/ — création d'un rôle CUSTOM."""
+    label = serializers.CharField(max_length=100)
+    description = serializers.CharField(max_length=255, required=False, allow_blank=True, default="")
+    permissions = serializers.ListField(
+        child=serializers.CharField(max_length=100), required=False, default=list
+    )
+
+
+class RoleUpdateSerializer(serializers.Serializer):
+    """
+    Serializer pour PATCH /auth/roles/{id}/.
+
+    `label`/`description` acceptés structurellement ici (partial=True côté
+    vue), mais rejetés (400) par role_service.update_role si le rôle ciblé
+    est un rôle de base — l'identité d'un rôle de base est fixe.
+    """
+    label = serializers.CharField(max_length=100, required=False)
+    description = serializers.CharField(max_length=255, required=False, allow_blank=True)
+    permissions = serializers.ListField(
+        child=serializers.CharField(max_length=100), required=False
+    )
 
 
 class StaffCustomPermissionsSerializer(serializers.Serializer):

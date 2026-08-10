@@ -13,6 +13,17 @@ def plan(db):
 
 
 @pytest.fixture
+def base_role_templates(db):
+    """
+    Rôles-modèles système (tenant=NULL) dont create_school()/
+    bootstrap_tenant_roles a besoin (ROLES-V2-01) — cf. même fixture dans
+    apps/superadmin/tests/test_school_endpoints.py.
+    """
+    for name, label in Role.RoleName.choices:
+        Role.objects.get_or_create(name=name, tenant=None, defaults={"label": label})
+
+
+@pytest.fixture
 def tenant(plan):
     return Tenant.objects.create(
         name="École Test Lvl",
@@ -141,7 +152,7 @@ class TestSeedStandardLevels:
         assert Level.objects.filter(tenant=tenant).count() == 13
         assert Level.objects.filter(tenant=tenant_b).count() == 13
 
-    def test_create_school_seeds_levels(self, plan):
+    def test_create_school_seeds_levels(self, plan, base_role_templates):
         from apps.superadmin.services.tenant_service import create_school
         data = {
             "name": "École Auto Seed",

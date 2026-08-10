@@ -21,9 +21,15 @@ from django.db.models import Count
 from django.utils import timezone
 
 from apps.authentication.models import User, StaffProfile
-from apps.authentication.services.staff_service import ALLOWED_CREATE_ROLES
 
 DAYS_PER_YEAR = 365.25
+
+# Répartition par rôle de base uniquement — limite connue (ROLES-V2-01) :
+# un membre du staff sur un rôle CUSTOM n'apparaît dans aucune de ces 3
+# clés, et n'est donc pas compté dans total_staff. Regrouper les rôles
+# CUSTOM ici (par label ? sous une clé "Autres" ?) est une question produit
+# distincte, non traitée par la feature de gestion des rôles elle-même.
+BASE_STAFF_ROLE_NAMES = ("TEACHER", "STUDENT_STUDIES", "ACCOUNTANT")
 
 
 def _average_tenure_years(dates) -> float:
@@ -51,7 +57,7 @@ def get_staff_dashboard_data(tenant) -> dict:
         tenant=tenant, is_active=True,
     ).exclude(role__name__in=["DIRECTOR", "SUPER_ADMIN"])
 
-    by_role = dict.fromkeys(ALLOWED_CREATE_ROLES, 0)
+    by_role = dict.fromkeys(BASE_STAFF_ROLE_NAMES, 0)
     rows = staff_qs.values("role__name").annotate(count=Count("id"))
     for row in rows:
         if row["role__name"] in by_role:

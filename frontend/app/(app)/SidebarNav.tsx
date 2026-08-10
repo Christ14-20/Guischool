@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, BookOpen, Users, UserCog, BookMarked, CalendarCheck, FileSpreadsheet, ClipboardCheck, Library, Landmark } from "lucide-react";
+import { LayoutDashboard, BookOpen, Users, UserCog, BookMarked, CalendarCheck, FileSpreadsheet, ClipboardCheck, Library, Landmark, ShieldCheck } from "lucide-react";
 import { PERMISSIONS, hasAnyPermission } from "@/lib/permissions";
 
 const NAV_ITEMS = [
@@ -15,6 +15,7 @@ const NAV_ITEMS = [
   { href: "/attendance", label: "Présences", icon: CalendarCheck, always: true },
   { href: "/students", label: "Élèves", icon: Users, permissions: [PERMISSIONS.ELEVES_READ] },
   { href: "/staff", label: "Personnel", icon: UserCog, permissions: [PERMISSIONS.STAFF_READ] },
+  { href: "/roles", label: "Rôles", icon: ShieldCheck, permissions: [PERMISSIONS.ROLES_READ] },
   {
     href: "/grades",
     label: "Notes",

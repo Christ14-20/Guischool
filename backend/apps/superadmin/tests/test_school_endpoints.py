@@ -10,7 +10,7 @@ from django.urls import reverse
 from unittest.mock import patch
 from rest_framework.test import APIClient
 
-from apps.authentication.models import User, Role
+from apps.authentication.models import User, Role, Permission
 from apps.superadmin.models import Tenant, Plan
 
 
@@ -63,6 +63,19 @@ def director_user(director_role, plan):
 
 
 @pytest.fixture
+def base_role_templates(db):
+    """
+    Rôles-modèles système (tenant=NULL) dont create_school()/
+    bootstrap_tenant_roles a besoin pour cloner les 5 rôles de base d'un
+    nouveau tenant (ROLES-V2-01). En dev/prod ils existent via
+    scripts/init_data.py, jamais exécuté pour la DB de test — les tests qui
+    exercent la création d'école doivent donc les créer eux-mêmes.
+    """
+    for name, label in Role.RoleName.choices:
+        Role.objects.get_or_create(name=name, tenant=None, defaults={"label": label})
+
+
+@pytest.fixture
 def plan(db):
     return Plan.objects.create(
         name="Pro Plan",
@@ -88,7 +101,7 @@ def login_user(api_client, email, password="SecurePass123!"):
 @pytest.mark.django_db
 class TestSchoolEndpoints:
 
-    def test_superadmin_can_create_school_workflow(self, superadmin_user, plan):
+    def test_superadmin_can_create_school_workflow(self, superadmin_user, plan, base_role_templates):
         """Workflow complet de création d'école (Tenant + Directeur) avec mot de passe temporaire."""
         client = APIClient()
         token = login_user(client, superadmin_user.email)
@@ -131,6 +144,39 @@ class TestSchoolEndpoints:
         assert user.must_change_password is True
         assert user.tenant.name == "Groupe Scolaire Les Palmiers"
         assert user.role.name == "DIRECTOR"
+        assert user.role.tenant_id == user.tenant_id  # ROLES-V2-01 : rôle propre au tenant, pas le template
+
+    def test_create_school_provisions_all_base_roles(self, plan, base_role_templates):
+        """
+        ROLES-V2-01 : create_school() clone les 5 rôles de base non-SUPER_ADMIN
+        pour le nouveau tenant, avec les mêmes permissions par défaut que les
+        rôles-modèles système (tenant=NULL) — snapshot, pas un lien vivant.
+        """
+        from apps.authentication.services.role_service import BASE_ROLE_NAMES
+        from apps.superadmin.services.tenant_service import create_school
+
+        perm, _ = Permission.objects.get_or_create(codename="staff:read", defaults={"module": "staff"})
+        template_teacher = Role.objects.get(tenant__isnull=True, name="TEACHER")
+        template_teacher.permissions.add(perm)
+
+        tenant, _ = create_school({
+            "name": "École Provisioning",
+            "school_type": "MIXTE",
+            "contact_name": "Directeur Prov",
+            "contact_phone": "+224620000098",
+            "contact_email": "prov@ecole-provisioning.gn",
+            "plan_id": plan.id,
+        })
+
+        tenant_roles = {r.name: r for r in Role.objects.filter(tenant=tenant)}
+        assert set(tenant_roles.keys()) == set(BASE_ROLE_NAMES)
+        assert "staff:read" in set(tenant_roles["TEACHER"].permissions.values_list("codename", flat=True))
+
+        # Snapshot, pas un lien vivant : modifier le template après coup ne
+        # doit pas affecter le rôle déjà cloné pour ce tenant.
+        perm2, _ = Permission.objects.get_or_create(codename="finance:read", defaults={"module": "finance"})
+        template_teacher.permissions.add(perm2)
+        assert "finance:read" not in set(tenant_roles["TEACHER"].permissions.values_list("codename", flat=True))
 
     def test_create_school_validations(self, superadmin_user, plan, director_user):
         """Vérifie les validations de doublons et formats à la création d'une école."""
@@ -175,7 +221,7 @@ class TestSchoolEndpoints:
         assert resp.status_code == 400
         assert "plan_id" in resp.json()["errors"]
 
-    def test_create_school_with_blank_location_fields_succeeds(self, superadmin_user, plan):
+    def test_create_school_with_blank_location_fields_succeeds(self, superadmin_user, plan, base_role_templates):
         """
         Régression : CreateSchoolForm.tsx envoie toujours region/prefecture/
         commune/quartier avec "" quand la section "Localisation (optionnel)"

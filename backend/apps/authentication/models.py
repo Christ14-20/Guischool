@@ -59,9 +59,25 @@ class Permission(TimestampedModel):
 class Role(TimestampedModel):
     """
     Rôle applicatif — 6 rôles fixes pour le MVP (SUPER_ADMIN, DIRECTOR,
-    STUDENT_STUDIES, TEACHER, ACCOUNTANT, PARENT).
-    Le rôle CUSTOM (constructeur de rôle) est prévu dans l'enum mais son usage
-    réel est différé en V2.
+    STUDENT_STUDIES, TEACHER, ACCOUNTANT, PARENT), plus des rôles CUSTOM
+    créés librement par chaque tenant.
+
+    ROLES-V2-01 : Role est passé de global (une ligne par nom, partagée par
+    tous les tenants) à tenant-scopé. `tenant=NULL` désigne un rôle-modèle
+    système (jamais assigné à un utilisateur réel) — c'est l'état des 6
+    lignes historiques après la migration 0012, utilisé uniquement pour
+    cloner les permissions par défaut d'un nouveau tenant (cf.
+    role_service.bootstrap_tenant_roles). SUPER_ADMIN reste pour toujours
+    la seule ligne tenant=NULL réellement assignée à des utilisateurs (ses
+    comptes n'ont eux-mêmes pas de tenant).
+
+    `name` reste l'identité fixe d'un rôle de base (DIRECTOR/TEACHER/etc.)
+    — de nombreuses règles métier testent `role.name == "TEACHER"` etc.
+    littéralement (cf. apps/pedagogy/views.py::_check_teacher_scope) et un
+    tenant ne peut ni le renommer ni le supprimer, seulement modifier
+    l'ensemble de `permissions` attaché. Un rôle CUSTOM partage toujours
+    `name="CUSTOM"` ; c'est `label` qui porte alors l'identité visible,
+    unique par tenant (cf. Meta.constraints).
     """
 
     class RoleName(models.TextChoices):
@@ -73,9 +89,20 @@ class Role(TimestampedModel):
         PARENT = "PARENT", "Parent d'élève"
         CUSTOM = "CUSTOM", "Personnalisé"
 
-    name = models.CharField(
-        max_length=30, choices=RoleName.choices, unique=True
+    tenant = models.ForeignKey(
+        "superadmin.Tenant",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="roles",
+        db_index=True,
+        help_text=(
+            "Null = rôle-modèle système, jamais assigné à un utilisateur réel "
+            "(sert uniquement à cloner les permissions par défaut d'un nouveau "
+            "tenant). SUPER_ADMIN est la seule exception assignée avec tenant=NULL."
+        ),
     )
+    name = models.CharField(max_length=30, choices=RoleName.choices)
     label = models.CharField(max_length=100, blank=True)
     description = models.CharField(max_length=255, blank=True)
     permissions = models.ManyToManyField(
@@ -84,9 +111,21 @@ class Role(TimestampedModel):
 
     class Meta:
         ordering = ["name"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["tenant", "name"],
+                condition=~models.Q(name="CUSTOM"),
+                name="uniq_role_tenant_name_base",
+            ),
+            models.UniqueConstraint(
+                fields=["tenant", "label"],
+                condition=models.Q(name="CUSTOM"),
+                name="uniq_role_tenant_label_custom",
+            ),
+        ]
 
     def __str__(self):
-        return self.get_name_display()
+        return self.label or self.get_name_display()
 
 
 class User(AbstractUser):

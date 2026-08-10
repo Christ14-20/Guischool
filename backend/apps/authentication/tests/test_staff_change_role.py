@@ -31,25 +31,25 @@ def tenant(plan):
 
 
 @pytest.fixture
-def director_role(db):
-    return Role.objects.create(name="DIRECTOR", label="Directeur")
+def director_role(tenant):
+    return Role.objects.create(name="DIRECTOR", label="Directeur", tenant=tenant)
 
 
 @pytest.fixture
-def teacher_role(db):
-    return Role.objects.create(name="TEACHER", label="Enseignant")
+def teacher_role(tenant):
+    return Role.objects.create(name="TEACHER", label="Enseignant", tenant=tenant)
 
 
 @pytest.fixture
-def ss_role(db):
-    return Role.objects.create(name="STUDENT_STUDIES", label="Scolarité")
+def ss_role(tenant):
+    return Role.objects.create(name="STUDENT_STUDIES", label="Scolarité", tenant=tenant)
 
 
 @pytest.fixture
-def accountant_role(db):
-    # ACCOUNTANT est pré-semé par la migration 0004_add_accountant_role —
-    # get_or_create (pas create) pour ne pas violer l'unicité de name.
-    return Role.objects.get_or_create(name="ACCOUNTANT", defaults={"label": "Comptable"})[0]
+def accountant_role(tenant):
+    return Role.objects.get_or_create(
+        name="ACCOUNTANT", tenant=tenant, defaults={"label": "Comptable"}
+    )[0]
 
 
 @pytest.fixture
@@ -93,7 +93,7 @@ class TestChangeRole:
         _auth(api_client, director_user)
 
         resp = api_client.patch(
-            reverse("staff-change-role", args=[str(teacher.id)]), {"role": "ACCOUNTANT"}, format="json",
+            reverse("staff-change-role", args=[str(teacher.id)]), {"role": str(accountant_role.id)}, format="json",
         )
         assert resp.status_code == 200, resp.json()
         assert resp.json()["data"]["role"]["name"] == "ACCOUNTANT"
@@ -115,7 +115,7 @@ class TestChangeRole:
         _auth(api_client, director_user)
 
         resp = api_client.patch(
-            reverse("staff-change-role", args=[str(accountant.id)]), {"role": "TEACHER"}, format="json",
+            reverse("staff-change-role", args=[str(accountant.id)]), {"role": str(teacher_role.id)}, format="json",
         )
         assert resp.status_code == 200, resp.json()
         assert resp.json()["data"]["role"]["name"] == "TEACHER"
@@ -132,7 +132,7 @@ class TestChangeRole:
         _auth(api_client, director_user)
 
         resp = api_client.patch(
-            reverse("staff-change-role", args=[str(ss.id)]), {"role": "STUDENT_STUDIES"}, format="json",
+            reverse("staff-change-role", args=[str(ss.id)]), {"role": str(ss_role.id)}, format="json",
         )
         assert resp.status_code == 400
         ss.refresh_from_db()
@@ -149,7 +149,7 @@ class TestChangeRole:
         _auth(api_client, director_user)
 
         resp = api_client.patch(
-            reverse("staff-change-role", args=[str(teacher.id)]), {"role": "DIRECTOR"}, format="json",
+            reverse("staff-change-role", args=[str(teacher.id)]), {"role": str(director_role.id)}, format="json",
         )
         assert resp.status_code == 400
         teacher.refresh_from_db()
@@ -183,7 +183,7 @@ class TestChangeRole:
         _auth(api_client, director_user)
 
         resp = api_client.patch(
-            reverse("staff-change-role", args=[str(teacher.id)]), {"role": "ACCOUNTANT"}, format="json",
+            reverse("staff-change-role", args=[str(teacher.id)]), {"role": str(accountant_role.id)}, format="json",
         )
         assert resp.status_code == 200
 
@@ -204,7 +204,7 @@ class TestChangeRole:
         _auth(api_client, director_user)
 
         resp = api_client.patch(
-            reverse("staff-change-role", args=[str(teacher.id)]), {"role": "ACCOUNTANT"}, format="json",
+            reverse("staff-change-role", args=[str(teacher.id)]), {"role": str(accountant_role.id)}, format="json",
         )
         assert resp.status_code == 403
         teacher.refresh_from_db()
@@ -219,13 +219,13 @@ class TestChangeRole:
 
         teacher, _ = create_staff_account(
             tenant=tenant, created_by=director_user, email="ens6-sv2@ecole-test-sv2.gn",
-            first_name="O", last_name="P", role_name="TEACHER", numero_cnss="CNSS-555",
+            first_name="O", last_name="P", role_id=str(teacher_role.id), numero_cnss="CNSS-555",
         )
         _ensure_director_permissions(director_role)
         _auth(api_client, director_user)
 
         resp = api_client.patch(
-            reverse("staff-change-role", args=[str(teacher.id)]), {"role": "ACCOUNTANT"}, format="json",
+            reverse("staff-change-role", args=[str(teacher.id)]), {"role": str(accountant_role.id)}, format="json",
         )
         assert resp.status_code == 200
         assert StaffProfile.objects.get(user=teacher).numero_cnss == "CNSS-555"

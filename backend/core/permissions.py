@@ -40,6 +40,26 @@ class HasPermission(BasePermission):
         return self.has_permission(request, view)
 
 
+class HasAnyPermission(BasePermission):
+    """
+    Permission DRF vérifiant qu'un utilisateur possède AU MOINS UN des
+    codenames donnés — HasPermission fait un ET logique quand plusieurs
+    instances sont listées dans permission_classes, ce qui ne convient pas
+    aux endpoints partagés par plusieurs fonctionnalités indépendantes
+    (ex. le catalogue de permissions, utilisé à la fois par l'édition de
+    permissions individuelles d'un staff, staff:update, et par l'éditeur de
+    rôles, roles:read/create/update).
+    """
+
+    def __init__(self, *codenames: str):
+        self.codenames = codenames
+
+    def has_permission(self, request, view):
+        if not request.user or not request.user.is_authenticated:
+            return False
+        return any(request.user.can(c) for c in self.codenames)
+
+
 class IsSuperAdmin(BasePermission):
     """Réservé aux utilisateurs avec role=SUPER_ADMIN (plateforme, hors tenant)."""
 

@@ -22,7 +22,7 @@ from .models import User, StaffProfile, Role, Permission
 from django_ratelimit.decorators import ratelimit
 from django.utils.decorators import method_decorator
 
-from core.permissions import HasPermission
+from core.permissions import HasPermission, HasAnyPermission
 from core.utils import success_response, error_response, created_response
 from apps.monitoring.services import audit_log, get_client_ip
 
@@ -37,10 +37,19 @@ from .serializers import (
     StaffChangeRoleSerializer,
     StaffCustomPermissionsSerializer,
     PermissionSerializer,
+    RoleSerializer,
+    RoleCreateSerializer,
+    RoleUpdateSerializer,
     STAFF_PROFILE_FIELDS,
 )
 from .services.staff_service import create_staff_account
 from .services.staff_dashboard_service import get_staff_dashboard_data
+from .services.role_service import (
+    assignable_roles_queryset,
+    create_custom_role,
+    update_role,
+    delete_role,
+)
 
 
 class LoginView(APIView):
@@ -202,16 +211,21 @@ class PermissionsMeView(APIView):
 
 class PermissionsCatalogView(APIView):
     """
-    GET /auth/permissions/catalog/ — STAFF-V2-03.
+    GET /auth/permissions/catalog/ — STAFF-V2-03 / ROLES-V2-01.
 
-    Catalogue complet des permissions disponibles (~30 entrées fixes), pour
-    peupler le sélecteur de permissions individuelles (`custom_permissions`)
-    sur la fiche staff. Accès restreint à `staff:update` : ce catalogue n'a
-    d'usage que dans l'UI d'édition du personnel.
+    Catalogue complet des permissions disponibles (~34 entrées fixes). Deux
+    usages indépendants : peupler le sélecteur de permissions individuelles
+    (`custom_permissions`) sur la fiche staff (staff:update), et peupler
+    l'éditeur de permissions d'un rôle (roles:read/create/update) — accès
+    accordé si l'utilisateur détient AU MOINS UN de ces codenames, pas les
+    quatre.
     """
 
     def get_permissions(self):
-        return [IsAuthenticated(), HasPermission("staff:update")]
+        return [
+            IsAuthenticated(),
+            HasAnyPermission("staff:update", "roles:read", "roles:create", "roles:update"),
+        ]
 
     def get(self, request):
         permissions = Permission.objects.all().order_by("module", "codename")
@@ -297,7 +311,7 @@ class StaffViewSet(viewsets.ModelViewSet):
 
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
-    filterset_fields = ["role__name", "is_active", "staff_profile__statut"]
+    filterset_fields = ["role", "is_active", "staff_profile__statut"]
     search_fields = ["first_name", "last_name", "email"]
     ordering_fields = ["first_name", "last_name", "created_at"]
     ordering = ["first_name"]
@@ -351,7 +365,7 @@ class StaffViewSet(viewsets.ModelViewSet):
             email=serializer.validated_data["email"],
             first_name=serializer.validated_data["first_name"],
             last_name=serializer.validated_data["last_name"],
-            role_name=serializer.validated_data["role"],
+            role_id=serializer.validated_data["role"],
             phone=serializer.validated_data.get("phone", ""),
             subjects_taught=serializer.validated_data.get("subjects_taught", []),
             ip_address=get_client_ip(request),
@@ -467,11 +481,16 @@ class StaffViewSet(viewsets.ModelViewSet):
         """
         PATCH /auth/staff/{id}/change-role/ — STAFF-V2-02.
 
-        Rôles cibles autorisés : mêmes que la création (TEACHER,
-        STUDENT_STUDIES, ACCOUNTANT) — jamais DIRECTOR. `subjects_taught`
-        est vidé dès que le rôle cible n'est pas TEACHER (décision PO :
-        évite des matières "enseignées" fantômes sur un compte non-TEACHER,
-        que l'ancien rôle ait été TEACHER ou non).
+        Rôles cibles autorisés : tout rôle assignable du tenant (cf.
+        role_service.assignable_roles_queryset) — jamais DIRECTOR. `role`
+        est l'id (UUID) du rôle cible, pas son nom (ROLES-V2-01 : plusieurs
+        rôles CUSTOM d'un tenant partagent name="CUSTOM", un nom seul ne
+        suffit plus à en identifier un). `subjects_taught` est vidé dès que
+        le rôle cible n'est pas le rôle de base TEACHER littéral (décision
+        PO : évite des matières "enseignées" fantômes sur un compte
+        non-TEACHER, que l'ancien rôle ait été TEACHER ou non — limite
+        connue : un rôle CUSTOM de type "enseignant remplaçant" n'hérite
+        pas de ce traitement, cf. plan ROLES-V2-01).
 
         Limite connue, non corrigée ici (même lacune que `disable`, jamais
         traitée dans un ticket jusqu'ici) : le rôle est encodé dans le JWT à
@@ -482,25 +501,25 @@ class StaffViewSet(viewsets.ModelViewSet):
         user = self.get_object()
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        new_role_name = serializer.validated_data["role"]
+        new_role_id = serializer.validated_data["role"]
 
-        if user.role and user.role.name == new_role_name:
+        new_role = assignable_roles_queryset(request.tenant).filter(id=new_role_id).first()
+        if not new_role:
             return error_response(
-                "Ce compte a déjà ce rôle.",
+                "Rôle introuvable ou non assignable.",
                 status_code=status.HTTP_400_BAD_REQUEST,
             )
 
-        new_role = Role.objects.filter(name=new_role_name).first()
-        if not new_role:
+        if user.role_id == new_role.id:
             return error_response(
-                f"Le rôle '{new_role_name}' est introuvable.",
+                "Ce compte a déjà ce rôle.",
                 status_code=status.HTTP_400_BAD_REQUEST,
             )
 
         old_role = user.role
         user.role = new_role
         update_fields = ["role"]
-        if new_role_name != "TEACHER":
+        if new_role.name != "TEACHER":
             user.subjects_taught = []
             update_fields.append("subjects_taught")
         user.save(update_fields=update_fields)
@@ -566,3 +585,79 @@ class StaffViewSet(viewsets.ModelViewSet):
         )
 
         return success_response(StaffDetailSerializer(user).data)
+
+
+class RoleViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet pour la gestion des rôles du tenant — ROLES-V2-01.
+
+    Endpoints :
+    - GET    /auth/roles/          → liste (roles:read)
+    - POST   /auth/roles/          → création d'un rôle CUSTOM (roles:create)
+    - GET    /auth/roles/{id}/     → détail (roles:read)
+    - PATCH  /auth/roles/{id}/     → modification permissions/label (roles:update)
+    - DELETE /auth/roles/{id}/     → suppression d'un rôle CUSTOM inutilisé (roles:delete)
+
+    Isolation multi-tenant : filtré sur request.tenant — exclut donc
+    naturellement les rôles-modèles système (tenant=NULL) et SUPER_ADMIN
+    (jamais tenant-scopé). Toute la logique de validation (socle
+    anti-verrouillage DIRECTOR, immutabilité des rôles de base, blocage
+    suppression si assigné) vit dans role_service.py, pas ici.
+    """
+
+    permission_classes = [IsAuthenticated]
+    serializer_class = RoleSerializer
+
+    def get_queryset(self):
+        return Role.objects.filter(tenant=self.request.tenant).prefetch_related("permissions")
+
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        return success_response(serializer.data)
+
+    def get_permissions(self):
+        perms = super().get_permissions()
+        if self.action in ("list", "retrieve"):
+            perms.append(HasPermission("roles:read"))
+        elif self.action == "create":
+            perms.append(HasPermission("roles:create"))
+        elif self.action in ("partial_update", "update"):
+            perms.append(HasPermission("roles:update"))
+        elif self.action == "destroy":
+            perms.append(HasPermission("roles:delete"))
+        return perms
+
+    def create(self, request, *args, **kwargs):
+        serializer = RoleCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        role = create_custom_role(
+            tenant=request.tenant,
+            created_by=request.user,
+            label=serializer.validated_data["label"],
+            description=serializer.validated_data.get("description", ""),
+            codenames=serializer.validated_data.get("permissions", []),
+            ip_address=get_client_ip(request),
+        )
+        return created_response(RoleSerializer(role).data)
+
+    def partial_update(self, request, *args, **kwargs):
+        role = self.get_object()
+        serializer = RoleUpdateSerializer(data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+
+        role = update_role(
+            role=role,
+            updated_by=request.user,
+            label=serializer.validated_data.get("label"),
+            description=serializer.validated_data.get("description"),
+            codenames=serializer.validated_data.get("permissions"),
+            ip_address=get_client_ip(request),
+        )
+        return success_response(RoleSerializer(role).data)
+
+    def destroy(self, request, *args, **kwargs):
+        role = self.get_object()
+        delete_role(role=role, deleted_by=request.user, ip_address=get_client_ip(request))
+        return success_response(None, status_code=status.HTTP_204_NO_CONTENT)

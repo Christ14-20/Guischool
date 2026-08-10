@@ -22,8 +22,12 @@ from django.db import models
 
 class TimestampedModel(models.Model):
     """
-    Classe abstraite pour les entités non rattachées à un tenant.
-    Exemples : Plan (global), Tenant, Role, Permission, AuditLog.
+    Classe abstraite pour les entités non intrinsèquement rattachées à un
+    tenant unique (elles gèrent leur propre FK tenant si besoin).
+    Exemples : Plan (global), Tenant, Permission (global), AuditLog.
+    Role a son propre FK `tenant` nullable (cf. apps/authentication/models.py)
+    — nullable plutôt qu'obligatoire (TenantScopedModel) car les rôles-modèles
+    système (tenant=NULL) doivent pouvoir exister.
     """
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)

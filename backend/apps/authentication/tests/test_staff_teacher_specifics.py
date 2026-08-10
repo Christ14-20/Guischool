@@ -33,18 +33,20 @@ def tenant(plan):
 
 
 @pytest.fixture
-def director_role(db):
-    return Role.objects.create(name="DIRECTOR", label="Directeur")
+def director_role(tenant):
+    return Role.objects.create(name="DIRECTOR", label="Directeur", tenant=tenant)
 
 
 @pytest.fixture
-def teacher_role(db):
-    return Role.objects.create(name="TEACHER", label="Enseignant")
+def teacher_role(tenant):
+    return Role.objects.create(name="TEACHER", label="Enseignant", tenant=tenant)
 
 
 @pytest.fixture
-def accountant_role(db):
-    return Role.objects.get_or_create(name="ACCOUNTANT", defaults={"label": "Comptable"})[0]
+def accountant_role(tenant):
+    return Role.objects.get_or_create(
+        name="ACCOUNTANT", tenant=tenant, defaults={"label": "Comptable"}
+    )[0]
 
 
 @pytest.fixture
@@ -88,7 +90,7 @@ class TestGradeAndStatutEmploiFields:
             reverse("staff-list"),
             {
                 "email": "prof@ecole-test-sv4.gn", "first_name": "Aissatou", "last_name": "Bah",
-                "role": "TEACHER", "grade": "PROFESSEUR_CERTIFIE", "statut_emploi": "TITULAIRE",
+                "role": str(teacher_role.id), "grade": "PROFESSEUR_CERTIFIE", "statut_emploi": "TITULAIRE",
                 "access_start_date": "2026-09-01", "access_end_date": "2027-06-30",
             },
             format="json",
@@ -108,7 +110,7 @@ class TestGradeAndStatutEmploiFields:
 
         resp = api_client.post(
             reverse("staff-list"),
-            {"email": "minimal2@ecole-test-sv4.gn", "first_name": "A", "last_name": "B", "role": "TEACHER"},
+            {"email": "minimal2@ecole-test-sv4.gn", "first_name": "A", "last_name": "B", "role": str(teacher_role.id)},
             format="json",
         )
         assert resp.status_code == 201, resp.json()
@@ -125,7 +127,7 @@ class TestGradeAndStatutEmploiFields:
         resp = api_client.post(
             reverse("staff-list"),
             {"email": "grade-invalide@ecole-test-sv4.gn", "first_name": "A", "last_name": "B",
-             "role": "TEACHER", "grade": "PAS_UN_GRADE"},
+             "role": str(teacher_role.id), "grade": "PAS_UN_GRADE"},
             format="json",
         )
         assert resp.status_code == 400
@@ -137,7 +139,7 @@ class TestGradeAndStatutEmploiFields:
 
         user, _ = create_staff_account(
             tenant=tenant, created_by=director_user, email="patch-grade@ecole-test-sv4.gn",
-            first_name="C", last_name="D", role_name="TEACHER",
+            first_name="C", last_name="D", role_id=str(teacher_role.id),
         )
         _ensure_director_permissions(director_role)
         _auth(api_client, director_user)
@@ -164,14 +166,14 @@ class TestGradeAndStatutEmploiFields:
 
         user, _ = create_staff_account(
             tenant=tenant, created_by=director_user, email="grade-persist@ecole-test-sv4.gn",
-            first_name="E", last_name="F", role_name="TEACHER",
+            first_name="E", last_name="F", role_id=str(teacher_role.id),
             grade="PROFESSEUR_CERTIFIE", statut_emploi="TITULAIRE",
         )
         _ensure_director_permissions(director_role)
         _auth(api_client, director_user)
 
         resp = api_client.patch(
-            reverse("staff-change-role", args=[str(user.id)]), {"role": "ACCOUNTANT"}, format="json",
+            reverse("staff-change-role", args=[str(user.id)]), {"role": str(accountant_role.id)}, format="json",
         )
         assert resp.status_code == 200, resp.json()
 
@@ -188,7 +190,7 @@ class TestAccessWindowLogin:
         from apps.authentication.services.staff_service import create_staff_account
         user, temp_pass = create_staff_account(
             tenant=tenant, created_by=director_user, email=profile_kwargs.pop("email"),
-            first_name="G", last_name="H", role_name="TEACHER", **profile_kwargs,
+            first_name="G", last_name="H", role_id=str(teacher_role.id), **profile_kwargs,
         )
         user.must_change_password = False
         user.set_password("P@ssTeacher123!")

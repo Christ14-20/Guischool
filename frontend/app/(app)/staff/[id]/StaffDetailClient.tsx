@@ -44,24 +44,24 @@ interface PermissionCatalogItem {
   module: string;
 }
 
+interface AssignableRole {
+  id: string;
+  name: string;
+  label: string;
+}
+
 interface Props {
   staff: any;
   subjects: Subject[];
   permissionsCatalog: PermissionCatalogItem[];
   viewerPermissions?: string[];
+  // ROLES-V2-01 : rôles du tenant assignables à un membre du staff (base
+  // non-DIRECTOR ou CUSTOM) — remplace l'ancien tuple statique
+  // CHANGE_ROLE_OPTIONS, pilote le sélecteur "Changer de rôle" par id (UUID)
+  // plutôt que par nom, un nom seul ne pouvant plus identifier un rôle
+  // CUSTOM (plusieurs partagent name="CUSTOM").
+  assignableRoles?: AssignableRole[];
 }
-
-// STAFF-V2-02 : ACCOUNTANT ajouté — absent jusqu'ici bien que déjà créable
-// (résidu pré-existant, corrigé en marge car change-role rend ce rôle
-// couramment rencontré sur cette page).
-const ROLE_LABELS: Record<string, string> = {
-  TEACHER: "Enseignant",
-  STUDENT_STUDIES: "Études",
-  ACCOUNTANT: "Comptable",
-};
-
-// Mêmes rôles cibles que la création (ALLOWED_CREATE_ROLES côté backend).
-const CHANGE_ROLE_OPTIONS = ["TEACHER", "STUDENT_STUDIES", "ACCOUNTANT"];
 
 const SEXE_LABELS: Record<string, string> = { M: "Masculin", F: "Féminin" };
 const CONTRAT_LABELS: Record<string, string> = {
@@ -90,7 +90,7 @@ const STATUT_STYLES: Record<string, { color: string; label: string }> = {
 const inputClass =
   "w-full bg-paper-alt border border-line rounded-lg px-4 py-2.5 text-sm text-text placeholder-text-faint outline-none focus:border-accent-line transition-colors";
 
-export default function StaffDetailClient({ staff, subjects, permissionsCatalog, viewerPermissions }: Props) {
+export default function StaffDetailClient({ staff, subjects, permissionsCatalog, viewerPermissions, assignableRoles = [] }: Props) {
   const canUpdate = hasPermission(viewerPermissions, PERMISSIONS.STAFF_UPDATE);
   const canDisable = hasPermission(viewerPermissions, PERMISSIONS.STAFF_DISABLE);
   const router = useRouter();
@@ -122,11 +122,11 @@ export default function StaffDetailClient({ staff, subjects, permissionsCatalog,
   const [showDisableModal, setShowDisableModal] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
 
-  // Change-role modal (STAFF-V2-02)
+  // Change-role modal (STAFF-V2-02) — newRole est l'id (UUID) du rôle cible,
+  // pas son nom (ROLES-V2-01).
+  const otherAssignableRoles = assignableRoles.filter((r) => r.id !== staff.role?.id);
   const [showChangeRoleModal, setShowChangeRoleModal] = useState(false);
-  const [newRole, setNewRole] = useState(
-    CHANGE_ROLE_OPTIONS.find((r) => r !== staff.role?.name) || CHANGE_ROLE_OPTIONS[0]
-  );
+  const [newRole, setNewRole] = useState(otherAssignableRoles[0]?.id ?? "");
   const [changeRoleError, setChangeRoleError] = useState<string | null>(null);
 
   // Permissions individuelles / rôles composites (STAFF-V2-03)
@@ -274,7 +274,7 @@ export default function StaffDetailClient({ staff, subjects, permissionsCatalog,
                     className="size-[9px] rounded-full border-2"
                     style={{ borderColor: staff.role?.name === "TEACHER" ? "var(--accent)" : "var(--ok)" }}
                   />
-                  {ROLE_LABELS[staff.role?.name] ?? staff.role?.name}
+                  {staff.role?.label || staff.role?.name}
                 </span>
                 {(() => {
                   const st = STATUT_STYLES[staff.statut] || STATUT_STYLES.ACTIF;
@@ -638,7 +638,7 @@ export default function StaffDetailClient({ staff, subjects, permissionsCatalog,
             <div>
               <span className="text-[10.5px] text-text-faint block uppercase tracking-[.08em]">Rôle</span>
               <span className="font-medium">
-                {ROLE_LABELS[staff.role?.name] ?? staff.role?.name ?? "—"}
+                {staff.role?.label || staff.role?.name || "—"}
               </span>
             </div>
             <div>
@@ -693,7 +693,7 @@ export default function StaffDetailClient({ staff, subjects, permissionsCatalog,
               Permissions individuelles
             </h3>
             <p className="text-xs text-text-faint mt-1">
-              Ajoutées au-delà du rôle {ROLE_LABELS[staff.role?.name] ?? staff.role?.name} — simule un rôle composite sans en créer un nouveau.
+              Ajoutées au-delà du rôle {staff.role?.label || staff.role?.name} — simule un rôle composite sans en créer un nouveau.
             </p>
           </div>
           {canUpdate && !editingPermissions && permissionsCatalog.length > 0 && (
@@ -839,11 +839,11 @@ export default function StaffDetailClient({ staff, subjects, permissionsCatalog,
               Réactiver
             </button>
           ))}
-          {canUpdate && (
+          {canUpdate && otherAssignableRoles.length > 0 && (
             <button
               onClick={() => {
                 setChangeRoleError(null);
-                setNewRole(CHANGE_ROLE_OPTIONS.find((r) => r !== staff.role?.name) || CHANGE_ROLE_OPTIONS[0]);
+                setNewRole(otherAssignableRoles[0]?.id ?? "");
                 setShowChangeRoleModal(true);
               }}
               disabled={isPending}
@@ -899,7 +899,7 @@ export default function StaffDetailClient({ staff, subjects, permissionsCatalog,
               <div>
                 <h3 className="font-serif text-lg font-medium">Changer de rôle</h3>
                 <p className="text-text-soft text-sm mt-1">
-                  Rôle actuel : <strong>{ROLE_LABELS[staff.role?.name] ?? staff.role?.name}</strong>.
+                  Rôle actuel : <strong>{staff.role?.label || staff.role?.name}</strong>.
                   {staff.role?.name === "TEACHER" && (staff.subjects_taught ?? []).length > 0 && (
                     <> Les matières enseignées seront réinitialisées si le nouveau rôle n&apos;est pas Enseignant.</>
                   )}
@@ -915,8 +915,8 @@ export default function StaffDetailClient({ staff, subjects, permissionsCatalog,
               <div className="space-y-1">
                 <label className="text-[10.5px] text-text-faint uppercase tracking-[.08em]">Nouveau rôle</label>
                 <select value={newRole} onChange={(e) => setNewRole(e.target.value)} className={inputClass}>
-                  {CHANGE_ROLE_OPTIONS.filter((r) => r !== staff.role?.name).map((r) => (
-                    <option key={r} value={r}>{ROLE_LABELS[r]}</option>
+                  {otherAssignableRoles.map((r) => (
+                    <option key={r.id} value={r.id}>{r.label || r.name}</option>
                   ))}
                 </select>
               </div>

@@ -26,20 +26,23 @@ interface Subject {
   name: string;
 }
 
-interface CreateStaffFormProps {
-  subjects: Subject[];
+interface AssignableRole {
+  id: string;
+  name: string;
+  label: string;
 }
 
-const ROLE_OPTIONS = [
-  { value: "TEACHER", label: "Enseignant" },
-  { value: "STUDENT_STUDIES", label: "Études" },
-  { value: "ACCOUNTANT", label: "Comptable" },
-];
+interface CreateStaffFormProps {
+  subjects: Subject[];
+  // ROLES-V2-01 : rôles du tenant assignables (base non-DIRECTOR ou CUSTOM)
+  // — remplace l'ancien tuple statique ROLE_OPTIONS.
+  assignableRoles: AssignableRole[];
+}
 
 const fieldClass =
   "w-full bg-paper-alt border border-line rounded-lg px-4 py-2.5 text-sm text-text placeholder-text-faint outline-none focus:border-accent-line transition-colors";
 
-export default function CreateStaffForm({ subjects }: CreateStaffFormProps) {
+export default function CreateStaffForm({ subjects, assignableRoles }: CreateStaffFormProps) {
   const [isPending, startTransition] = useTransition();
   const [successData, setSuccessData] = useState<any>(null);
   const [copied, setCopied] = useState(false);
@@ -47,7 +50,8 @@ export default function CreateStaffForm({ subjects }: CreateStaffFormProps) {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<any>({});
 
-  const [selectedRole, setSelectedRole] = useState("TEACHER");
+  const [selectedRole, setSelectedRole] = useState(assignableRoles[0]?.id ?? "");
+  const selectedRoleName = assignableRoles.find((r) => r.id === selectedRole)?.name;
   const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
 
   const handleCopyPassword = () => {
@@ -301,9 +305,9 @@ export default function CreateStaffForm({ subjects }: CreateStaffFormProps) {
               required
               className={fieldClass}
             >
-              {ROLE_OPTIONS.map((r) => (
-                <option key={r.value} value={r.value}>
-                  {r.label}
+              {assignableRoles.map((r) => (
+                <option key={r.id} value={r.id}>
+                  {r.label || r.name}
                 </option>
               ))}
             </select>
@@ -396,7 +400,7 @@ export default function CreateStaffForm({ subjects }: CreateStaffFormProps) {
         </div>
 
         {/* Spécificités enseignant (STAFF-V2-04, TEACHER only) */}
-        {selectedRole === "TEACHER" && (
+        {selectedRoleName === "TEACHER" && (
           <div className="space-y-4">
             <h3 className="text-[10.5px] font-semibold text-text-faint uppercase tracking-[.08em] border-l-2 border-accent pl-2">
               Spécificités enseignant (optionnel)
@@ -442,7 +446,7 @@ export default function CreateStaffForm({ subjects }: CreateStaffFormProps) {
         )}
 
         {/* Matières (TEACHER only) */}
-        {selectedRole === "TEACHER" && subjects.length > 0 && (
+        {selectedRoleName === "TEACHER" && subjects.length > 0 && (
           <div className="space-y-4">
             <h3 className="text-[10.5px] font-semibold text-text-faint uppercase tracking-[.08em] border-l-2 border-accent pl-2">
               Matières enseignées
@@ -478,7 +482,7 @@ export default function CreateStaffForm({ subjects }: CreateStaffFormProps) {
           </div>
         )}
 
-        {selectedRole === "TEACHER" && subjects.length === 0 && (
+        {selectedRoleName === "TEACHER" && subjects.length === 0 && (
           <div className="text-xs text-text-faint italic">
             Aucune matière disponible. Veuillez d&apos;abord créer des matières dans la section Pédagogie.
           </div>

@@ -33,13 +33,13 @@ def tenant(plan):
 
 
 @pytest.fixture
-def director_role(db):
-    return Role.objects.create(name="DIRECTOR", label="Directeur")
+def director_role(tenant):
+    return Role.objects.create(name="DIRECTOR", label="Directeur", tenant=tenant)
 
 
 @pytest.fixture
-def teacher_role(db):
-    return Role.objects.create(name="TEACHER", label="Enseignant")
+def teacher_role(tenant):
+    return Role.objects.create(name="TEACHER", label="Enseignant", tenant=tenant)
 
 
 @pytest.fixture
@@ -101,7 +101,7 @@ class TestCreateStaffAccountWithProfile:
         user, _ = create_staff_account(
             tenant=tenant, created_by=director_user,
             email="rh-complet@ecole-test-sv1.gn", first_name="Aissatou", last_name="Bah",
-            role_name="TEACHER", date_naissance=date(1990, 5, 12), sexe="F",
+            role_id=str(teacher_role.id), date_naissance=date(1990, 5, 12), sexe="F",
             date_embauche=date(2024, 9, 1), type_contrat="CDI", numero_cnss="CNSS-001",
             type_compte_paie="ORANGE_MONEY", numero_compte_paie="+224620000099",
         )
@@ -123,7 +123,7 @@ class TestCreateStaffAccountWithProfile:
         user, _ = create_staff_account(
             tenant=tenant, created_by=director_user,
             email="rh-vide@ecole-test-sv1.gn", first_name="Fanta", last_name="Camara",
-            role_name="TEACHER",
+            role_id=str(teacher_role.id),
         )
 
         assert StaffProfile.objects.filter(user=user).exists()
@@ -145,7 +145,7 @@ class TestStaffProfileEndpoints:
             reverse("staff-list"),
             {
                 "email": "api-rh@ecole-test-sv1.gn", "first_name": "Ibrahim", "last_name": "Sow",
-                "role": "TEACHER", "date_naissance": "1988-03-20", "sexe": "M",
+                "role": str(teacher_role.id), "date_naissance": "1988-03-20", "sexe": "M",
                 "date_embauche": "2023-01-15", "type_contrat": "VACATAIRE",
                 "numero_cnss": "CNSS-042", "type_compte_paie": "BANQUE",
                 "numero_compte_paie": "BICIGUI-00998877",
@@ -170,7 +170,7 @@ class TestStaffProfileEndpoints:
 
         resp = api_client.post(
             reverse("staff-list"),
-            {"email": "minimal@ecole-test-sv1.gn", "first_name": "A", "last_name": "B", "role": "TEACHER"},
+            {"email": "minimal@ecole-test-sv1.gn", "first_name": "A", "last_name": "B", "role": str(teacher_role.id)},
             format="json",
         )
         assert resp.status_code == 201, resp.json()
@@ -184,7 +184,7 @@ class TestStaffProfileEndpoints:
         resp = api_client.post(
             reverse("staff-list"),
             {"email": "invalide@ecole-test-sv1.gn", "first_name": "A", "last_name": "B",
-             "role": "TEACHER", "sexe": "X"},
+             "role": str(teacher_role.id), "sexe": "X"},
             format="json",
         )
         assert resp.status_code == 400
@@ -194,7 +194,7 @@ class TestStaffProfileEndpoints:
 
         user, _ = create_staff_account(
             tenant=tenant, created_by=director_user, email="detail@ecole-test-sv1.gn",
-            first_name="C", last_name="D", role_name="TEACHER", sexe="F",
+            first_name="C", last_name="D", role_id=str(teacher_role.id), sexe="F",
         )
         _ensure_director_permissions(director_role)
         _auth(api_client, director_user)
@@ -209,7 +209,7 @@ class TestStaffProfileEndpoints:
 
         create_staff_account(
             tenant=tenant, created_by=director_user, email="liste@ecole-test-sv1.gn",
-            first_name="E", last_name="F", role_name="TEACHER", type_contrat="CDD",
+            first_name="E", last_name="F", role_id=str(teacher_role.id), type_contrat="CDD",
         )
         _ensure_director_permissions(director_role)
         _auth(api_client, director_user)
@@ -226,7 +226,7 @@ class TestStaffProfileEndpoints:
 
         user, _ = create_staff_account(
             tenant=tenant, created_by=director_user, email="patch-rh@ecole-test-sv1.gn",
-            first_name="G", last_name="H", role_name="TEACHER",
+            first_name="G", last_name="H", role_id=str(teacher_role.id),
         )
         original_first_name = user.first_name
         _ensure_director_permissions(director_role)
@@ -253,7 +253,7 @@ class TestStaffProfileEndpoints:
 
         user, _ = create_staff_account(
             tenant=tenant, created_by=director_user, email="patch-mixte@ecole-test-sv1.gn",
-            first_name="I", last_name="J", role_name="TEACHER",
+            first_name="I", last_name="J", role_id=str(teacher_role.id),
         )
         _ensure_director_permissions(director_role)
         _auth(api_client, director_user)
@@ -275,7 +275,7 @@ class TestStaffProfileEndpoints:
 
         user, _ = create_staff_account(
             tenant=tenant, created_by=director_user, email="independance@ecole-test-sv1.gn",
-            first_name="K", last_name="L", role_name="TEACHER",
+            first_name="K", last_name="L", role_id=str(teacher_role.id),
         )
         assert user.is_active is True
         _ensure_director_permissions(director_role)
@@ -298,7 +298,7 @@ class TestStaffProfileEndpoints:
 
         user, _ = create_staff_account(
             tenant=tenant, created_by=director_user, email="disable-rh@ecole-test-sv1.gn",
-            first_name="M", last_name="N", role_name="TEACHER",
+            first_name="M", last_name="N", role_id=str(teacher_role.id),
         )
         _ensure_director_permissions(director_role)
         _auth(api_client, director_user)
@@ -352,11 +352,11 @@ class TestStaffProfileEndpoints:
 
         u1, _ = create_staff_account(
             tenant=tenant, created_by=director_user, email="filtre1@ecole-test-sv1.gn",
-            first_name="S", last_name="T", role_name="TEACHER",
+            first_name="S", last_name="T", role_id=str(teacher_role.id),
         )
         u2, _ = create_staff_account(
             tenant=tenant, created_by=director_user, email="filtre2@ecole-test-sv1.gn",
-            first_name="U", last_name="V", role_name="TEACHER",
+            first_name="U", last_name="V", role_id=str(teacher_role.id),
         )
         StaffProfile.objects.filter(user=u2).update(statut=StaffProfile.Status.PARTI)
 
@@ -397,7 +397,7 @@ class TestPhoneBlankRegression:
         resp = api_client.post(
             reverse("staff-list"),
             {"email": "sans-tel@ecole-test-sv1.gn", "first_name": "W", "last_name": "X",
-             "role": "TEACHER", "phone": ""},
+             "role": str(teacher_role.id), "phone": ""},
             format="json",
         )
         assert resp.status_code == 201, resp.json()
@@ -408,7 +408,7 @@ class TestPhoneBlankRegression:
 
         user, _ = create_staff_account(
             tenant=tenant, created_by=director_user, email="clear-tel@ecole-test-sv1.gn",
-            first_name="Y", last_name="Z", role_name="TEACHER", phone="+224620000077",
+            first_name="Y", last_name="Z", role_id=str(teacher_role.id), phone="+224620000077",
         )
         _ensure_director_permissions(director_role)
         _auth(api_client, director_user)

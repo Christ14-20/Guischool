@@ -18,20 +18,23 @@ interface StaffPageProps {
   }>;
 }
 
-// STAFF-V2-05 : ACCOUNTANT ajouté ici aussi — même résidu pré-existant que
-// StaffDetailClient.tsx (corrigé en STAFF-V2-02), le tableau de bord rend ce
-// rôle visible dans ses stat cards.
-const ROLE_OPTIONS = [
-  { value: "TEACHER", label: "Enseignant" },
-  { value: "STUDENT_STUDIES", label: "Études" },
-  { value: "ACCOUNTANT", label: "Comptable" },
-];
-
-const ROLE_STYLES: Record<string, { color: string; label: string }> = {
-  TEACHER: { color: "var(--accent)", label: "Enseignant" },
-  STUDENT_STUDIES: { color: "var(--ok)", label: "Études" },
-  ACCOUNTANT: { color: "var(--warn)", label: "Comptable" },
+// ROLES-V2-01 : couleurs fixes pour les 3 rôles de base couramment assignés
+// au staff ; un rôle CUSTOM retombe sur un repli cyclique (cf. customRoleColor)
+// plutôt que sur une entrée statique — le nombre de rôles CUSTOM n'est pas
+// borné, contrairement aux rôles de base.
+const ROLE_STYLES: Record<string, { color: string }> = {
+  TEACHER: { color: "var(--accent)" },
+  STUDENT_STUDIES: { color: "var(--ok)" },
+  ACCOUNTANT: { color: "var(--warn)" },
 };
+const CUSTOM_ROLE_PALETTE = ["var(--accent)", "var(--ok)", "var(--warn)", "var(--info)", "var(--danger)"];
+
+function roleColor(role: { id: string; name: string } | undefined, allRoles: { id: string }[]): string {
+  if (!role) return "var(--mute)";
+  if (ROLE_STYLES[role.name]) return ROLE_STYLES[role.name].color;
+  const idx = allRoles.findIndex((r) => r.id === role.id);
+  return idx >= 0 ? CUSTOM_ROLE_PALETTE[idx % CUSTOM_ROLE_PALETTE.length] : "var(--mute)";
+}
 
 interface DashboardData {
   total_staff: number;
@@ -56,6 +59,7 @@ export default async function StaffPage({ searchParams }: StaffPageProps) {
 
   let staffData: { results: any[]; count: number } = { results: [], count: 0 };
   let dashboard: DashboardData | null = null;
+  let roleOptions: { id: string; name: string; label: string }[] = [];
   let errorMsg: string | null = null;
 
   try {
@@ -68,9 +72,12 @@ export default async function StaffPage({ searchParams }: StaffPageProps) {
     if (currentPage > 1) queryParts.push(`page=${currentPage}`);
     const queryStr = queryParts.length ? `?${queryParts.join("&")}` : "";
 
-    const [staffResp, dashboardResp] = await Promise.all([
+    const [staffResp, dashboardResp, rolesResp] = await Promise.all([
       client.get(`/auth/staff/${queryStr}`),
       client.get("/auth/staff/dashboard/").catch(() => ({ data: { status: "error" } })),
+      // ROLES-V2-01 : réservé à roles:read — dégradé silencieusement (le
+      // filtre par rôle reste masqué si la liste est vide).
+      client.get("/auth/roles/").catch(() => ({ data: { status: "error" } })),
     ]);
 
     if (staffResp.data?.status === "success") {
@@ -78,6 +85,10 @@ export default async function StaffPage({ searchParams }: StaffPageProps) {
     }
     if (dashboardResp.data?.status === "success") {
       dashboard = dashboardResp.data.data;
+    }
+    if (rolesResp.data?.status === "success") {
+      const allRoles = rolesResp.data.data.results ?? [];
+      roleOptions = allRoles.filter((r: any) => r.name !== "DIRECTOR");
     }
   } catch {
     errorMsg = "Impossible de charger la liste du personnel.";
@@ -176,9 +187,9 @@ export default async function StaffPage({ searchParams }: StaffPageProps) {
                 className="bg-paper-alt border border-line rounded-lg px-3 py-2.5 text-[13px] text-text outline-none focus:border-accent-line transition-colors"
               >
                 <option value="">Tous</option>
-                {ROLE_OPTIONS.map((r) => (
-                  <option key={r.value} value={r.value}>
-                    {r.label}
+                {roleOptions.map((r) => (
+                  <option key={r.id} value={r.id}>
+                    {r.label || r.name}
                   </option>
                 ))}
               </select>
@@ -228,7 +239,7 @@ export default async function StaffPage({ searchParams }: StaffPageProps) {
                 </thead>
                 <tbody className="text-sm">
                   {staffData.results.map((s: any) => {
-                    const roleStyle = ROLE_STYLES[s.role?.name];
+                    const color = roleColor(s.role, roleOptions);
                     return (
                       <tr key={s.id} className="hover:bg-paper-alt transition-colors">
                         <td className="px-6 py-4 border-b border-line last:border-b-0 font-medium">
@@ -243,13 +254,13 @@ export default async function StaffPage({ searchParams }: StaffPageProps) {
                         <td className="px-6 py-4 border-b border-line">
                           <span
                             className="inline-flex items-center gap-[7px] text-[12.5px]"
-                            style={{ color: roleStyle?.color ?? "var(--mute)" }}
+                            style={{ color }}
                           >
                             <span
                               className="size-[9px] rounded-full border-2"
-                              style={{ borderColor: roleStyle?.color ?? "var(--mute)" }}
+                              style={{ borderColor: color }}
                             />
-                            {roleStyle?.label ?? s.role?.name ?? "—"}
+                            {s.role?.label || s.role?.name || "—"}
                           </span>
                         </td>
                         <td className="px-6 py-4 border-b border-line">

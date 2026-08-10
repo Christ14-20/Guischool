@@ -49,6 +49,12 @@ export const PERMISSIONS = {
 
   // Communication
   COMMUNICATION_SEND: "communication:send",
+
+  // Rôles (apps.authentication.views.RoleViewSet)
+  ROLES_READ: "roles:read",
+  ROLES_CREATE: "roles:create",
+  ROLES_UPDATE: "roles:update",
+  ROLES_DELETE: "roles:delete",
 } as const;
 
 export type PermissionCodename = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];

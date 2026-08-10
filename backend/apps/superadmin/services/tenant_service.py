@@ -14,7 +14,8 @@ from django.utils import timezone
 from django.utils.text import slugify
 from rest_framework.exceptions import ValidationError
 
-from apps.authentication.models import User, Role
+from apps.authentication.models import User
+from apps.authentication.services.role_service import bootstrap_tenant_roles
 from apps.superadmin.models import Tenant, Plan
 from apps.monitoring.services import audit_log
 from apps.pedagogy.services.school_year_service import (
@@ -130,14 +131,10 @@ def create_school(data: dict, ip_address: str = "") -> tuple[Tenant, str]:
             trial_ends_at=trial_ends_at,
         )
 
-        # 3. Récupération du rôle DIRECTOR
-        director_role, _ = Role.objects.get_or_create(
-            name="DIRECTOR",
-            defaults={
-                "label": "Directeur",
-                "description": "Compte de direction de l'établissement",
-            },
-        )
+        # 3. Bootstrap des 5 rôles de base du tenant (ROLES-V2-01) — clonés
+        # depuis les rôles-modèles système, permissions par défaut incluses.
+        roles = bootstrap_tenant_roles(tenant)
+        director_role = roles["DIRECTOR"]
 
         # 4. Création de l'utilisateur Directeur
         User.objects.create_user(

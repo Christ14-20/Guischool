@@ -4,19 +4,18 @@ apps/authentication/services/staff_service.py — STAFF-MVP-01
 Service métier pour la création et la gestion des comptes du personnel.
 Réutilise generate_temporary_password() de tenant_service.py.
 
-Rôles créables : TEACHER, STUDENT_STUDIES (DIRECTOR via Super Admin seulement).
-DIRECTOR n'est pas créable via ce service (réservé à TENANT-03).
+Rôles créables : tout rôle assignable du tenant (base non-DIRECTOR ou
+CUSTOM, cf. role_service.assignable_roles_queryset) — jamais DIRECTOR
+(réservé au Super Admin via TENANT-03), jamais SUPER_ADMIN/PARENT.
 """
 
 from django.db import transaction
 from rest_framework.exceptions import ValidationError
 
-from apps.authentication.models import User, Role, StaffProfile
+from apps.authentication.models import User, StaffProfile
+from apps.authentication.services.role_service import assignable_roles_queryset
 from apps.superadmin.services.tenant_service import generate_temporary_password
 from apps.monitoring.services import audit_log
-
-
-ALLOWED_CREATE_ROLES = ("TEACHER", "STUDENT_STUDIES", "ACCOUNTANT")
 
 
 def create_staff_account(
@@ -26,7 +25,7 @@ def create_staff_account(
     email: str,
     first_name: str,
     last_name: str,
-    role_name: str,
+    role_id: str,
     phone: str = "",
     subjects_taught: list | None = None,
     ip_address: str = "",
@@ -58,17 +57,12 @@ def create_staff_account(
       l'invariant "tout compte géré par StaffViewSet a un profil RH" ne
       doit jamais souffrir d'exception.
     """
-    if role_name not in ALLOWED_CREATE_ROLES:
-        raise ValidationError(
-            {"role": [f"Le rôle '{role_name}' n'est pas autorisé. Rôles autorisés : {', '.join(ALLOWED_CREATE_ROLES)}."]}
-        )
+    role = assignable_roles_queryset(tenant).filter(id=role_id).first()
+    if not role:
+        raise ValidationError({"role": ["Rôle introuvable ou non assignable."]})
 
     if User.objects.filter(email__iexact=email).exists():
         raise ValidationError({"email": ["Cette adresse email est déjà utilisée."]})
-
-    role = Role.objects.filter(name=role_name).first()
-    if not role:
-        raise ValidationError({"role": [f"Le rôle '{role_name}' est introuvable."]})
 
     temp_pass = generate_temporary_password()
 

@@ -16,21 +16,32 @@ export default async function NewStaffPage() {
   }
 
   let subjects: { id: string; code: string; name: string }[] = [];
+  let assignableRoles: { id: string; name: string; label: string }[] = [];
 
   try {
     const client = await getBackendClient();
-    const resp = await client.get("/pedagogy/subjects/");
-    if (resp.data?.status === "success") {
-      subjects = resp.data.data.results ?? [];
+    const [subjResp, rolesResp] = await Promise.all([
+      client.get("/pedagogy/subjects/"),
+      client.get("/auth/roles/").catch(() => ({ data: { status: "error" } })),
+    ]);
+    if (subjResp.data?.status === "success") {
+      subjects = subjResp.data.data.results ?? [];
+    }
+    if (rolesResp.data?.status === "success") {
+      const allRoles = rolesResp.data.data.results ?? [];
+      assignableRoles = allRoles.filter(
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (r: any) => !["DIRECTOR", "SUPER_ADMIN", "PARENT"].includes(r.name)
+      );
     }
   } catch {
-    // Silently fallback to empty subjects list
+    // Silently fallback to empty lists
   }
 
   return (
     <div className="min-h-screen bg-paper text-text">
       <div className="px-11 pt-9 pb-12">
-        <CreateStaffForm subjects={subjects} />
+        <CreateStaffForm subjects={subjects} assignableRoles={assignableRoles} />
       </div>
     </div>
   );

@@ -51,23 +51,25 @@ def tenant2(plan):
 
 
 @pytest.fixture
-def director_role(db):
-    return Role.objects.create(name="DIRECTOR", label="Directeur")
+def director_role(tenant):
+    return Role.objects.create(name="DIRECTOR", label="Directeur", tenant=tenant)
 
 
 @pytest.fixture
-def teacher_role(db):
-    return Role.objects.create(name="TEACHER", label="Enseignant")
+def teacher_role(tenant):
+    return Role.objects.create(name="TEACHER", label="Enseignant", tenant=tenant)
 
 
 @pytest.fixture
-def ss_role(db):
-    return Role.objects.create(name="STUDENT_STUDIES", label="Scolarité")
+def ss_role(tenant):
+    return Role.objects.create(name="STUDENT_STUDIES", label="Scolarité", tenant=tenant)
 
 
 @pytest.fixture
-def accountant_role(db):
-    role, _ = Role.objects.get_or_create(name="ACCOUNTANT", defaults={"label": "Comptable"})
+def accountant_role(tenant):
+    role, _ = Role.objects.get_or_create(
+        name="ACCOUNTANT", tenant=tenant, defaults={"label": "Comptable"}
+    )
     return role
 
 
@@ -152,7 +154,7 @@ class TestStaffCreateService:
             email="enseignant@ecole-test.gn",
             first_name="Aissatou",
             last_name="Bah",
-            role_name="TEACHER",
+            role_id=str(teacher_role.id),
             phone="+224620000010",
         )
 
@@ -174,7 +176,7 @@ class TestStaffCreateService:
             email="secretaire@ecole-test.gn",
             first_name="Fanta",
             last_name="Camara",
-            role_name="STUDENT_STUDIES",
+            role_id=str(ss_role.id),
         )
 
         assert user.role.name == "STUDENT_STUDIES"
@@ -191,7 +193,7 @@ class TestStaffCreateService:
             email="dup@ecole-test.gn",
             first_name="Test",
             last_name="Dup",
-            role_name="TEACHER",
+            role_id=str(teacher_role.id),
         )
 
         with pytest.raises(ValidationError):
@@ -201,10 +203,10 @@ class TestStaffCreateService:
                 email="dup@ecole-test.gn",
                 first_name="Autre",
                 last_name="Nom",
-                role_name="TEACHER",
+                role_id=str(teacher_role.id),
             )
 
-    def test_create_staff_invalid_role(self, api_client, tenant, director_user):
+    def test_create_staff_invalid_role(self, api_client, tenant, director_user, director_role):
         """Rôle non autorisé → ValidationError (DIRECTOR non créable ici)."""
         from apps.authentication.services.staff_service import create_staff_account
         from rest_framework.exceptions import ValidationError
@@ -216,7 +218,7 @@ class TestStaffCreateService:
                 email="invalid@ecole-test.gn",
                 first_name="Test",
                 last_name="Invalid",
-                role_name="DIRECTOR",
+                role_id=str(director_role.id),
             )
 
     def test_create_accountant_success(self, api_client, tenant, director_user, accountant_role):
@@ -229,7 +231,7 @@ class TestStaffCreateService:
             email="comptable@ecole-test.gn",
             first_name="Oumar",
             last_name="Diallo",
-            role_name="ACCOUNTANT",
+            role_id=str(accountant_role.id),
             phone="+224620000015",
         )
 
@@ -250,7 +252,7 @@ class TestStaffCreateService:
             email="iso@ecole-test.gn",
             first_name="Iso",
             last_name="Test",
-            role_name="TEACHER",
+            role_id=str(teacher_role.id),
         )
 
         assert User.objects.filter(tenant=tenant, email="iso@ecole-test.gn").count() == 1
@@ -320,7 +322,7 @@ class TestStaffEndpoints:
                 "email": "nouvel-ens@ecole-test.gn",
                 "first_name": "Nouvel",
                 "last_name": "Enseignant",
-                "role": "TEACHER",
+                "role": str(teacher_role.id),
                 "phone": "+224620000020",
             },
             format="json",
@@ -346,7 +348,7 @@ class TestStaffEndpoints:
                 "email": "comptable@ecole-test.gn",
                 "first_name": "Oumar",
                 "last_name": "Diallo",
-                "role": "ACCOUNTANT",
+                "role": str(accountant_role.id),
                 "phone": "+224620000015",
             },
             format="json",

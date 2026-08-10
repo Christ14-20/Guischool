@@ -9,11 +9,12 @@ from rest_framework.routers import DefaultRouter
 from .views import (
     LoginView, RefreshView, LogoutView, MeView,
     PermissionsMeView, PermissionsCatalogView, TeachersListView, ChangePasswordView,
-    StaffViewSet,
+    StaffViewSet, RoleViewSet,
 )
 
 router = DefaultRouter()
 router.register(r"auth/staff", StaffViewSet, basename="staff")
+router.register(r"auth/roles", RoleViewSet, basename="role")
 
 urlpatterns = [
     # Auth endpoints

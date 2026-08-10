@@ -103,6 +103,21 @@ class TestPermissionsCatalog:
         resp = api_client.get(reverse("auth-permissions-catalog"))
         assert resp.status_code == 403
 
+    def test_catalog_accessible_with_roles_read_alone(
+        self, api_client, tenant, director_user, director_role
+    ):
+        """
+        ROLES-V2-01 : HasAnyPermission — roles:read seul (sans staff:update)
+        suffit désormais, pour l'éditeur de rôles.
+        """
+        _seed_catalog()
+        perm, _ = Permission.objects.get_or_create(codename="roles:read", defaults={"module": "roles"})
+        director_role.permissions.add(perm)
+        _auth(api_client, director_user)
+
+        resp = api_client.get(reverse("auth-permissions-catalog"))
+        assert resp.status_code == 200, resp.json()
+
 
 @pytest.mark.django_db
 class TestStaffCustomPermissions:
